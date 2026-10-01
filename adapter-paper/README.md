@@ -1,24 +1,35 @@
-# adapter-paper
+# Paper adapter
 
-A venue-free account on Deribit's live public prices, for forward testing through the real gateway
-path. No account or key. Fills market orders at the touch and limits when the other side reaches
-them, keeps positions across restarts, and settles expiries at Deribit's delivery price. It holds no
-margin: margin used is 0 and all equity is available. Trade mode is always `demo`.
+A simulated account on Deribit's live public prices. Use it to forward-test strategies through the
+real gateway, with no venue account or API key.
+
+- Market orders fill at the best bid or ask. Limits fill when the market reaches them.
+- Positions persist across restarts. Expired contracts settle at Deribit's delivery price.
+- No margin: all equity is available. Trade mode is always `demo`.
+
+## Start
+
+It's the gateway's default adapter:
+
+```bash
+docker compose up -d     # gateway-paper on 127.0.0.1:8443
+```
 
 ## Settings
 
-| Variable | Default | |
+| Variable | Default | Meaning |
 |---|---|---|
-| `GATEWAY_ADAPTER` | `paper` | the gateway's default adapter |
-| `GATEWAY_SETTING_CURRENCY` | `USDC` | |
-| `GATEWAY_SETTING_STARTING_BALANCE` | `10000` | |
-| `GATEWAY_SETTING_FEE_RATE` | `0` | charged on each fill's notional |
-| `GATEWAY_SETTING_LOGIN` | `paper` | the account login qkt checks |
-| `GATEWAY_SETTING_SETTLEMENT_CHECK_MS` | `60000` | how often expiries are settled |
-| `GATEWAY_SETTING_DERIBIT_URL`, `…_DERIBIT_WS_URL` | Deribit mainnet public | testnet: `https://test.deribit.com`, `wss://test.deribit.com/ws/api/v2` |
+| `GATEWAY_SETTING_STARTING_BALANCE` | `10000` | Opening balance |
+| `GATEWAY_SETTING_CURRENCY` | `USDC` | Account currency |
+| `GATEWAY_SETTING_FEE_RATE` | `0` | Fee per fill, as a fraction of notional |
+| `GATEWAY_SETTING_LOGIN` | `paper` | Account login reported to qkt |
+| `GATEWAY_SETTING_SETTLEMENT_CHECK_MS` | `60000` | How often expiries are checked |
+| `GATEWAY_SETTING_DERIBIT_URL`, `GATEWAY_SETTING_DERIBIT_WS_URL` | Deribit mainnet public API | Price source. Testnet: `https://test.deribit.com`, `wss://test.deribit.com/ws/api/v2` |
 
-## Exceptions to the adapter layout
+In Compose, `PAPER_STARTING_BALANCE` in `.env` sets the opening balance.
 
-It has no `client/` and no recorded fixtures of its own: it reads Deribit through
-`adapter-deribit`'s public client, whose fixtures cover those answers. `PaperContractTest` runs offline
-over a scripted market, so it needs no secret.
+## Layout exception
+
+Unlike other adapters, it has no `client/` package or recorded fixtures. It reads prices through the
+Deribit adapter's public client, whose fixtures cover them. Its contract suite runs offline against a
+scripted market.

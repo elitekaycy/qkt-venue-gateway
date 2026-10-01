@@ -21,7 +21,7 @@ For a walk-through with code, see [writing-an-adapter.md](writing-an-adapter.md)
 ```
 adapter-<venue>/
   build.gradle.kts            api(project(":adapter-api")), testImplementation(project(":adapter-testkit"))
-  README.md                   settings, credentials, venue facts (see below)
+  README.md                   setup, connect qkt, settings, venue behaviour, contract suite
   CLAUDE.md                   @README.md and @../docs/adapters.md, nothing else
   src/main/kotlin/com/qkt/venuegateway/<venue>/
     client/                   the venue's protocol in its own words; no adapter-api types
@@ -54,8 +54,8 @@ Each checkpoint is one or more commits on the branch; do not start the next with
 4. **Adapter and factory.** Registered under `META-INF/services`; refuses bad settings naming the key.
 5. **Contract.** `<Venue>ContractTest extends AdapterContractTest` passes against the test environment.
    It reads its key from `<VENUE>_CLIENT_ID` / `<VENUE>_CLIENT_SECRET` and skips locally without them.
-6. **Wire-up.** `settings.gradle.kts` includes the module; `app/build.gradle.kts` bundles it; the README
-   adapter table and settings table list it; `adapter.yml` passes its secrets.
+6. **Wire-up.** `settings.gradle.kts` includes the module; `app/build.gradle.kts` bundles it; the root
+   README's Adapters table has a row linking to the module README; `adapter.yml` passes its secrets.
 7. **End to end.** qkt trades through a gateway running the adapter on the test environment: an order
    placed, filled, seen on the stream, and closed. Note the run in the PR.
 

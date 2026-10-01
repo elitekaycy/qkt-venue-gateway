@@ -170,9 +170,10 @@ ACME_CLIENT_ID=… ACME_CLIENT_SECRET=… ./gradlew :adapter-acme:test --tests '
 
 ## 7. Wire up and document (checkpoint 6)
 
-- `adapter-acme/README.md`: settings table (variable, default, meaning), credentials, venue facts,
-  how the contract suite runs. `adapter-acme/CLAUDE.md`: exactly `@README.md` and `@../docs/adapters.md`.
-- Root `README.md`: a row in the Adapters table and in the adapter settings table.
+- `adapter-acme/README.md`, shaped like the Deribit one: setup, connect qkt, settings (variable,
+  default, meaning), venue behaviour and the contract suite.
+- `adapter-acme/CLAUDE.md`: exactly `@README.md` and `@../docs/adapters.md`.
+- Root `README.md`: a row in the Adapters table, linking to `adapter-acme/README.md`.
 - `.github/workflows/adapter.yml`, in the test step's `env`:
 
   ```yaml
