@@ -136,6 +136,7 @@ internal class FakeAdapter : VenueAdapter {
     ) = settlements.filter { it.timeMs in fromMs..toMs }
 
     val bars = CopyOnWriteArrayList<VenueBar>()
+    val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
     val subscriptions = CopyOnWriteArrayList<Pair<Set<String>, Set<String>>>()
 
     override fun bars(
@@ -143,7 +144,7 @@ internal class FakeAdapter : VenueAdapter {
         windowMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = bars.toList()
+    ) = bars.toList().also { barCalls += fromMs to toMs }
 
     override fun subscribeQuotes(
         codes: Set<String>,

@@ -17,7 +17,8 @@ import kotlinx.coroutines.channels.Channel
 
 /**
  * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only, a page of at most
- * [BARS_PAGE] with `next`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
+ * [BARS_PAGE] windows, each page asked of the adapter alone (so no venue call is larger than a page),
+ * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
  * and roots, never replayed. A slow client loses its oldest buffered quotes, never the newest.
  */
 internal fun Route.marketRoutes(
@@ -35,13 +36,18 @@ internal fun Route.marketRoutes(
             val from = q["from"]?.toLongOrNull() ?: throw InvalidRequestException("from missing")
             val to = q["to"]?.toLongOrNull() ?: throw InvalidRequestException("to missing")
             val closedBy = gateway.clock()
-            val bars =
-                gateway.adapter
-                    .bars(code, window, from, to)
-                    .filter { it.startMs in from until to && it.startMs + window <= closedBy }
-                    .sortedBy { it.startMs }
-            val page = bars.take(BARS_PAGE)
-            json(WireBars.serializer(), WireBars(page.map(WireReads::bar), bars.getOrNull(BARS_PAGE)?.startMs))
+            val last = minOf(to, closedBy)
+            val end = minOf(last, from + BARS_PAGE * window)
+            val page =
+                if (from >= end) {
+                    emptyList()
+                } else {
+                    gateway.adapter
+                        .bars(code, window, from, end)
+                        .filter { it.startMs in from until end && it.startMs + window <= closedBy }
+                        .sortedBy { it.startMs }
+                }
+            json(WireBars.serializer(), WireBars(page.map(WireReads::bar), end.takeIf { it < last }))
         }
     }
     webSocket("/v1/quotes") {

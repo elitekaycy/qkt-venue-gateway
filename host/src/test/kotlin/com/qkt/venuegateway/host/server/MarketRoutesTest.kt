@@ -123,6 +123,28 @@ class MarketRoutesTest {
         assertThat(bad).contains("invalid_request")
     }
 
+    @Test
+    fun `each page asks the adapter for one page of windows, and next stops at the last closed window`() {
+        start()
+        now = 2_500 * minute + 30_000
+        venue.bars +=
+            (0L until 2_500L).map {
+                VenueBar(it * minute, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE)
+            }
+
+        val first = get("/v1/bars?symbol=BTC_USDC-PERPETUAL&window_ms=60000&from=0&to=${10_000 * minute}")
+        val firstCall = venue.barCalls.last()
+        val last =
+            get("/v1/bars?symbol=BTC_USDC-PERPETUAL&window_ms=60000&from=${2_000 * minute}&to=${10_000 * minute}")
+
+        assertThat(firstCall).isEqualTo(0L to 1_000 * minute)
+        assertThat(Regex("\"start\":").findAll(first).count()).isEqualTo(1_000)
+        assertThat(first).contains("\"next\":${1_000 * minute}")
+        assertThat(venue.barCalls.last()).isEqualTo(2_000 * minute to now)
+        assertThat(Regex("\"start\":").findAll(last).count()).isEqualTo(500)
+        assertThat(last).doesNotContain("\"next\":")
+    }
+
     private val seen = java.util.concurrent.CopyOnWriteArrayList<String>()
 
     private fun awaitMessage(
