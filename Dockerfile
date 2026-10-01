@@ -1,11 +1,11 @@
 # One qkt-venue-gateway: one venue account, configured by GATEWAY_* variables (README, "Configuration").
 
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src
 COPY . .
 RUN ./gradlew :app:installDist --no-daemon -q
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --home-dir /data gateway \
     && mkdir -p /data && chown gateway /data
