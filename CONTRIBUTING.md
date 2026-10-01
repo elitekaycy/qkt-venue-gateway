@@ -13,9 +13,9 @@ The rules are in [CLAUDE.md](CLAUDE.md) (code, structure, tests, commits) and, f
 
 ## Branches
 
-`<type>/<topic>` from `main` (`feat/quote-throttle`, `fix/stream-replay-gap`), one change each, or
+`<type>/<topic>` from `dev` (`feat/quote-throttle`, `fix/stream-replay-gap`), one change each, or
 `adapter/<venue>` for venue work. Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`,
-`ci`, `chore`. Nobody pushes to `main`.
+`ci`, `chore`. Pull requests target `dev`; `main` holds released code only and moves by promotion.
 
 ## Commits
 
@@ -54,9 +54,27 @@ and how it was tested.
 
 ## Merging
 
-Pull requests merge into `main` by squash only, with every check above green and every review thread
-resolved; the PR title becomes the commit. A maintainer applies this once by importing
-[`.github/rulesets/main.json`](.github/rulesets/main.json) under Settings → Rules → Rulesets → Import.
+Pull requests merge into `dev` by squash only, with every check above green and every review thread
+resolved; the PR title becomes the commit. `main` is only ever fast-forwarded to a green `dev` commit.
+A maintainer applies this once by importing both rulesets under Settings → Rules → Rulesets → Import:
+[`dev.json`](.github/rulesets/dev.json) (pull requests, squash, required checks) and
+[`main.json`](.github/rulesets/main.json) (no direct updates; admins and GitHub Actions promote).
+
+## Releases
+
+A release is a promotion of `dev` to `main`. The version comes from the Conventional Commits since the
+last tag (`scripts/release.sh`): a breaking change bumps the minor version before 1.0 (the major
+after), `feat` the minor, `fix` or `perf` the patch; docs, ci and chores alone release nothing. The
+same script writes the section of `CHANGELOG.md`. `VERSION` is the single version: Gradle, the jars and
+each adapter's `adapter_version` read it. With `check` green on `dev`:
+
+```bash
+git checkout dev && git pull --tags
+version=$(scripts/release.sh)          # empty: nothing to release, promote anyway or wait
+git commit -am "chore(release): v$version" && git tag -a "v$version" -m "v$version"
+git push --atomic origin dev dev:main "v$version"
+docker build -t "ghcr.io/elitekaycy/qkt-venue-gateway:$version" . && docker push "ghcr.io/elitekaycy/qkt-venue-gateway:$version"
+```
 
 ## Venue secrets
 

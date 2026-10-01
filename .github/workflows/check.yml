@@ -1,6 +1,6 @@
 name: check
 
-# Every pull request and every push to main: the build (compile, ktlint, every module's tests offline),
+# Every pull request and every push to dev and main: the build (compile, ktlint, every module's tests offline),
 # the repository rules, and the image, started with docker compose and serving VGP. `build`, `rules`
 # and `image` are required checks on main (CONTRIBUTING.md); a docs-only change skips `build` and
 # `image`, which a required check accepts.
@@ -8,7 +8,7 @@ name: check
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [dev, main]
 
 concurrency:
   group: check-${{ github.ref }}
@@ -73,7 +73,10 @@ jobs:
         run: |
           set -a; . ./.env; set +a
           auth="Authorization: Bearer $PAPER_TRADER_TOKEN"
-          curl -fsS -H "$auth" http://127.0.0.1:8443/v1/health | tee /dev/stderr | grep -q '"adapter":"paper"'
+          health=$(curl -fsS -H "$auth" http://127.0.0.1:8443/v1/health)
+          echo "$health"
+          grep -q '"adapter":"paper"' <<<"$health"
+          grep -q "\"adapter_version\":\"$(cat VERSION)\"" <<<"$health"
           curl -fsS -H "$auth" http://127.0.0.1:8443/v1/account | grep -q '"balance":"10000"'
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer wrong' http://127.0.0.1:8443/v1/health)" = 401
       - name: Container logs

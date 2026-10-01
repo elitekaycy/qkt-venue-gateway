@@ -11,7 +11,8 @@ For a walk-through with code, see [writing-an-adapter.md](writing-an-adapter.md)
 - One venue, one branch: `adapter/<venue>`, lowercase letters and digits only (`adapter/bybit`).
 - The branch carries the whole adapter, nothing else. It may change only:
   `adapter-<venue>/**`, `settings.gradle.kts`, `app/build.gradle.kts`, `README.md`, `docs/adapters.md`
-  and `.github/workflows/adapter.yml` (to pass the venue's secrets). A host or API change it needs is
+  and `.github/workflows/adapter.yml` (to pass the venue's secrets). It is cut from `dev` and merges
+  into `dev`. A host or API change it needs is
   its own `feat/…` PR, merged first.
 - CI enforces both (`pr` workflow). Fixes to an existing adapter use the same branch name.
 

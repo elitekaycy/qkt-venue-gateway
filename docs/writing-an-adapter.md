@@ -18,7 +18,7 @@ Check these before writing code. If one fails, the venue cannot be adapted (yet)
 ## 1. Branch and module
 
 ```bash
-git checkout main && git pull
+git checkout dev && git pull
 git checkout -b adapter/acme
 mkdir -p adapter-acme/src/{main,test}/kotlin/com/qkt/venuegateway/acme/client \
          adapter-acme/src/main/resources/META-INF/services adapter-acme/src/test/resources/fixtures
@@ -206,5 +206,5 @@ place an order, see it fill on the stream, close the position. Note the run in t
 ## 9. Open the pull request
 
 Title `feat(acme): add the acme adapter, passing the contract suite on testnet`, from `adapter/acme`
-into `main`. The `pr` check holds the diff to the adapter's scope; the `adapter` check runs the layout
+into `dev`. The `pr` check holds the diff to the adapter's scope; the `adapter` check runs the layout
 check, the tests and the contract suite on testnet, and fails if the suite was skipped.

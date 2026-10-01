@@ -48,7 +48,7 @@ abstractions, no dead code, no TODOs left behind, no new dependency without a re
 
 ## Branches, commits and pull requests
 
-- Branch from `main`, one change per branch, named `<type>/<short-kebab-topic>` (`feat/quote-throttle`,
+- Branch from `dev`, one change per branch, named `<type>/<short-kebab-topic>` (`feat/quote-throttle`,
   `fix/stream-replay-gap`). Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`,
   `chore`. A new venue, or work only on one venue, is `adapter/<venue>` (see `docs/adapters.md`).
   Session branches named `claude/…` are accepted.
@@ -58,8 +58,10 @@ abstractions, no dead code, no TODOs left behind, no new dependency without a re
 - Author and committer: `Dickson Anyaele <dicksonanyaele1234@gmail.com>`. No tool or AI attribution of any
   kind (no `Co-Authored-By` for tools, no "Generated with"); a session link, when attached, is one line
   `session(<type>): <link>`.
-- PR title follows the commit rules (it becomes the squash commit). PRs merge by squash into `main`
-  only, with every required check green (`CONTRIBUTING.md`, "Merging").
+- PRs target `dev` and merge by squash, with every required check green; the PR title follows the
+  commit rules (it becomes the squash commit). `main` only moves by promoting `dev`, which cuts the
+  release (version from the commits, `CHANGELOG.md`, tag). Never edit `VERSION` or `CHANGELOG.md` in
+  a PR. See `CONTRIBUTING.md`, "Merging" and "Releases".
 
 ## Before you push
 

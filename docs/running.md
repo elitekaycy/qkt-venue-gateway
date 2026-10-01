@@ -133,7 +133,8 @@ journal, so it survives a restart. Details: [vgp-v1-wire.md](vgp-v1-wire.md) §3
     tar czf /backup/paper-state.tgz -C /data .
   docker compose start gateway-paper
   ```
-- Upgrade: `git pull && docker compose build && docker compose up -d`. The journal is kept; qkt
+- Upgrade: check out a release tag (`git checkout v0.2.0`; what changed is in `CHANGELOG.md`), then
+  `docker compose build && docker compose up -d`. The journal is kept; qkt
   reconnects and replays from its last sequence, losing or doubling nothing.
 - Never point two containers at one volume, and never reuse a volume for another account.
 
