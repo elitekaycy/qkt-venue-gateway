@@ -47,8 +47,9 @@ data class DeribitKline(
     val volume: BigDecimal,
 )
 
-/** Deribit answered a JSON-RPC error. */
+/** Deribit answered a JSON-RPC error [code], with the offending parameter's [reason] when it names one. */
 class DeribitException(
     val code: Int,
     message: String,
-) : RuntimeException("deribit error $code: $message")
+    val reason: String? = null,
+) : RuntimeException("deribit error $code: $message" + (reason?.let { " ($it)" } ?: ""))
