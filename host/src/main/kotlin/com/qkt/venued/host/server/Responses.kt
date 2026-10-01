@@ -15,11 +15,12 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-/** The wire's JSON: defaults written, nulls kept, unknown fields ignored. */
+/** The wire's JSON: defaults written, absent values omitted (every nullable wire field defaults to null). */
 internal val wireJson =
     Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        explicitNulls = false
     }
 
 /** Responds [value] as JSON with [status]. */

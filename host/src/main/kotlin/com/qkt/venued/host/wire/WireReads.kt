@@ -3,11 +3,15 @@ package com.qkt.venued.host.wire
 import com.qkt.venued.adapter.AccountSnapshot
 import com.qkt.venued.adapter.Instrument
 import com.qkt.venued.adapter.Positions
+import com.qkt.venued.adapter.VenueBar
+import com.qkt.venued.adapter.VenueQuote
 import com.qkt.venued.host.wire.WireMapping.wire
 import com.qkt.vgp.WireAccount
+import com.qkt.vgp.WireBar
 import com.qkt.vgp.WireInstrument
 import com.qkt.vgp.WirePosition
 import com.qkt.vgp.WirePositions
+import com.qkt.vgp.WireQuote
 
 /** The read endpoints' translation of the adapters' account, listing and positions onto the wire. */
 object WireReads {
@@ -49,5 +53,28 @@ object WireReads {
                     it.openedAtMs,
                 )
             },
+        )
+
+    fun quote(q: VenueQuote): WireQuote =
+        WireQuote(
+            q.symbol,
+            q.bid?.toPlainString(),
+            q.ask?.toPlainString(),
+            q.bidSize?.toPlainString(),
+            q.askSize?.toPlainString(),
+            q.mark?.toPlainString(),
+            q.markIv?.toPlainString(),
+            q.underlying?.toPlainString(),
+            q.timeMs,
+        )
+
+    fun bar(b: VenueBar): WireBar =
+        WireBar(
+            b.startMs,
+            b.open.toPlainString(),
+            b.high.toPlainString(),
+            b.low.toPlainString(),
+            b.close.toPlainString(),
+            b.volume.toPlainString(),
         )
 }

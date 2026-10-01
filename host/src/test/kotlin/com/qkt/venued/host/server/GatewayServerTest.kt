@@ -34,7 +34,15 @@ class GatewayServerTest {
         gateway = Gateway(venue, Journal.open(dir.resolve("j.db")), tokens) { 1_000L }
         gateway.start()
         venue.listener!!.connection(true, "test")
-        server = GatewayServer(gateway, "127.0.0.1", 0)
+        server =
+            GatewayServer(
+                gateway,
+                com.qkt.venued.host.market
+                    .QuoteHub(gateway)
+                    .also { it.start() },
+                "127.0.0.1",
+                0,
+            )
         base = "http://127.0.0.1:${server.start()}"
     }
 

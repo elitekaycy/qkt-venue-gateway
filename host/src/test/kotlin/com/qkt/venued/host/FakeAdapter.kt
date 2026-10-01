@@ -58,6 +58,19 @@ internal class FakeAdapter : VenueAdapter {
                 BigDecimal("0.001"),
                 BigDecimal("0.001"),
             ),
+            Instrument(
+                "BTC_USDC-9OCT26-82000-P",
+                InstrumentKind.OPTION,
+                "USDC",
+                BigDecimal.ONE,
+                BigDecimal("5"),
+                BigDecimal("0.01"),
+                BigDecimal("0.01"),
+                expiryMs = 1_791_532_800_000L,
+                strike = BigDecimal("82000"),
+                right = "put",
+                underlying = "BTC_USDC",
+            ),
         )
 
     override fun account() =
@@ -122,17 +135,22 @@ internal class FakeAdapter : VenueAdapter {
         toMs: Long,
     ) = settlements.filter { it.timeMs in fromMs..toMs }
 
+    val bars = CopyOnWriteArrayList<VenueBar>()
+    val subscriptions = CopyOnWriteArrayList<Pair<Set<String>, Set<String>>>()
+
     override fun bars(
         code: String,
         windowMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = emptyList<VenueBar>()
+    ) = bars.toList()
 
     override fun subscribeQuotes(
         codes: Set<String>,
         roots: Set<String>,
-    ) {}
+    ) {
+        subscriptions += codes to roots
+    }
 
     override fun close() {}
 }

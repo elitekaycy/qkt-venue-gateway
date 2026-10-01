@@ -1,6 +1,7 @@
 package com.qkt.venued.host.server
 
 import com.qkt.venued.host.Gateway
+import com.qkt.venued.host.market.QuoteHub
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -15,10 +16,11 @@ import kotlinx.coroutines.runBlocking
 /** The gateway's HTTP and WebSocket server on [host]:[port] (`0` picks a free port, as tests do). */
 class GatewayServer(
     gateway: Gateway,
+    hub: QuoteHub,
     host: String,
     port: Int,
 ) : AutoCloseable {
-    private val server = embeddedServer(Netty, port = port, host = host) { gatewayModule(gateway) }
+    private val server = embeddedServer(Netty, port = port, host = host) { gatewayModule(gateway, hub) }
 
     /** Starts serving; returns the port it listens on. */
     fun start(): Int {
@@ -39,8 +41,11 @@ class GatewayServer(
     }
 }
 
-/** Every VGP v1 route of [gateway]. */
-fun Application.gatewayModule(gateway: Gateway) {
+/** Every VGP v1 route of [gateway], its quotes from [hub]. */
+fun Application.gatewayModule(
+    gateway: Gateway,
+    hub: QuoteHub,
+) {
     install(WebSockets) {
         pingPeriod = 20.seconds
         timeout = 60.seconds
@@ -48,5 +53,6 @@ fun Application.gatewayModule(gateway: Gateway) {
     routing {
         restRoutes(gateway)
         streamRoute(gateway)
+        marketRoutes(gateway, hub)
     }
 }
