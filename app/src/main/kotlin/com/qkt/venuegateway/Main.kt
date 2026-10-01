@@ -30,7 +30,10 @@ fun start(
 ): RunningGateway {
     val log = LoggerFactory.getLogger("com.qkt.venuegateway.Main")
     val factory = AdapterLoader(config.pluginsDir).factory(config.adapter)
-    val adapter = factory.create(AdapterContext(config.settings, clock, config.stateDir.resolve("adapter")))
+    val adapter =
+        factory.create(
+            AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials),
+        )
     val gateway = Gateway(adapter, Journal.open(config.stateDir.resolve("journal.db")), config.tokens, clock)
     val hub = QuoteHub(gateway).also { it.start() }
     gateway.start()

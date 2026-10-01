@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.config
 
+import com.qkt.venuegateway.adapter.Credentials
 import com.qkt.venuegateway.host.server.Role
 import java.nio.file.Files
 import java.nio.file.Path
@@ -9,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 class GatewayConfigTest {
-    private val env = mapOf("TRADER" to "t-secret", "GUARD" to "g-secret")
+    private val env = mapOf("TRADER" to "t-secret", "GUARD" to "g-secret", "VENUE_LOGIN" to "client-7")
 
     private fun parse(yaml: String) = GatewayConfig.parse(yaml, env)
 
@@ -50,5 +51,40 @@ class GatewayConfigTest {
         assertThatThrownBy { parse(base + "tokens:\n  trader: env:NOPE\n  guardian: env:GUARD\n") }
             .hasMessageContaining("NOPE is not set")
         assertThatThrownBy { parse("state_dir: /tmp/s\ntokens: {}\n") }.hasMessageContaining("listen")
+    }
+
+    private val base =
+        "listen: 127.0.0.1:8443\nstate_dir: /tmp/s\ntokens: { trader: env:TRADER, guardian: env:GUARD }\n"
+
+    @Test
+    fun `adapter credentials resolve as one login and secret pair, and are absent when not configured`(
+        @TempDir dir: Path,
+    ) {
+        val secretFile = dir.resolve("venue.secret").also { Files.writeString(it, "s3cret\n") }
+
+        val config =
+            parse(
+                base +
+                    "adapter:\n  type: deribit\n  credentials: { login: env:VENUE_LOGIN, secret: file:$secretFile }\n",
+            )
+
+        assertThat(config.credentials).isEqualTo(Credentials("client-7", "s3cret"))
+        assertThat(parse(base + "adapter:\n  type: paper\n").credentials).isNull()
+    }
+
+    @Test
+    fun `an inline credential, a missing half or an empty value is refused by name`() {
+        val adapter = base + "adapter:\n  type: deribit\n  credentials: "
+        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN, secret: hunter2 }\n") }
+            .hasMessageContaining("adapter.credentials.secret must be env:<VAR> or file:<path>")
+        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN }\n") }
+            .hasMessageContaining("adapter.credentials.secret is required")
+        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN, secret: env:EMPTY }\n") }
+            .hasMessageContaining("EMPTY is not set")
+    }
+
+    @Test
+    fun `credentials never print their secret`() {
+        assertThat(Credentials("client-7", "s3cret").toString()).contains("client-7").doesNotContain("s3cret")
     }
 }

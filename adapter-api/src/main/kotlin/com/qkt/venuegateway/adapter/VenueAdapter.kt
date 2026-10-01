@@ -91,15 +91,34 @@ interface AdapterListener {
     )
 }
 
-/** What the host hands an adapter: its config [settings], a [clock] and a private [stateDir]. */
+/**
+ * The venue login every adapter receives in one shape, whatever its venue calls the two halves: an
+ * API key's client id and secret, or a username and password. [login] is not secret and is what the
+ * adapter reports as its identity's login; [secret] never leaves the adapter and never prints.
+ */
+data class Credentials(
+    val login: String,
+    val secret: String,
+) {
+    override fun toString() = "Credentials(login=$login, secret=***)"
+}
+
+/**
+ * What the host hands an adapter: its config [settings], its venue [credentials] (null when the
+ * config names none, as for the paper venue), a [clock] and a private [stateDir].
+ */
 class AdapterContext(
     val settings: Map<String, String>,
     val clock: () -> Long,
     val stateDir: Path,
+    val credentials: Credentials? = null,
 ) {
     /** Setting [key], or a failure naming it. */
     fun required(key: String): String =
         settings[key]?.takeIf { it.isNotBlank() } ?: error("adapter.settings.$key is required")
+
+    /** The venue credentials, or a failure naming the missing config. */
+    fun requiredCredentials(): Credentials = credentials ?: error("adapter.credentials is required")
 }
 
 /** Builds the adapter of one `adapter.type`; found with `java.util.ServiceLoader`. */
