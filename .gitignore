@@ -1,0 +1,7 @@
+build/
+.gradle/
+.kotlin/
+*.db
+*.db-wal
+*.db-shm
+state/
