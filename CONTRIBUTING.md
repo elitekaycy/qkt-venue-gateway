@@ -58,7 +58,7 @@ Pull requests merge into `dev` by squash only, with every check above green and 
 resolved; the PR title becomes the commit. `main` is only ever fast-forwarded to a green `dev` commit.
 A maintainer applies this once by importing both rulesets under Settings → Rules → Rulesets → Import:
 [`dev.json`](.github/rulesets/dev.json) (pull requests, squash, required checks) and
-[`main.json`](.github/rulesets/main.json) (no direct updates; admins and GitHub Actions promote).
+[`main.json`](.github/rulesets/main.json) (no direct updates; only admins promote).
 
 ## Releases
 
