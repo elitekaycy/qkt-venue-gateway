@@ -8,7 +8,8 @@ import org.slf4j.LoggerFactory
 /**
  * Brings the journal back to the venue's truth (design §6): every open order as the venue reports it;
  * a journaled working order the venue no longer lists, by its label; a write-ahead record the venue's
- * answer never reached, resolved by label or closed as rejected when the venue never saw it; and every
+ * answer never reached, resolved by [OrderRecovery] (by label, else from its fills) or closed as
+ * rejected when the venue holds no trace of it; and every
  * fill and settlement since the newest journaled one (less [overlapMs]; [lookbackMs] on a new journal),
  * which the journal journals once. Runs on [start], each time the venue link comes back, and every
  * [periodMs]; one failed run is logged and the next tries again.
@@ -42,11 +43,12 @@ class Reconciler(
             venue.orderByLabel(gone.clientOrderId)?.let(listener::order)
         }
         for (body in journal.unresolved()) {
-            val found = venue.orderByLabel(body.clientOrderId)
+            val found = gateway.desk.recovery.find(body)
             if (found != null) {
-                listener.order(found)
+                found.fills.forEach(listener::fill)
+                listener.order(found.order)
             } else {
-                journal.appendOrder(WireMapping.rejected(body, "the venue never received it", gateway.clock()))
+                journal.appendOrder(WireMapping.rejected(body, "the venue holds no trace of it", gateway.clock()))
             }
         }
         val now = gateway.clock()

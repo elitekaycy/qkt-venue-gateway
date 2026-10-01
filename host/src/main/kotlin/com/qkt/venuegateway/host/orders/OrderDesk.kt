@@ -32,7 +32,8 @@ sealed interface DeskResult {
  * Orders as VGP v1 defines them (wire spec §3). A submit is idempotent on its `client_order_id`: the
  * same body again returns the stored order, another body or an id written off as dead is `409`. A new
  * one is written ahead to the [journal] before the [venue] sees it, so a crash or a lost answer is
- * resolved by the venue's label on the resend, never by placing again. While the venue is down
+ * resolved on the resend by [OrderRecovery] (the venue's label, else the order's fills), never by
+ * placing again while the venue holds a trace of it. While the venue is down
  * ([venueUp] false) a submit is `503` before anything is written; the kill switch gates every submit.
  * Each id is handled under its own lock.
  */
@@ -43,6 +44,9 @@ class OrderDesk(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val gate = KillSwitchGate(journal, venue)
+
+    /** Finds what became of a sent order whose answer was lost; the reconciler uses it too. */
+    val recovery = OrderRecovery(venue, clock)
     private val locks = ConcurrentHashMap<String, Any>()
     private val json = Json { encodeDefaults = true }
 
@@ -109,7 +113,10 @@ class OrderDesk(
             if (record == null) {
                 journal.writeAhead(body, hash)
             } else {
-                venue.orderByLabel(body.clientOrderId)?.let { return@locked DeskResult.Ok(appended(it)) }
+                recovery.find(body)?.let { found ->
+                    found.fills.forEach { journal.appendFill(WireMapping.fill(it)) }
+                    return@locked DeskResult.Ok(appended(found.order))
+                }
             }
             try {
                 DeskResult.Ok(appended(venue.place(order)), created = true)
