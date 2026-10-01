@@ -49,7 +49,8 @@ awk -v RS='\036' -F'\t' -v version="$version" -v day="$(date -u +%F)" '
   }' <<<"$log" >"$notes"
 
 printf '%s\n' "$version" >VERSION
-previous=$( [[ -f CHANGELOG.md ]] && sed -n '/^## /,$p' CHANGELOG.md || true)
+previous=
+if [[ -f CHANGELOG.md ]]; then previous=$(sed -n '/^## /,$p' CHANGELOG.md); fi
 {
   printf '# Changelog\n\nWritten by the promote workflow from Conventional Commits (scripts/release.sh); not edited by hand.\n\n'
   cat "$notes"
