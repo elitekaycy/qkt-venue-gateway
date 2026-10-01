@@ -14,6 +14,7 @@ import org.snakeyaml.engine.v2.api.LoadSettings
  * ```yaml
  * listen: 127.0.0.1:8443
  * state_dir: /var/lib/qkt-venued/deribit
+ * plugins_dir: /opt/qkt-venued/plugins      # optional: adapter jars beside the built-in ones
  * tokens: { trader: env:VENUED_TRADER_TOKEN, guardian: file:/run/secrets/guardian }
  * adapter: { type: paper, settings: { starting_balance: "10000" } }
  * ```
@@ -25,6 +26,7 @@ data class VenuedConfig(
     val tokens: Map<Role, String>,
     val adapter: String,
     val settings: Map<String, String>,
+    val pluginsDir: Path? = null,
 ) {
     companion object {
         /** [yaml] as a config, resolving `env:` references against [env]; fails naming the key at fault. */
@@ -44,6 +46,7 @@ data class VenuedConfig(
                 tokens = Role.entries.associateWith { secret(tokens, it.key, env) },
                 adapter = text(adapter, "type", "adapter."),
                 settings = section(adapter, "settings").entries.associate { (k, v) -> k.toString() to v.toString() },
+                pluginsDir = root["plugins_dir"]?.toString()?.let { Path.of(it) },
             )
         }
 

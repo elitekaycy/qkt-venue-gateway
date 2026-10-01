@@ -8,6 +8,7 @@ dependencies {
     "implementation"(libs.snakeyaml.engine)
     "implementation"(libs.slf4j.api)
     "runtimeOnly"(libs.logback.classic)
+    "testImplementation"(libs.okhttp)
 }
 
 application { mainClass.set("com.qkt.venued.MainKt") }
