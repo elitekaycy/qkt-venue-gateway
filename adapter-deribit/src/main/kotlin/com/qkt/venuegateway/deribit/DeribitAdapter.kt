@@ -151,16 +151,7 @@ class DeribitAdapter(
         windowMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> =
-        DeribitMarketMapping.closedBars(
-            venue {
-                market.klines(code, windowMs / MINUTE_MS, fromMs, toMs)
-            },
-            windowMs,
-            fromMs,
-            toMs,
-            context.clock(),
-        )
+    ): List<VenueBar> = venue { DeribitBars.closed(market, code, windowMs, fromMs, toMs, context.clock()) }
 
     override fun subscribeQuotes(
         codes: Set<String>,
@@ -183,9 +174,5 @@ class DeribitAdapter(
 
     private fun onTrade(trade: DeribitTrade) {
         DeribitMapping.fill(trade)?.let { listener?.fill(it) }
-    }
-
-    private companion object {
-        const val MINUTE_MS = 60_000L
     }
 }

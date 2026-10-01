@@ -16,6 +16,7 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
+import com.qkt.venuegateway.deribit.DeribitBars
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -145,16 +146,7 @@ class PaperAdapter(
         windowMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> =
-        DeribitMarketMapping.closedBars(
-            venue {
-                market.klines(code, windowMs / MINUTE_MS, fromMs, toMs)
-            },
-            windowMs,
-            fromMs,
-            toMs,
-            context.clock(),
-        )
+    ): List<VenueBar> = venue { DeribitBars.closed(market, code, windowMs, fromMs, toMs, context.clock()) }
 
     override fun subscribeQuotes(
         codes: Set<String>,
@@ -194,7 +186,6 @@ class PaperAdapter(
         }
 
     private companion object {
-        const val MINUTE_MS = 60_000L
         const val SETTLEMENT_CHECK_MS = 60_000L
     }
 }

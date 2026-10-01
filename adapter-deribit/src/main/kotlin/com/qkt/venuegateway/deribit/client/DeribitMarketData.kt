@@ -3,6 +3,9 @@ package com.qkt.venuegateway.deribit.client
 import java.math.BigDecimal
 import java.time.LocalDate
 
+/** The kline lengths Deribit serves, in minutes (`1D` is 1440). */
+val DERIBIT_KLINE_MINUTES: List<Long> = listOf(1, 3, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1_440)
+
 /** Deribit's public market data, as adapters use it; [DeribitPublicClient] is the real one. */
 interface DeribitMarketData {
     fun instruments(
