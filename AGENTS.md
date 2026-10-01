@@ -1,4 +1,4 @@
-# qkt-venued
+# qkt-venue-gateway
 
 The VGP v1 gateway host for qkt: one process per venue account. qkt and guardrails talk to it over
 the wire protocol in `docs/vgp-v1-wire.md` (the qkt repository holds the authoritative copy); it talks

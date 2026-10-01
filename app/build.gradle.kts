@@ -11,4 +11,4 @@ dependencies {
     "testImplementation"(libs.okhttp)
 }
 
-application { mainClass.set("com.qkt.venued.MainKt") }
+application { mainClass.set("com.qkt.venuegateway.MainKt") }

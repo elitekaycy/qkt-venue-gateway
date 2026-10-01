@@ -1,4 +1,4 @@
-# qkt-venued
+# qkt-venue-gateway
 
 A gateway between qkt and a trading venue, speaking VGP v1 (`docs/vgp-v1-wire.md`). One process serves
 one account: idempotent orders, an event journal qkt can replay after any restart, a kill switch

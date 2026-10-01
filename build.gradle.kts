@@ -6,7 +6,7 @@ plugins {
 }
 
 subprojects {
-    group = "com.qkt.venued"
+    group = "com.qkt.venuegateway"
     version = "0.1.0"
     repositories { mavenCentral() }
     apply(plugin = "org.jetbrains.kotlin.jvm")
