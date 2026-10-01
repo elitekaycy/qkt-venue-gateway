@@ -2,7 +2,8 @@
 
 The VGP v1 gateway for qkt: one process (one container) per venue account. qkt and guardrails talk to it
 over the wire protocol in `docs/vgp-v1-wire.md` (qkt holds the authoritative copy); it talks to the
-venue through one adapter. Design: `docs/design.md`. Adapters: `docs/adapters.md`. Plans: `docs/plans/`.
+venue through one adapter. Docs index: `docs/README.md` (running, adapters, wire, design). Plans:
+`docs/plans/`. Behaviour changes update the docs in the same PR.
 
 Lean and production-first: the smallest change that is correct, tested and documented. No speculative
 abstractions, no dead code, no TODOs left behind, no new dependency without a reason in the PR.

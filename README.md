@@ -37,6 +37,13 @@ guardian ───┘   (bearer)     │    │                       ▲       
                                          venue API (Deribit JSON-RPC/WS, …)
 ```
 
+## Documentation
+
+- [Running it](docs/running.md): Compose, Docker, connecting qkt and guardrails, backups, upgrades,
+  mainnet, troubleshooting.
+- [Writing an adapter](docs/writing-an-adapter.md), step by step, and [the adapter rules](docs/adapters.md).
+- [All docs](docs/README.md), including the [wire protocol](docs/vgp-v1-wire.md) and [design](docs/design.md).
+
 ## Adapters
 
 | Adapter | Venue | Status |
