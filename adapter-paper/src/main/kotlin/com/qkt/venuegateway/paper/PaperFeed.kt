@@ -6,16 +6,30 @@ import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory
 
 /**
  * The paper venue's prices: the latest ticker of every instrument it hears, and one live subscription
  * covering what clients want (codes, and every listed option of each root) plus what the account
- * trades (working orders and positions, from [trading]), so matching and marks never go blind.
+ * trades (working orders and positions, from [trading]), so matching and marks never go blind. The
+ * subscription is renewed every [refreshMs], so options Deribit lists after it (new expiries, daily)
+ * are quoted too; a renewal that fails is logged and the next one tries again.
  */
 class PaperFeed(
     private val listing: DeribitListing,
+    private val refreshMs: Long = 600_000,
     private val trading: () -> Collection<String>,
 ) {
+    private val log = LoggerFactory.getLogger(PaperFeed::class.java)
+    private val timer =
+        Executors.newSingleThreadScheduledExecutor {
+            Thread(
+                it,
+                "paper-feed",
+            ).apply { isDaemon = true }
+        }
     private val latest = ConcurrentHashMap<String, DeribitTicker>()
     private var tickers: DeribitTickers? = null
     private var codes = emptySet<String>()
@@ -25,6 +39,7 @@ class PaperFeed(
     fun start(feed: DeribitTickers) {
         tickers = feed.also { it.start() }
         resubscribe()
+        timer.scheduleWithFixedDelay(::renew, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
     }
 
     /** The latest ticker of [name], or null before any. */
@@ -55,6 +70,11 @@ class PaperFeed(
     }
 
     fun close() {
+        timer.shutdownNow()
         tickers?.close()
+    }
+
+    private fun renew() {
+        runCatching { resubscribe() }.onFailure { log.warn("paper feed renewal failed: {}", it.message) }
     }
 }
