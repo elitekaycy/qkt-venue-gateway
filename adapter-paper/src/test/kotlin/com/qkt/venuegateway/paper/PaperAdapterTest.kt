@@ -32,6 +32,13 @@ class PaperAdapterTest {
     private val expiry = 1_790_928_000_000L
     private var now = expiry - 3_600_000
 
+    private val listed by lazy {
+        mapOf(
+            "future" to instrument(perp, "future", null, null),
+            "option" to instrument(put, "option", expiry, "82000"),
+        )
+    }
+
     private val market =
         object : DeribitMarketData {
             val tickers = mutableMapOf<String, DeribitTicker>()
@@ -39,19 +46,9 @@ class PaperAdapterTest {
             override fun instruments(
                 currency: String,
                 kind: String,
-            ) = if (kind ==
-                "future"
-            ) {
-                listOf(instrument(perp, "future", null, null))
-            } else {
-                listOf(instrument(put, "option", expiry, "82000"))
-            }
+            ) = listOfNotNull(listed[kind])
 
-            override fun instrument(name: String) =
-                instruments("USDC", "future").plus(instruments("USDC", "option")).first {
-                    it.name ==
-                        name
-                }
+            override fun instrument(name: String) = listed.values.first { it.name == name }
 
             override fun ticker(name: String) = tickers.getValue(name)
 
@@ -83,9 +80,7 @@ class PaperAdapterTest {
         expiryMs == null,
         expiryMs,
         strike?.let(::BigDecimal),
-        strike?.let {
-            "put"
-        },
+        strike?.let { "put" },
         BigDecimal.ONE,
         BigDecimal("0.5"),
         BigDecimal("0.01"),
@@ -101,9 +96,7 @@ class PaperAdapterTest {
         name,
         now,
         bid?.let(::BigDecimal),
-        bid?.let {
-            BigDecimal.TEN
-        },
+        bid?.let { BigDecimal.TEN },
         ask?.let(::BigDecimal),
         ask?.let { BigDecimal.TEN },
         null,
@@ -115,9 +108,7 @@ class PaperAdapterTest {
     private fun adapter(dir: Path): PaperAdapter {
         val adapter =
             PaperAdapter(
-                AdapterContext(mapOf("starting_balance" to "10000", "settlement_check_ms" to "50"), {
-                    now
-                }, dir),
+                AdapterContext(mapOf("starting_balance" to "10000", "settlement_check_ms" to "50"), { now }, dir),
                 market,
             ) { t, _ ->
                 onTicker = t
@@ -185,13 +176,8 @@ class PaperAdapterTest {
         assertThat(heard).containsExactly("order a-1 FILLED", "fill a-1 84000.5")
         adapter.close()
         val restarted = adapter(dir)
-        assertThat(
-            restarted
-                .positions()
-                .rows
-                .single()
-                .quantity,
-        ).isEqualByComparingTo("1")
+        val position = restarted.positions().rows.single()
+        assertThat(position.quantity).isEqualByComparingTo("1")
         assertThat(restarted.orderByLabel("a-1")?.status).isEqualTo(OrderStatus.FILLED)
         restarted.close()
     }
