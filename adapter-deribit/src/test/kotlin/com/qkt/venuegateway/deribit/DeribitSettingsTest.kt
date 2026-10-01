@@ -23,7 +23,7 @@ class DeribitSettingsTest {
         assertThat(mainnet.environment.socketUrl).isEqualTo("wss://www.deribit.com/ws/api/v2")
         assertThat(mainnet.environment.mode).isEqualTo(TradeMode.REAL)
         assertThat(mainnet.stopTrigger).isEqualTo("mark_price")
-        assertThatThrownBy { DeribitSettings.of(emptyMap()) }.hasMessageContaining("adapter.settings.environment")
+        assertThatThrownBy { DeribitSettings.of(emptyMap()) }.hasMessageContaining("setting environment is required")
     }
 
     @Test

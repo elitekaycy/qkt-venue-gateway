@@ -7,7 +7,7 @@ import com.qkt.venuegateway.deribit.client.DeribitPrivateClient
 import com.qkt.venuegateway.deribit.client.DeribitPublicClient
 import com.qkt.venuegateway.deribit.client.DeribitTickerStream
 
-/** `adapter.type: deribit`: one Deribit account on the environment its settings name ([DeribitSettings]). */
+/** `GATEWAY_ADAPTER=deribit`: one Deribit account on the environment its settings name ([DeribitSettings]). */
 class DeribitAdapterFactory : VenueAdapterFactory {
     override val type = "deribit"
 

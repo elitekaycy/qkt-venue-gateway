@@ -5,13 +5,15 @@ dependencies {
     "implementation"(project(":adapter-api"))
     "implementation"(project(":adapter-paper"))
     "implementation"(project(":adapter-deribit"))
-    "implementation"(libs.snakeyaml.engine)
     "implementation"(libs.slf4j.api)
     "runtimeOnly"(libs.logback.classic)
     "testImplementation"(libs.okhttp)
 }
 
-application { mainClass.set("com.qkt.venuegateway.MainKt") }
+application {
+    mainClass.set("com.qkt.venuegateway.MainKt")
+    applicationName = "qkt-venue-gateway"
+}
 
-// `./gradlew :app:run --args=config.yaml` resolves the config and its relative paths from the repository root.
+// `./gradlew :app:run` resolves a relative GATEWAY_STATE_DIR from the repository root.
 tasks.named<JavaExec>("run") { workingDir = rootDir }

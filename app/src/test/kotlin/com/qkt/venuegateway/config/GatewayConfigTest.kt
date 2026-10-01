@@ -10,77 +10,90 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 class GatewayConfigTest {
-    private val env = mapOf("TRADER" to "t-secret", "GUARD" to "g-secret", "VENUE_LOGIN" to "client-7")
-
-    private fun parse(yaml: String) = GatewayConfig.parse(yaml, env)
+    private val tokens = mapOf("GATEWAY_TRADER_TOKEN" to "t-secret", "GATEWAY_GUARDIAN_TOKEN" to "g-secret")
 
     @Test
-    fun `a full config resolves tokens by role and keeps adapter settings as written`(
-        @TempDir dir: Path,
-    ) {
-        val guardFile = dir.resolve("guard.token").also { Files.writeString(it, "g-file\n") }
-        val config =
-            parse(
-                """
-                listen: 127.0.0.1:8443
-                state_dir: ${dir.resolve("state")}
-                tokens:
-                  trader: env:TRADER
-                  guardian: file:$guardFile
-                adapter:
-                  type: paper
-                  settings:
-                    starting_balance: "10000"
-                    login: paper-1
-                """.trimIndent(),
-            )
+    fun `with only the tokens set, every other variable takes its default`() {
+        val config = GatewayConfig.fromEnv(tokens)
 
         assertThat(config.host).isEqualTo("127.0.0.1")
         assertThat(config.port).isEqualTo(8443)
-        assertThat(config.tokens).isEqualTo(mapOf(Role.TRADER to "t-secret", Role.GUARDIAN to "g-file"))
+        assertThat(config.stateDir).isEqualTo(Path.of("./state"))
         assertThat(config.adapter).isEqualTo("paper")
-        assertThat(config.settings).containsEntry("starting_balance", "10000").containsEntry("login", "paper-1")
+        assertThat(config.tokens).isEqualTo(mapOf(Role.TRADER to "t-secret", Role.GUARDIAN to "g-secret"))
+        assertThat(config.settings).isEmpty()
+        assertThat(config.pluginsDir).isNull()
+        assertThat(config.credentials).isNull()
     }
 
     @Test
-    fun `a missing key, an inline token or an unset variable is refused by name`() {
-        val base = "listen: 127.0.0.1:8443\nstate_dir: /tmp/s\nadapter:\n  type: paper\n"
-        assertThatThrownBy { parse(base) }.hasMessageContaining("tokens.trader")
-        assertThatThrownBy { parse(base + "tokens:\n  trader: plain\n  guardian: env:GUARD\n") }
-            .hasMessageContaining("tokens.trader must be env:<VAR> or file:<path>")
-        assertThatThrownBy { parse(base + "tokens:\n  trader: env:NOPE\n  guardian: env:GUARD\n") }
-            .hasMessageContaining("NOPE is not set")
-        assertThatThrownBy { parse("state_dir: /tmp/s\ntokens: {}\n") }.hasMessageContaining("listen")
-    }
-
-    private val base =
-        "listen: 127.0.0.1:8443\nstate_dir: /tmp/s\ntokens: { trader: env:TRADER, guardian: env:GUARD }\n"
-
-    @Test
-    fun `adapter credentials resolve as one login and secret pair, and are absent when not configured`(
-        @TempDir dir: Path,
-    ) {
-        val secretFile = dir.resolve("venue.secret").also { Files.writeString(it, "s3cret\n") }
-
+    fun `set variables replace the defaults and settings are keyed by their lower-cased suffix`() {
         val config =
-            parse(
-                base +
-                    "adapter:\n  type: deribit\n  credentials: { login: env:VENUE_LOGIN, secret: file:$secretFile }\n",
+            GatewayConfig.fromEnv(
+                tokens +
+                    mapOf(
+                        "GATEWAY_LISTEN" to "0.0.0.0:9000",
+                        "GATEWAY_STATE_DIR" to "/data",
+                        "GATEWAY_ADAPTER" to "deribit",
+                        "GATEWAY_PLUGINS_DIR" to "/plugins",
+                        "GATEWAY_SETTING_ENVIRONMENT" to "testnet",
+                        "GATEWAY_SETTING_STOP_TRIGGER" to "mark_price",
+                        "GATEWAY_SETTING_BLANK" to "",
+                        "OTHER_SETTING_X" to "ignored",
+                    ),
             )
 
-        assertThat(config.credentials).isEqualTo(Credentials("client-7", "s3cret"))
-        assertThat(parse(base + "adapter:\n  type: paper\n").credentials).isNull()
+        assertThat(config.host).isEqualTo("0.0.0.0")
+        assertThat(config.port).isEqualTo(9000)
+        assertThat(config.stateDir).isEqualTo(Path.of("/data"))
+        assertThat(config.adapter).isEqualTo("deribit")
+        assertThat(config.pluginsDir).isEqualTo(Path.of("/plugins"))
+        assertThat(config.settings).isEqualTo(mapOf("environment" to "testnet", "stop_trigger" to "mark_price"))
     }
 
     @Test
-    fun `an inline credential, a missing half or an empty value is refused by name`() {
-        val adapter = base + "adapter:\n  type: deribit\n  credentials: "
-        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN, secret: hunter2 }\n") }
-            .hasMessageContaining("adapter.credentials.secret must be env:<VAR> or file:<path>")
-        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN }\n") }
-            .hasMessageContaining("adapter.credentials.secret is required")
-        assertThatThrownBy { parse(adapter + "{ login: env:VENUE_LOGIN, secret: env:EMPTY }\n") }
-            .hasMessageContaining("EMPTY is not set")
+    fun `a missing token is refused by name, as is a listen address without a port`() {
+        assertThatThrownBy { GatewayConfig.fromEnv(mapOf("GATEWAY_TRADER_TOKEN" to "t")) }
+            .hasMessageContaining("GATEWAY_GUARDIAN_TOKEN (or GATEWAY_GUARDIAN_TOKEN_FILE) is required")
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_TRADER_TOKEN" to " ")) }
+            .hasMessageContaining("GATEWAY_TRADER_TOKEN")
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_LISTEN" to "0.0.0.0")) }
+            .hasMessageContaining("GATEWAY_LISTEN must be <host>:<port>")
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_LISTEN" to "0.0.0.0:x")) }
+            .hasMessageContaining("GATEWAY_LISTEN has no port")
+    }
+
+    @Test
+    fun `a value can come from the file a _FILE variable names, but not from both`(
+        @TempDir dir: Path,
+    ) {
+        val guard = dir.resolve("guard").also { Files.writeString(it, "g-file\n") }
+        val secret = dir.resolve("secret").also { Files.writeString(it, "s3cret\n") }
+        val env =
+            mapOf(
+                "GATEWAY_TRADER_TOKEN" to "t",
+                "GATEWAY_GUARDIAN_TOKEN_FILE" to guard.toString(),
+                "GATEWAY_LOGIN" to "client-7",
+                "GATEWAY_SECRET_FILE" to secret.toString(),
+            )
+
+        val config = GatewayConfig.fromEnv(env)
+
+        assertThat(config.tokens[Role.GUARDIAN]).isEqualTo("g-file")
+        assertThat(config.credentials).isEqualTo(Credentials("client-7", "s3cret"))
+        assertThatThrownBy { GatewayConfig.fromEnv(env + ("GATEWAY_GUARDIAN_TOKEN" to "g")) }
+            .hasMessageContaining("set GATEWAY_GUARDIAN_TOKEN or GATEWAY_GUARDIAN_TOKEN_FILE, not both")
+        val empty = dir.resolve("empty").also { Files.writeString(it, "\n") }
+        assertThatThrownBy { GatewayConfig.fromEnv(env + ("GATEWAY_SECRET_FILE" to empty.toString())) }
+            .hasMessageContaining("GATEWAY_SECRET_FILE names an empty file")
+    }
+
+    @Test
+    fun `credentials are both halves or neither`() {
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_LOGIN" to "client-7")) }
+            .hasMessageContaining("GATEWAY_SECRET is required with GATEWAY_LOGIN")
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_SECRET" to "s")) }
+            .hasMessageContaining("GATEWAY_LOGIN is required with GATEWAY_SECRET")
     }
 
     @Test

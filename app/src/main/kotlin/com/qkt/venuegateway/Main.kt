@@ -8,13 +8,12 @@ import com.qkt.venuegateway.host.journal.Journal
 import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.market.QuoteHub
 import com.qkt.venuegateway.host.server.GatewayServer
-import java.nio.file.Files
-import java.nio.file.Path
 import org.slf4j.LoggerFactory
 
-/** `qkt-venue-gateway <config.yaml>`: one account's gateway, until the process is stopped. */
+/** `qkt-venue-gateway`: one account's gateway, configured by `GATEWAY_*` variables, until it is stopped. */
 fun main(args: Array<String>) {
-    val config = GatewayConfig.parse(Files.readString(Path.of(args.firstOrNull() ?: "config.yaml")), System.getenv())
+    require(args.isEmpty()) { "qkt-venue-gateway takes no arguments: it is configured by GATEWAY_* variables" }
+    val config = GatewayConfig.fromEnv(System.getenv())
     val running = start(config)
     Runtime.getRuntime().addShutdownHook(Thread { running.close() })
     Thread.currentThread().join()
@@ -31,10 +30,15 @@ fun start(
 ): RunningGateway {
     val log = LoggerFactory.getLogger("com.qkt.venuegateway.Main")
     val factory = AdapterLoader(config.pluginsDir).factory(config.adapter)
+    val context = AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials)
     val adapter =
-        factory.create(
-            AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials),
-        )
+        runCatching { factory.create(context) }.getOrElse {
+            throw IllegalStateException(
+                "adapter ${config.adapter}: ${it.message} " +
+                    "(a setting <key> is ${GatewayConfig.SETTING_PREFIX}<KEY>; credentials are GATEWAY_LOGIN and GATEWAY_SECRET)",
+                it,
+            )
+        }
     val gateway =
         Gateway(
             adapter,

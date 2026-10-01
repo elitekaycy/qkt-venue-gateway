@@ -28,7 +28,7 @@ data class DeribitSettings(
 
         fun of(settings: Map<String, String>): DeribitSettings {
             val environment =
-                settings["environment"] ?: error("adapter.settings.environment is required: testnet or mainnet")
+                settings["environment"] ?: error("setting environment is required: testnet or mainnet")
             val currency = settings["currency"] ?: "USDC"
             val trigger = settings["stop_trigger"] ?: "last_price"
             require(

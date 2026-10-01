@@ -7,7 +7,7 @@ import com.qkt.venuegateway.deribit.client.DeribitPublicClient
 import com.qkt.venuegateway.deribit.client.DeribitTickerStream
 
 /**
- * `adapter.type: paper`: the paper venue on Deribit's public data. Optional settings beyond
+ * `GATEWAY_ADAPTER=paper`: the paper venue on Deribit's public data. Optional settings beyond
  * [PaperAdapter]'s: `deribit_url` (default `https://www.deribit.com`) and `deribit_ws_url` (default
  * `wss://www.deribit.com/ws/api/v2`); the testnet's are `https://test.deribit.com` and
  * `wss://test.deribit.com/ws/api/v2`.
