@@ -46,7 +46,7 @@ class DeribitAdapter(
     private val refreshMs: Long = 600_000,
 ) : VenueAdapter {
     override val id = "deribit"
-    override val version = "0.1.0"
+    override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
     private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login

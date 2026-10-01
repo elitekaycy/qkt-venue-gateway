@@ -40,7 +40,7 @@ class PaperAdapter(
     private val tickers: (onTicker: (DeribitTicker) -> Unit, onConnection: (Boolean, String) -> Unit) -> DeribitTickers,
 ) : VenueAdapter {
     override val id = "paper"
-    override val version = "0.1.0"
+    override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
     private val book =

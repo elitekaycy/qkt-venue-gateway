@@ -1,22 +1,5 @@
 # qkt-venue-gateway
 
-The VGP v1 gateway host for qkt: one process per venue account. qkt and guardrails talk to it over
-the wire protocol in `docs/vgp-v1-wire.md` (the qkt repository holds the authoritative copy); it talks
-to the venue through one adapter. Design: `docs/design.md`. Plans: `docs/plans/`.
-
-## Module boundaries (enforced by the build)
-- `host` serves everything qkt sees and never imports a venue API.
-- One venue, one module (`adapter-<venue>`): its `client` package speaks the venue's protocol and
-  knows nothing about VGP; its mapping is the only place venue words become `adapter-api` types.
-- Adapters see only `adapter-api`; they never speak HTTP to qkt. Each passes `adapter-testkit`.
-
-## Rules
-- Kotlin 2.1, JVM 21. Files ≤ 200 lines (tests ≤ 220), KDoc on public API, ktlint clean.
-- Money and quantities are `BigDecimal`, parsed from raw JSON text, never through `Double`.
-- Every wire-spec statement the host implements has a test; venue facts have recorded fixtures.
-- Build: `./gradlew build`. One module: `./gradlew :host:test`.
-
-## Commits
-- Author and committer: `Dickson Anyaele <dicksonanyaele1234@gmail.com>`.
-- Conventional subject (`feat(host): …`), no body needed, no tool or AI attribution of any kind; a
-  session link, when attached, is one line `session(<type>): <link>`.
+The rules for this repository live in [CLAUDE.md](CLAUDE.md), and for adapters in
+[docs/adapters.md](docs/adapters.md). Read both before changing code; they apply to every agent and
+contributor.
