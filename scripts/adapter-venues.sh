@@ -13,8 +13,11 @@ else
   if grep -qE '^(adapter-api|adapter-testkit)/' <<<"$changed"; then
     venues=$all
   else
-    venues=$( { grep -oE '^adapter-[a-z0-9]+/' <<<"$changed" | sed 's#^adapter-##; s#/$##' || true
-               [[ $branch =~ ^adapter/([a-z0-9]+)$ ]] && echo "${BASH_REMATCH[1]}" || true; } | sort -u)
+    venues=$(grep -oE '^adapter-[a-z0-9]+/' <<<"$changed" | sed 's#^adapter-##; s#/$##' || true)
+    if [[ $branch =~ ^adapter/([a-z0-9]+)$ ]]; then
+      venues=$(printf '%s\n%s\n' "$venues" "${BASH_REMATCH[1]}")
+    fi
+    venues=$(sort -u <<<"$venues")
   fi
 fi
 jq -cn --arg v "$venues" '$v | split("\n") | map(select(length > 0))'
