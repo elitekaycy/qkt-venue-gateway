@@ -104,9 +104,9 @@ class PaperContractTest : AdapterContractTest() {
         PaperAdapter(
             AdapterContext(mapOf("starting_balance" to "10000"), System::currentTimeMillis, stateDir),
             market,
-        ) { onTicker, _ ->
+        ) { onTicker, onConnection ->
             object : DeribitTickers {
-                override fun start() {}
+                override fun start() = onConnection(true, "open")
 
                 override fun subscribe(names: Set<String>) = names.forEach { onTicker(quoted(it)) }
 

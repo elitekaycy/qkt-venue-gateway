@@ -11,15 +11,15 @@ class DeribitMarketMappingTest {
         DeribitKline(startMs, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE)
 
     @Test
-    fun `only bars that have closed by now are served, so Deribit's forming minute never is`() {
+    fun `only closed bars starting inside the window are served, never the forming one or the one before it`() {
         val minute = 60_000L
-        val klines = listOf(kline(0), kline(minute), kline(2 * minute))
+        val klines = listOf(kline(0), kline(minute), kline(2 * minute), kline(3 * minute))
 
-        val closed = DeribitMarketMapping.closedBars(klines, minute, nowMs = 2 * minute + 30_000)
+        val forming = DeribitMarketMapping.closedBars(klines, minute, 30_000, 10 * minute, nowMs = 3 * minute + 30_000)
+        val windowed = DeribitMarketMapping.closedBars(klines, minute, minute, 3 * minute, nowMs = 10 * minute)
 
-        assertThat(closed.map { it.startMs }).containsExactly(0L, minute)
-        assertThat(DeribitMarketMapping.closedBars(klines, minute, nowMs = 3 * minute).map { it.startMs })
-            .containsExactly(0L, minute, 2 * minute)
+        assertThat(forming.map { it.startMs }).containsExactly(minute, 2 * minute)
+        assertThat(windowed.map { it.startMs }).containsExactly(minute, 2 * minute)
     }
 
     @Test

@@ -151,6 +151,8 @@ class PaperAdapter(
                 market.klines(code, windowMs / MINUTE_MS, fromMs, toMs)
             },
             windowMs,
+            fromMs,
+            toMs,
             context.clock(),
         )
 

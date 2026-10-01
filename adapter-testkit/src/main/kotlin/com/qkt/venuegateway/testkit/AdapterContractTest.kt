@@ -59,6 +59,7 @@ abstract class AdapterContractTest {
         val listener = RecordingListener()
         val adapter = newAdapter(stateDir).also { it.connect(listener) }
         adapters += adapter
+        listener.await("the venue link to come up", pushTimeoutMs) { listener.connections.contains(true) }
         return adapter to listener
     }
 

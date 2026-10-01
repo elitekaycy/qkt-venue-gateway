@@ -42,13 +42,18 @@ object DeribitMarketMapping {
     fun quote(t: DeribitTicker) =
         VenueQuote(t.name, t.bid, t.ask, t.bidAmount, t.askAmount, t.mark, t.markIv, t.underlyingPrice, t.timestampMs)
 
-    /** The [klines] of [windowMs] that have closed by [nowMs]; Deribit's last kline may still be forming. */
+    /**
+     * The [klines] of [windowMs] starting in `[fromMs, toMs)` that have closed by [nowMs]: Deribit also
+     * returns the kline holding `fromMs`, which can start before it, and a last kline still forming.
+     */
     fun closedBars(
         klines: List<DeribitKline>,
         windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
         nowMs: Long,
     ): List<VenueBar> =
         klines
-            .filter { it.startMs + windowMs <= nowMs }
+            .filter { it.startMs in fromMs until toMs && it.startMs + windowMs <= nowMs }
             .map { VenueBar(it.startMs, it.open, it.high, it.low, it.close, it.volume) }
 }

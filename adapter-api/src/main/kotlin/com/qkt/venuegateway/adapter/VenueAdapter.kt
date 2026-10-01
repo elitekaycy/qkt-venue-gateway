@@ -20,7 +20,11 @@ interface VenueAdapter : AutoCloseable {
     /** The adapter's version. */
     val version: String
 
-    /** Opens the venue link; pushes go to [listener] from then on. */
+    /**
+     * Opens the venue link and returns at once; pushes go to [listener] from then on. The adapter
+     * reports `connection(true)` once it can serve calls (the host takes no orders before it), and
+     * `connection(false)` whenever it no longer can.
+     */
     fun connect(listener: AdapterListener)
 
     fun identity(): VenueIdentity
