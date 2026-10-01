@@ -10,9 +10,10 @@ import org.slf4j.LoggerFactory
  * a journaled working order the venue no longer lists, resolved by [OrderRecovery] or, with no trace
  * left, closed as cancelled (it is not working: the venue would list it); a write-ahead record the venue's
  * answer never reached, resolved by [OrderRecovery] (by label, else from its fills) or closed as
- * rejected when the venue holds no trace of it; and every
- * fill and settlement since the newest journaled one (less [overlapMs]; [lookbackMs] on a new journal),
- * which the journal journals once. Runs on [start], each time the venue link comes back, and every
+ * rejected when the venue holds no trace of it; every position that changed ([PositionWatch]), read
+ * before the history so it is told even when the history cannot be read; and every fill and settlement
+ * since the newest journaled one (less [overlapMs]; [lookbackMs] on a new journal), which the journal
+ * journals once. Runs on [start], each time the venue link comes back, and every
  * [periodMs]; one failed run is logged and the next tries again.
  */
 class Reconciler(
@@ -58,10 +59,10 @@ class Reconciler(
                 journal.appendOrder(WireMapping.rejected(body, "the venue holds no trace of it", gateway.clock()))
             }
         }
+        gateway.positions.refresh(null)
         val now = gateway.clock()
         venue.fills(since(journal.latestFillTime(), now), now).forEach(listener::fill)
         venue.settlements(since(journal.latestSettlementTime(), now), now).forEach(listener::settlement)
-        gateway.positions.refresh(null)
     }
 
     override fun close() {

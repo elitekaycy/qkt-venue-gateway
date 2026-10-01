@@ -99,4 +99,18 @@ class PositionWatchTest {
         assertThat(positions(gateway).map { it.symbol to it.quantity }).containsExactly(perp to "-0.1")
         gateway.close()
     }
+
+    @Test
+    fun `positions are told even when the venue's settlement history cannot be read`(
+        @TempDir dir: Path,
+    ) {
+        val gateway = gateway(dir)
+        venue.net[perp] = BigDecimal("0.2")
+        venue.settlementsUnavailable = true
+
+        runCatching { Reconciler(gateway).reconcile() }
+
+        assertThat(positions(gateway).map { it.symbol to it.quantity }).containsExactly(perp to "0.2")
+        gateway.close()
+    }
 }

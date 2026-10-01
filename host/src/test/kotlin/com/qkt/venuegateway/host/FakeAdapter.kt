@@ -41,6 +41,9 @@ internal class FakeAdapter : VenueAdapter {
 
     @Volatile var unreachable = false
 
+    /** Settlement history cannot be read (an adapter that does not map it yet). */
+    @Volatile var settlementsUnavailable = false
+
     /** The next place reaches the venue, but its answer is lost on the way back. */
     @Volatile var loseNextAnswer = false
 
@@ -146,7 +149,10 @@ internal class FakeAdapter : VenueAdapter {
     override fun settlements(
         fromMs: Long,
         toMs: Long,
-    ) = settlements.filter { it.timeMs in fromMs..toMs }
+    ): List<VenueSettlement> {
+        if (settlementsUnavailable) throw VenueUnavailableException("settlements not mapped")
+        return settlements.filter { it.timeMs in fromMs..toMs }
+    }
 
     val bars = CopyOnWriteArrayList<VenueBar>()
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
