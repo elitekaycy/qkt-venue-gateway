@@ -1,16 +1,24 @@
+# Weekly dependency updates, opened as pull requests into dev.
 version: 2
 updates:
   - package-ecosystem: gradle
     directory: /
+    target-branch: dev
     schedule: {interval: weekly}
     groups:
       gradle-minor-patch: {update-types: [minor, patch]}
     commit-message: {prefix: build}
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule: {interval: weekly}
     commit-message: {prefix: ci}
   - package-ecosystem: docker
     directory: /
+    target-branch: dev
     schedule: {interval: weekly}
     commit-message: {prefix: build}
+    # The gateway targets JVM 21 (CLAUDE.md); a new Java major is a deliberate change, not a bump.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
