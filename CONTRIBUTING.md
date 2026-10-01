@@ -78,7 +78,11 @@ docker build -t "ghcr.io/elitekaycy/qkt-venue-gateway:$version" . && docker push
 
 ## Venue secrets
 
-The `adapter` workflow reads test-environment keys from repository secrets named
-`<VENUE>_CLIENT_ID` and `<VENUE>_CLIENT_SECRET` (today `DERIBIT_CLIENT_ID`, `DERIBIT_CLIENT_SECRET`, a
-Deribit **testnet** key with read and trade scopes). Pull requests from forks get no secrets, so a
-maintainer re-runs their adapter check from a branch in this repository.
+The `adapter` workflow can read test-environment keys from repository secrets named
+`<VENUE>_CLIENT_ID` and `<VENUE>_CLIENT_SECRET` (for Deribit, a **testnet** key with read and trade
+scopes). They are optional: with them, CI runs the venue's contract suite and fails if it skipped;
+without them (the default here), CI warns and the PR records a local run:
+
+```bash
+DERIBIT_CLIENT_ID=… DERIBIT_CLIENT_SECRET=… ./gradlew :adapter-deribit:test --tests '*ContractTest' --rerun
+```

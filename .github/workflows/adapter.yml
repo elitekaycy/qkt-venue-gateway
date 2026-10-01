@@ -2,7 +2,8 @@ name: adapter
 
 # Each adapter a pull request touches (all of them when adapter-api or adapter-testkit change), and every
 # adapter nightly against main: layout complete (scripts/check-adapter.sh), its tests, and its contract
-# suite run against the venue's test environment, where a skipped contract test fails. `adapter` is the
+# suite run against the venue's test environment, where a skipped contract test fails when the venue's
+# secrets are configured (without them, a warning). `adapter` is the
 # required check on main; it passes when no adapter is touched. docs/adapters.md, "CI".
 #
 # A venue's secrets are passed only to its own matrix entry; a new venue adds its lines below.
@@ -67,9 +68,17 @@ jobs:
           VENUE: ${{ matrix.venue }}
           DERIBIT_CLIENT_ID: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_ID || '' }}
           DERIBIT_CLIENT_SECRET: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_SECRET || '' }}
-      - run: scripts/check-contract-ran.sh "$VENUE"
+      # A venue whose test-environment secrets are not configured cannot run its contract suite here:
+      # that is a warning, and the PR notes a local run instead (docs/adapters.md, "CI").
+      - run: |
+          if [ "$HAS_KEY" = true ]; then
+            scripts/check-contract-ran.sh "$VENUE"
+          else
+            echo "::warning::adapter-$VENUE: no test-environment secrets configured; run its contract suite locally and note it in the PR"
+          fi
         env:
           VENUE: ${{ matrix.venue }}
+          HAS_KEY: ${{ matrix.venue != 'deribit' || secrets.DERIBIT_CLIENT_ID != '' }}
 
   adapter:
     needs: [detect, test]

@@ -75,11 +75,14 @@ The `adapter` workflow runs for every PR touching an adapter, and nightly for al
 1. `scripts/check-adapter.sh <venue>`: the layout above is complete (module, README, CLAUDE.md, service
    registration, contract test, fixtures, settings and app inclusion, README row).
 2. `./gradlew :adapter-<venue>:test` with the venue's secrets, then a check that the contract suite
-   **ran**: on this workflow a skipped contract test is a failure. Secrets are repository secrets named
-   `<VENUE>_CLIENT_ID` and `<VENUE>_CLIENT_SECRET`, test-environment keys with trade scope only.
+   **ran**: when the venue's secrets are configured (repository secrets `<VENUE>_CLIENT_ID` and
+   `<VENUE>_CLIENT_SECRET`, test-environment keys with trade scope only), a skipped contract test is a
+   failure. Without them it is a warning, and the PR records a local contract run against the test
+   environment (command and result) instead.
 3. Nightly, the same against `main`, so a venue that changes under us turns red before qkt notices.
 
 ## Done means
 
-All checkpoints green, the adapter workflow green with the contract suite run, the end-to-end run noted
+All checkpoints green, the adapter workflow green, the contract suite run on the test environment (in CI,
+or locally and noted in the PR), the end-to-end run noted
 in the PR, and nothing in the diff outside the branch scope.
