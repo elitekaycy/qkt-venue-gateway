@@ -33,7 +33,10 @@ class PaperBook(
     /** The orders, fills and settlements this book made. */
     val state = PaperOrders(ledger, currency, feeRate)
 
-    /** Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. */
+    /**
+     * Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. The change
+     * always reports the order as it ends up, so an order left working is acknowledged and saved.
+     */
     fun place(
         order: NewOrder,
         ticker: DeribitTicker?,
@@ -46,7 +49,8 @@ class PaperBook(
             }
         }
         state.orders[order.clientOrderId] = working
-        return match(working, ticker, nowMs, arriving = true)
+        val matched = match(working, ticker, nowMs, arriving = true)
+        return if (matched.orders.isEmpty()) matched.copy(orders = listOf(working)) else matched
     }
 
     /** Matches every working order of [ticker]'s instrument against it. */
