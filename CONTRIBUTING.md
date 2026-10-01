@@ -17,7 +17,7 @@
 - Every wire-spec statement the host implements has a test. Every venue fact an adapter relies on has a
   fixture recorded from the venue (`src/test/resources/fixtures`), with account identifiers removed.
 - An adapter passes `AdapterContractTest` against the venue's test environment before it merges.
-- Never commit a secret: configs hold `env:` or `file:` references only.
+- Never commit a secret: they reach the gateway as `GATEWAY_*` variables or `_FILE` paths; `.env` is untracked.
 
 ## Commits
 

@@ -7,7 +7,7 @@ import java.nio.file.Path
 import java.util.ServiceLoader
 
 /**
- * Finds the adapter factory for an `adapter.type`: the adapters built into the gateway, and those in
+ * Finds the adapter factory for an adapter type (`GATEWAY_ADAPTER`): the adapters built into the gateway, and those in
  * the jars of [pluginsDir] (each registering a [VenueAdapterFactory] under
  * `META-INF/services/com.qkt.venuegateway.adapter.VenueAdapterFactory`). Two factories claiming one type
  * are refused, so a plugin can never silently replace another.

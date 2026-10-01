@@ -209,8 +209,9 @@ chain endpoint is designed with its first consumer, live continuous futures (qkt
 
 ## 11. Deployment and operations
 
-- One container per account, configured by a file (venue, adapter settings, secret references, state
-  directory, listen address, tokens). Secrets are `env:` or `file:` references, never inline.
+- One container per account (`Dockerfile`, `docker-compose.yml`), configured by `GATEWAY_*` environment
+  variables (venue, adapter settings, credentials, state directory, listen address, tokens), each
+  defaulted in one place or required. Secrets can be `_FILE` paths to mounted secrets.
 - TLS terminates at the reverse proxy already in front of the fleet; the gateway listens on a private
   address. Tokens: one for qkt (trading), one for guardrails (reads and the kill switch).
 - Logs are structured; health is the readiness probe; a venue link down for longer than 2 minutes alerts.

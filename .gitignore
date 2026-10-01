@@ -5,3 +5,4 @@ build/
 *.db-wal
 *.db-shm
 state/
+.env

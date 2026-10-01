@@ -1,0 +1,40 @@
+# One service per venue account; each keeps its journal in its own volume. Copy .env.example to .env.
+#   docker compose up -d                      the paper account on 127.0.0.1:8443
+#   docker compose --profile deribit up -d    and the Deribit account on 127.0.0.1:8444
+# qkt on this host points its gateway broker at http://127.0.0.1:<port>; qkt in a container on this
+# compose network uses http://gateway-paper:8443 or http://gateway-deribit:8443.
+
+x-gateway: &gateway
+  build: .
+  image: qkt-venue-gateway:local
+  restart: unless-stopped
+
+services:
+  gateway-paper:
+    <<: *gateway
+    environment:
+      GATEWAY_ADAPTER: paper
+      GATEWAY_TRADER_TOKEN: ${PAPER_TRADER_TOKEN:?set PAPER_TRADER_TOKEN in .env}
+      GATEWAY_GUARDIAN_TOKEN: ${PAPER_GUARDIAN_TOKEN:?set PAPER_GUARDIAN_TOKEN in .env}
+      GATEWAY_SETTING_STARTING_BALANCE: ${PAPER_STARTING_BALANCE:-10000}
+    ports: ["127.0.0.1:8443:8443"]
+    volumes: ["paper-state:/data"]
+
+  gateway-deribit:
+    <<: *gateway
+    profiles: ["deribit"]
+    # Unset values are refused at startup by the gateway, naming the GATEWAY_* variable.
+    environment:
+      GATEWAY_ADAPTER: deribit
+      GATEWAY_TRADER_TOKEN: ${DERIBIT_TRADER_TOKEN:-}
+      GATEWAY_GUARDIAN_TOKEN: ${DERIBIT_GUARDIAN_TOKEN:-}
+      GATEWAY_LOGIN: ${DERIBIT_CLIENT_ID:-}
+      GATEWAY_SECRET: ${DERIBIT_CLIENT_SECRET:-}
+      # Required, never defaulted: testnet, or mainnet for real money.
+      GATEWAY_SETTING_ENVIRONMENT: ${DERIBIT_ENVIRONMENT:-}
+    ports: ["127.0.0.1:8444:8443"]
+    volumes: ["deribit-state:/data"]
+
+volumes:
+  paper-state:
+  deribit-state:

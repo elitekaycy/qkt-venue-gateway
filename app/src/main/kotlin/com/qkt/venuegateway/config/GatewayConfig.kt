@@ -4,25 +4,26 @@ import com.qkt.venuegateway.adapter.Credentials
 import com.qkt.venuegateway.host.server.Role
 import java.nio.file.Files
 import java.nio.file.Path
-import org.snakeyaml.engine.v2.api.Load
-import org.snakeyaml.engine.v2.api.LoadSettings
 
 /**
  * One gateway's configuration: where it listens ([host]:[port]), where its journal lives ([stateDir]),
  * each role's token, and the [adapter] serving the account with its [settings] and venue [credentials].
- * Tokens and credentials are references, `env:<VAR>` or `file:<path>`, never inline, so a config file
- * carries no secret.
  *
- * ```yaml
- * listen: 127.0.0.1:8443
- * state_dir: /var/lib/qkt-venue-gateway/deribit
- * plugins_dir: /opt/qkt-venue-gateway/plugins      # optional: adapter jars beside the built-in ones
- * tokens: { trader: env:GATEWAY_TRADER_TOKEN, guardian: file:/run/secrets/guardian }
- * adapter:
- *   type: deribit
- *   credentials: { login: env:DERIBIT_CLIENT_ID, secret: env:DERIBIT_CLIENT_SECRET }
- *   settings: { environment: testnet }
- * ```
+ * It is read from `GATEWAY_*` environment variables by [fromEnv]; every default is in [DEFAULTS], and a
+ * variable without one is required only where named below:
+ *
+ * | Variable | Default | |
+ * |---|---|---|
+ * | `GATEWAY_LISTEN` | `127.0.0.1:8443` | `<host>:<port>` to serve VGP on |
+ * | `GATEWAY_STATE_DIR` | `./state` | the journal and the adapter's own state |
+ * | `GATEWAY_ADAPTER` | `paper` | the adapter type |
+ * | `GATEWAY_TRADER_TOKEN`, `GATEWAY_GUARDIAN_TOKEN` | required | each role's bearer token |
+ * | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | the venue credentials, both or neither |
+ * | `GATEWAY_PLUGINS_DIR` | none | adapter jars beside the built-in ones |
+ * | `GATEWAY_SETTING_<KEY>` | the adapter's | adapter setting `<key>`, lower-cased |
+ *
+ * Any variable but a setting may instead be given as `<NAME>_FILE`, the path of a file holding the
+ * value (a Docker secret), but not both.
  */
 data class GatewayConfig(
     val host: String,
@@ -35,66 +36,67 @@ data class GatewayConfig(
     val credentials: Credentials? = null,
 ) {
     companion object {
-        /** [yaml] as a config, resolving `env:` references against [env]; fails naming the key at fault. */
-        fun parse(
-            yaml: String,
-            env: Map<String, String>,
-        ): GatewayConfig {
-            val root = Load(LoadSettings.builder().build()).loadFromString(yaml) as? Map<*, *> ?: emptyMap<Any, Any>()
-            val listen = text(root, "listen")
-            require(listen.contains(':')) { "listen must be <host>:<port>: $listen" }
-            val tokens = section(root, "tokens")
-            val adapter = section(root, "adapter")
+        /** The prefix of every adapter setting's variable: `GATEWAY_SETTING_STOP_TRIGGER` is `stop_trigger`. */
+        const val SETTING_PREFIX = "GATEWAY_SETTING_"
+
+        /** The value each variable takes when unset. */
+        val DEFAULTS =
+            mapOf(
+                "GATEWAY_LISTEN" to "127.0.0.1:8443",
+                "GATEWAY_STATE_DIR" to "./state",
+                "GATEWAY_ADAPTER" to "paper",
+            )
+
+        /** The config [env] describes; fails naming the variable at fault. */
+        fun fromEnv(env: Map<String, String>): GatewayConfig {
+            val vars = Vars(env)
+            val listen = vars.withDefault("GATEWAY_LISTEN")
+            require(listen.contains(':')) { "GATEWAY_LISTEN must be <host>:<port>: $listen" }
             return GatewayConfig(
                 host = listen.substringBeforeLast(':'),
-                port = listen.substringAfterLast(':').toIntOrNull() ?: error("listen has no port: $listen"),
-                stateDir = Path.of(text(root, "state_dir")),
-                tokens = Role.entries.associateWith { resolve(tokens, it.key, "tokens.", env) },
-                adapter = text(adapter, "type", "adapter."),
-                settings = section(adapter, "settings").entries.associate { (k, v) -> k.toString() to v.toString() },
-                pluginsDir = root["plugins_dir"]?.toString()?.let { Path.of(it) },
-                credentials = credentials(adapter, env),
+                port = listen.substringAfterLast(':').toIntOrNull() ?: error("GATEWAY_LISTEN has no port: $listen"),
+                stateDir = Path.of(vars.withDefault("GATEWAY_STATE_DIR")),
+                tokens = Role.entries.associateWith { vars.required("GATEWAY_${it.key.uppercase()}_TOKEN") },
+                adapter = vars.withDefault("GATEWAY_ADAPTER"),
+                settings = settings(env),
+                pluginsDir = vars.optional("GATEWAY_PLUGINS_DIR")?.let { Path.of(it) },
+                credentials = credentials(vars),
             )
         }
 
-        private fun text(
-            map: Map<*, *>,
-            key: String,
-            path: String = "",
-        ): String = map[key]?.toString()?.takeIf { it.isNotBlank() } ?: error("$path$key is required")
+        private fun settings(env: Map<String, String>): Map<String, String> =
+            env
+                .filterKeys { it.startsWith(SETTING_PREFIX) && it.length > SETTING_PREFIX.length }
+                .filterValues { it.isNotBlank() }
+                .mapKeys { it.key.removePrefix(SETTING_PREFIX).lowercase() }
 
-        private fun section(
-            map: Map<*, *>,
-            key: String,
-        ): Map<*, *> = map[key] as? Map<*, *> ?: emptyMap<Any, Any>()
-
-        private fun credentials(
-            adapter: Map<*, *>,
-            env: Map<String, String>,
-        ): Credentials? {
-            val pair = adapter["credentials"] as? Map<*, *> ?: return null
-            val path = "adapter.credentials."
-            return Credentials(resolve(pair, "login", path, env), resolve(pair, "secret", path, env))
+        private fun credentials(vars: Vars): Credentials? {
+            val login = vars.optional("GATEWAY_LOGIN")
+            val secret = vars.optional("GATEWAY_SECRET")
+            return when {
+                login == null && secret == null -> null
+                login == null -> error("GATEWAY_LOGIN is required with GATEWAY_SECRET")
+                secret == null -> error("GATEWAY_SECRET is required with GATEWAY_LOGIN")
+                else -> Credentials(login, secret)
+            }
         }
+    }
 
-        /** The value the `env:`/`file:` reference at [path][key] names; fails naming the key at fault. */
-        private fun resolve(
-            map: Map<*, *>,
-            key: String,
-            path: String,
-            env: Map<String, String>,
-        ): String {
-            val ref = text(map, key, path)
-            val value =
-                when {
-                    ref.startsWith("env:") ->
-                        env[ref.removePrefix("env:")]
-                            ?: error("${ref.removePrefix("env:")} is not set")
-                    ref.startsWith("file:") -> Files.readString(Path.of(ref.removePrefix("file:"))).trim()
-                    else -> error("$path$key must be env:<VAR> or file:<path>")
-                }
-            require(value.isNotBlank()) { "$path$key resolves to an empty value" }
+    /** Variables read from [env], each set directly or through `<NAME>_FILE`. */
+    private class Vars(
+        private val env: Map<String, String>,
+    ) {
+        fun optional(name: String): String? {
+            val direct = env[name]?.takeIf { it.isNotBlank() }
+            val file = env["${name}_FILE"]?.takeIf { it.isNotBlank() }
+            require(direct == null || file == null) { "set $name or ${name}_FILE, not both" }
+            val value = direct ?: file?.let { Files.readString(Path.of(it)).trim() } ?: return null
+            require(value.isNotBlank()) { "${name}_FILE names an empty file: $file" }
             return value
         }
+
+        fun required(name: String): String = optional(name) ?: error("$name (or ${name}_FILE) is required")
+
+        fun withDefault(name: String): String = optional(name) ?: DEFAULTS.getValue(name)
     }
 }

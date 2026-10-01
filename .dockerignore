@@ -1,0 +1,9 @@
+.git
+.github
+.gradle
+.kotlin
+**/build
+state
+*.db
+*.db-*
+.env

@@ -109,7 +109,7 @@ data class Credentials(
 
 /**
  * What the host hands an adapter: its config [settings], its venue [credentials] (null when the
- * config names none, as for the paper venue), a [clock] and a private [stateDir].
+ * gateway was given none, as for the paper venue), a [clock] and a private [stateDir].
  */
 class AdapterContext(
     val settings: Map<String, String>,
@@ -118,14 +118,13 @@ class AdapterContext(
     val credentials: Credentials? = null,
 ) {
     /** Setting [key], or a failure naming it. */
-    fun required(key: String): String =
-        settings[key]?.takeIf { it.isNotBlank() } ?: error("adapter.settings.$key is required")
+    fun required(key: String): String = settings[key]?.takeIf { it.isNotBlank() } ?: error("setting $key is required")
 
     /** The venue credentials, or a failure naming the missing config. */
-    fun requiredCredentials(): Credentials = credentials ?: error("adapter.credentials is required")
+    fun requiredCredentials(): Credentials = credentials ?: error("credentials are required")
 }
 
-/** Builds the adapter of one `adapter.type`; found with `java.util.ServiceLoader`. */
+/** Builds the adapter of one adapter type (`GATEWAY_ADAPTER`); found with `java.util.ServiceLoader`. */
 interface VenueAdapterFactory {
     val type: String
 
