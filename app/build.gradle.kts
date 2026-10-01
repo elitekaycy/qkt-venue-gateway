@@ -12,3 +12,6 @@ dependencies {
 }
 
 application { mainClass.set("com.qkt.venuegateway.MainKt") }
+
+// `./gradlew :app:run --args=config.yaml` resolves the config and its relative paths from the repository root.
+tasks.named<JavaExec>("run") { workingDir = rootDir }
