@@ -1,0 +1,84 @@
+name: adapter
+
+# Each adapter a pull request touches (all of them when adapter-api or adapter-testkit change), and every
+# adapter nightly against main: layout complete (scripts/check-adapter.sh), its tests, and its contract
+# suite run against the venue's test environment, where a skipped contract test fails. `adapter` is the
+# required check on main; it passes when no adapter is touched. docs/adapters.md, "CI".
+#
+# A venue's secrets are passed only to its own matrix entry; a new venue adds its lines below.
+
+on:
+  pull_request:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      venues: ${{ steps.venues.outputs.venues }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: venues
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            venues=$(scripts/adapter-venues.sh "$BASE" "$HEAD" "$BRANCH")
+          else
+            venues=$(scripts/adapter-venues.sh)
+          fi
+          echo "venues=$venues" | tee -a "$GITHUB_OUTPUT"
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BRANCH: ${{ github.head_ref }}
+
+  test:
+    needs: detect
+    if: needs.detect.outputs.venues != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        venue: ${{ fromJSON(needs.detect.outputs.venues) }}
+    # One contract run per venue account at a time: two would trade against each other.
+    concurrency:
+      group: adapter-contract-${{ matrix.venue }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - run: scripts/check-adapter.sh "$VENUE"
+        env:
+          VENUE: ${{ matrix.venue }}
+      - run: ./gradlew ":adapter-$VENUE:test" --no-daemon
+        env:
+          VENUE: ${{ matrix.venue }}
+          DERIBIT_CLIENT_ID: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_ID || '' }}
+          DERIBIT_CLIENT_SECRET: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_SECRET || '' }}
+      - run: scripts/check-contract-ran.sh "$VENUE"
+        env:
+          VENUE: ${{ matrix.venue }}
+
+  adapter:
+    needs: [detect, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "detect: $DETECT, test: $TEST"
+          [ "$DETECT" = success ] && { [ "$TEST" = success ] || [ "$TEST" = skipped ]; }
+        env:
+          DETECT: ${{ needs.detect.result }}
+          TEST: ${{ needs.test.result }}
