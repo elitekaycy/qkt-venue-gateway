@@ -100,12 +100,11 @@ class DeribitPrivateJsonTest {
     }
 
     @Test
-    fun `the account summary reads its money and its id`() {
+    fun `the account summary reads its money`() {
         val account = DeribitPrivateJson.account(fixture("account-summary.json").jsonObject)
 
         assertThat(account.currency).isEqualTo("USDC")
-        assertThat(account.equity).isEqualByComparingTo("99999.25498056")
-        assertThat(account.availableFunds).isEqualByComparingTo("99998.30474381")
-        assertThat(account.accountId).isEqualTo("1")
+        assertThat(account.equity).isEqualByComparingTo("99999.19322085")
+        assertThat(account.availableFunds).isEqualByComparingTo("99998.26547786")
     }
 }

@@ -44,6 +44,10 @@ class DeribitPrivateClientTest {
                     )
                 }
                 "private/buy" -> recorded("buy-limit-open.json")["response"]!!.jsonObject["result"].toString()
+                "private/get_account_summary" ->
+                    recorded(
+                        "account-summary.json",
+                    )["response"]!!.jsonObject["result"].toString()
                 else -> "\"ok\""
             }
         return """{"jsonrpc":"2.0","id":$id,"result":$result}"""
@@ -157,6 +161,22 @@ class DeribitPrivateClientTest {
         Thread.sleep(1_500)
 
         assertThat(connections).doesNotContain(true)
+        client.close()
+    }
+
+    @Test
+    fun `the account summary is asked for exactly as it was recorded, so the fixture is the real answer`() {
+        server.enqueue(venue())
+        val connections = CopyOnWriteArrayList<Boolean>()
+        val client = client(connections = connections).also { it.start() }
+        awaitTrue { connections.contains(true) }
+        generateSequence { sent.poll() }.toList()
+
+        val account = client.account("USDC")
+
+        val asked = sent.poll(5, TimeUnit.SECONDS)!!
+        assertThat(asked["params"]).isEqualTo(recorded("account-summary.json")["params"])
+        assertThat(account.currency).isEqualTo("USDC")
         client.close()
     }
 

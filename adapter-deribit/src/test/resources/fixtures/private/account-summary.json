@@ -1,29 +1,22 @@
 {
  "method": "private/get_account_summary",
  "params": {
-  "currency": "USDC",
-  "extended": true
+  "currency": "USDC"
  },
  "response": {
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
    "portfolio_margining_enabled": false,
-   "receive_notifications": false,
-   "options_gamma": 192401.63584,
-   "security_keys_enabled": true,
-   "self_trading_reject_mode": "reject_taker",
+   "options_gamma": 205403.76615,
    "currency": "USDC",
-   "total_pl": -0.54976324,
-   "options_pl": -0.54976324,
-   "id": 1,
-   "referrer_id": null,
-   "options_theta": -0.95024,
-   "block_rfq_self_match_prevention": false,
-   "margin_balance": 99998.30474381,
-   "session_rpl": 0.00065,
+   "total_pl": -0.572257,
+   "options_pl": -0.572257,
+   "options_theta": -0.92774,
+   "margin_balance": 99998.26547786,
+   "session_rpl": 0.00337,
    "projected_initial_margin": 0.0,
-   "options_delta": 153.67363,
+   "options_delta": 157.40801,
    "projected_close_out_margin": 0.0,
    "limits": {
     "matching_engine": {
@@ -64,29 +57,24 @@
      "burst": 100
     }
    },
-   "options_vega": 0.14165,
-   "system_name": "trader",
-   "self_trading_extended_to_subaccounts": false,
-   "available_funds": 99998.30474381,
+   "options_vega": 0.14174,
+   "available_funds": 99998.26547786,
    "cross_collateral_enabled": false,
-   "options_session_upl": -0.54976324,
+   "options_session_upl": -0.572257,
    "options_vega_map": {
-    "trx_usdc": 0.14165
+    "trx_usdc": 0.14174
    },
-   "mandatory_tfa": true,
    "futures_session_upl": 0.0,
    "maintenance_margin": 0.0,
    "initial_margin": 0.0,
    "is_direct_access_allowed": false,
-   "balance": 99998.30409381,
+   "balance": 99998.26210786,
    "projected_delta_total": 0.0,
-   "available_withdrawal_funds": 99998.3040938,
+   "available_withdrawal_funds": 99998.26210785,
    "projected_maintenance_margin": 0.0,
-   "interuser_transfers_enabled": false,
    "disable_kyc_verification": true,
-   "user_origin": "deribit",
    "options_gamma_map": {
-    "trx_usdc": 192401.63584
+    "trx_usdc": 205403.76615
    },
    "options_session_rpl": 0.0,
    "margin_model": "segregated_sm",
@@ -94,72 +82,29 @@
     "timeframe": 86400000,
     "rate": 10
    },
-   "mmp_enabled": false,
    "spot_reserve": 0.0,
-   "type": "main",
    "additional_reserve": 0.0,
-   "creation_timestamp": 1774823827079,
    "delta_total_map": {
     "btc_usdc": 0.0,
-    "trx_usdc": 460.9536
+    "trx_usdc": 471.59493
    },
-   "username": "trader",
-   "delta_total": 153.67363,
-   "equity": 99999.25498056,
+   "delta_total": 157.40801,
+   "equity": 99999.19322085,
    "locked_balance": 0.0,
-   "email": "trader@example.com",
    "options_theta_map": {
-    "trx_usdc": -0.95024
+    "trx_usdc": -0.92774
    },
-   "available_spot_reserve": 99998.3040938,
-   "session_upl": -0.54976324,
-   "trading_products_details": [
-    {
-     "enabled": true,
-     "product": "perpetual",
-     "overwriteable": false,
-     "requires_consent": false
-    },
-    {
-     "enabled": true,
-     "product": "futures",
-     "overwriteable": false,
-     "requires_consent": false
-    },
-    {
-     "enabled": true,
-     "product": "options",
-     "overwriteable": false,
-     "requires_consent": false
-    },
-    {
-     "enabled": true,
-     "product": "future_combos",
-     "overwriteable": false,
-     "requires_consent": false
-    },
-    {
-     "enabled": true,
-     "product": "option_combos",
-     "overwriteable": false,
-     "requires_consent": false
-    },
-    {
-     "enabled": true,
-     "product": "spots",
-     "overwriteable": false,
-     "requires_consent": false
-    }
-   ],
+   "available_spot_reserve": 99998.26210785,
+   "session_upl": -0.572257,
    "fee_balance": 0.0,
-   "futures_session_rpl": 0.00065,
+   "futures_session_rpl": 0.00337,
    "futures_pl": 0.0,
    "close_out_margin": 0.0,
-   "options_value": 0.95023676
+   "options_value": 0.927743
   },
-  "usIn": 1790867033555548,
-  "usOut": 1790867033560920,
-  "usDiff": 5372,
+  "usIn": 1790869296992728,
+  "usOut": 1790869296997516,
+  "usDiff": 4788,
   "testnet": true
  },
  "recorded": "2026-10-01 Deribit testnet"

@@ -58,9 +58,8 @@ data class DeribitPosition(
     val averagePrice: BigDecimal,
 )
 
-/** The account's money in one [currency], and the account's own [accountId]. */
+/** The account's money in one [currency]. */
 data class DeribitAccount(
-    val accountId: String,
     val currency: String,
     val balance: BigDecimal,
     val equity: BigDecimal,

@@ -66,7 +66,6 @@ internal object DeribitPrivateJson {
 
     fun account(o: JsonObject) =
         DeribitAccount(
-            accountId = (o["id"] as? JsonPrimitive)?.content ?: error("deribit field id missing"),
             currency = o.need("currency"),
             balance = o.req("balance"),
             equity = o.req("equity"),

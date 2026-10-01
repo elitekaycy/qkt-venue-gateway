@@ -52,7 +52,6 @@ class DeribitAdapterTest {
 
         override fun account(currency: String) =
             DeribitAccount(
-                "1",
                 currency,
                 BigDecimal("100"),
                 BigDecimal("101"),
