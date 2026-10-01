@@ -21,7 +21,7 @@ class OrderDeskTest {
         reduceOnly: Boolean = false,
     ) = WireSubmit(id, "BTC_USDC-PERPETUAL", side, "market", quantity, null, null, "gtc", reduceOnly)
 
-    private fun desk(dir: Path) = Journal.open(dir.resolve("j.db")).let { it to OrderDesk(it, venue) { venueUp } }
+    private fun desk(dir: Path) = Journal.open(dir.resolve("j.db")).let { it to OrderDesk(it, venue, { venueUp }) }
 
     @Test
     fun `a submit is placed once, a resend returns it, and the same id with another body is a conflict`(

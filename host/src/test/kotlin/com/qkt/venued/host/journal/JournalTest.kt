@@ -30,6 +30,9 @@ class JournalTest {
         updatedAt = 1,
     )
 
+    private fun submit(id: String) =
+        com.qkt.vgp.WireSubmit(id, "BTC_USDC-PERPETUAL", "buy", "market", "0.1", null, null, "gtc", false)
+
     private fun fill(
         id: String,
         fillId: String,
@@ -62,7 +65,7 @@ class JournalTest {
         val file = dir.resolve("j.db")
         val first =
             Journal.open(file).use { journal ->
-                journal.writeAhead("a-1", "hash-1")
+                journal.writeAhead(submit("a-1"), "hash-1")
                 journal.updateOrder(order("a-1"))
                 journal.markDead("a-9")
                 journal.setKillSwitch(WireKillSwitch(all = false, symbols = listOf("BTC_USDC-PERPETUAL")))
@@ -93,7 +96,7 @@ class JournalTest {
         @TempDir dir: Path,
     ) {
         Journal.open(dir.resolve("j.db")).use { journal ->
-            journal.writeAhead("a-1", "h")
+            journal.writeAhead(submit("a-1"), "h")
             journal.updateOrder(order("a-1"))
             journal.updateOrder(order("a-1", status = "filled"))
             journal.appendSettlement(WireSettlement("BTC_USDC-27DEC26", "84100", 20))

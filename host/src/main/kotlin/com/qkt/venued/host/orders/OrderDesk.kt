@@ -1,6 +1,5 @@
 package com.qkt.venued.host.orders
 
-import com.qkt.venued.adapter.OrderStatus
 import com.qkt.venued.adapter.VenueAdapter
 import com.qkt.venued.adapter.VenueRefusedException
 import com.qkt.venued.adapter.VenueUnavailableException
@@ -38,6 +37,7 @@ class OrderDesk(
     private val journal: Journal,
     private val venue: VenueAdapter,
     private val venueUp: () -> Boolean,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val gate = KillSwitchGate(journal, venue)
     private val locks = ConcurrentHashMap<String, Any>()
@@ -59,14 +59,14 @@ class OrderDesk(
             gate.refusal(order)?.let { return@locked DeskResult.Refused(423, "kill_switch", it) }
             if (!venueUp()) return@locked unavailable("the venue link is down")
             if (record == null) {
-                journal.writeAhead(body.clientOrderId, hash)
+                journal.writeAhead(body, hash)
             } else {
                 venue.orderByLabel(body.clientOrderId)?.let { return@locked DeskResult.Ok(appended(it)) }
             }
             try {
                 DeskResult.Ok(appended(venue.place(order)), created = true)
             } catch (e: VenueRefusedException) {
-                journal.appendOrder(rejected(body, e.reason))
+                journal.appendOrder(WireMapping.rejected(body, e.reason, clock()))
                 DeskResult.Refused(422, "venue_rejected", e.reason)
             } catch (e: VenueUnavailableException) {
                 unavailable(e.message ?: "the venue did not answer")
@@ -101,26 +101,6 @@ class OrderDesk(
                 journal.appendOrder(wire)
             }
         }
-
-    private fun rejected(
-        body: WireSubmit,
-        reason: String,
-    ) = WireOrder(
-        body.clientOrderId,
-        null,
-        body.symbol,
-        body.side,
-        body.type,
-        body.quantity,
-        body.limitPrice,
-        body.stopPrice,
-        body.timeInForce,
-        body.reduceOnly,
-        OrderStatus.REJECTED.name.lowercase(),
-        rejectReason = reason,
-        createdAt = 0,
-        updatedAt = 0,
-    )
 
     private fun hash(body: WireSubmit): String =
         MessageDigest

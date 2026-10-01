@@ -27,7 +27,8 @@ class Gateway(
     val adapter: VenueAdapter,
     val journal: Journal,
     private val tokens: Map<Role, String>,
-    private val clock: () -> Long,
+    /** The gateway's time, epoch milliseconds. */
+    val clock: () -> Long,
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(Gateway::class.java)
     private val up = AtomicBoolean(false)
@@ -40,7 +41,7 @@ class Gateway(
     val appended: StateFlow<Long> get() = latest
 
     /** Takes orders. */
-    val desk = OrderDesk(journal, adapter, up::get)
+    val desk = OrderDesk(journal, adapter, up::get, clock)
 
     /** Hears every quote the venue pushes (the quote hub sets it). */
     @Volatile var onQuote: (VenueQuote) -> Unit = {}

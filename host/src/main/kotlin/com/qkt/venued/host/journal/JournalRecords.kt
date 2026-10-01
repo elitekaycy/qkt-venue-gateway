@@ -4,6 +4,7 @@ import com.qkt.vgp.WireEvent
 import com.qkt.vgp.WireFill
 import com.qkt.vgp.WireOrder
 import com.qkt.vgp.WireSettlement
+import com.qkt.vgp.WireSubmit
 import java.sql.Connection
 import java.sql.ResultSet
 import kotlinx.serialization.json.Json
@@ -46,9 +47,14 @@ internal class JournalRecords(
         }
 
     fun writeAhead(
-        id: String,
+        body: WireSubmit,
         hash: String,
-    ) = update("INSERT INTO orders(client_order_id, body_hash, status) VALUES(?, ?, 'pending')", id, hash)
+    ) = update(
+        "INSERT INTO orders(client_order_id, body_hash, body_json, status) VALUES(?, ?, ?, 'pending')",
+        body.clientOrderId,
+        hash,
+        json.encodeToString(WireSubmit.serializer(), body),
+    )
 
     fun upsertOrder(order: WireOrder) =
         update(
@@ -75,9 +81,9 @@ internal class JournalRecords(
             json.decodeFromString(WireOrder.serializer(), it.getString(1))
         }
 
-    fun pendingIds(): List<String> =
-        query("SELECT client_order_id FROM orders WHERE status = 'pending'") {
-            it.getString(1)
+    fun pendingBodies(): List<WireSubmit> =
+        query("SELECT body_json FROM orders WHERE status = 'pending' ORDER BY client_order_id") {
+            json.decodeFromString(WireSubmit.serializer(), it.getString(1))
         }
 
     fun insertFill(fill: WireFill): Boolean =
@@ -124,6 +130,8 @@ internal class JournalRecords(
 
     fun settlementsOf(symbol: String): List<WireSettlement> =
         query("SELECT settlement_json FROM settlements WHERE symbol = ? ORDER BY time", symbol, read = ::settlement)
+
+    fun latestTime(table: String): Long = long("SELECT COALESCE(MAX(time), 0) FROM $table")
 
     fun isDead(id: String): Boolean =
         query("SELECT 1 FROM dead_ids WHERE client_order_id = ?", id) { true }.isNotEmpty()

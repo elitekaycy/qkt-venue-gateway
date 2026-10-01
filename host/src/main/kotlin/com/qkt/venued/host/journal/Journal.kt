@@ -5,6 +5,7 @@ import com.qkt.vgp.WireFill
 import com.qkt.vgp.WireKillSwitch
 import com.qkt.vgp.WireOrder
 import com.qkt.vgp.WireSettlement
+import com.qkt.vgp.WireSubmit
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.Connection
@@ -83,19 +84,25 @@ class Journal private constructor(
                     ).let { true }
         }
 
-    /** The write-ahead record of a new submit: [clientOrderId] with its [bodyHash], before the venue sees it. */
+    /** The write-ahead record of a new submit: its [body] and [bodyHash], before the venue sees it. */
     fun writeAhead(
-        clientOrderId: String,
+        body: WireSubmit,
         bodyHash: String,
-    ) = transaction { records.writeAhead(clientOrderId, bodyHash) }
+    ) = transaction { records.writeAhead(body, bodyHash) }
 
     fun order(clientOrderId: String): OrderRecord? = synchronized(this) { records.order(clientOrderId) }
 
     /** Orders the venue holds as working, as last journaled. */
     fun workingOrders(): List<WireOrder> = synchronized(this) { records.ordersWithStatus("working") }
 
-    /** Write-ahead records the venue's answer never reached (a crash in between). */
-    fun unresolved(): List<String> = synchronized(this) { records.pendingIds() }
+    /** The submits of write-ahead records the venue's answer never reached (a crash in between). */
+    fun unresolved(): List<WireSubmit> = synchronized(this) { records.pendingBodies() }
+
+    /** The newest journaled fill's time; 0 before any. */
+    fun latestFillTime(): Long = synchronized(this) { records.latestTime("fills") }
+
+    /** The newest journaled settlement's time; 0 before any. */
+    fun latestSettlementTime(): Long = synchronized(this) { records.latestTime("settlements") }
 
     fun fills(
         fromMs: Long,

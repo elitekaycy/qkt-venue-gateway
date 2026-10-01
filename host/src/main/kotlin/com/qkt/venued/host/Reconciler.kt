@@ -1,0 +1,74 @@
+package com.qkt.venued.host
+
+import com.qkt.venued.host.wire.WireMapping
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory
+
+/**
+ * Brings the journal back to the venue's truth (design §6): every open order as the venue reports it;
+ * a journaled working order the venue no longer lists, by its label; a write-ahead record the venue's
+ * answer never reached, resolved by label or closed as rejected when the venue never saw it; and every
+ * fill and settlement since the newest journaled one (less [overlapMs]; [lookbackMs] on a new journal),
+ * which the journal journals once. Runs on [start], each time the venue link comes back, and every
+ * [periodMs]; one failed run is logged and the next tries again.
+ */
+class Reconciler(
+    private val gateway: Gateway,
+    private val periodMs: Long = 60_000,
+    private val overlapMs: Long = 5 * 60_000,
+    private val lookbackMs: Long = 7 * 24 * 3_600_000L,
+) : AutoCloseable {
+    private val log = LoggerFactory.getLogger(Reconciler::class.java)
+    private val timer =
+        Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "venued-reconciler").apply { isDaemon = true } }
+
+    /** Reconciles now, then every [periodMs] and on every venue reconnect. */
+    fun start() {
+        gateway.onConnection = { up -> if (up) timer.execute(::quietly) }
+        timer.scheduleWithFixedDelay(::quietly, 0, periodMs, TimeUnit.MILLISECONDS)
+    }
+
+    /** One reconciliation. Throws when the venue cannot answer. */
+    @Synchronized
+    fun reconcile() {
+        val venue = gateway.adapter
+        val journal = gateway.journal
+        val listener = gateway.listener
+        val open = venue.openOrders()
+        open.forEach(listener::order)
+        val listed = open.map { it.clientOrderId }.toSet()
+        journal.workingOrders().filter { it.clientOrderId !in listed }.forEach { gone ->
+            venue.orderByLabel(gone.clientOrderId)?.let(listener::order)
+        }
+        for (body in journal.unresolved()) {
+            val found = venue.orderByLabel(body.clientOrderId)
+            if (found != null) {
+                listener.order(found)
+            } else {
+                journal.appendOrder(WireMapping.rejected(body, "the venue never received it", gateway.clock()))
+            }
+        }
+        val now = gateway.clock()
+        venue.fills(since(journal.latestFillTime(), now), now).forEach(listener::fill)
+        venue.settlements(since(journal.latestSettlementTime(), now), now).forEach(listener::settlement)
+    }
+
+    override fun close() {
+        timer.shutdownNow()
+    }
+
+    private fun since(
+        newest: Long,
+        now: Long,
+    ): Long = (if (newest > 0) newest else now - lookbackMs) - overlapMs
+
+    private fun quietly() {
+        runCatching { reconcile() }.onFailure {
+            log.warn(
+                "reconciliation failed, retrying on the next run: {}",
+                it.message,
+            )
+        }
+    }
+}

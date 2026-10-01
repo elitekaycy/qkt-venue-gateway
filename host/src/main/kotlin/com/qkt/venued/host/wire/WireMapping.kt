@@ -88,6 +88,28 @@ object WireMapping {
     fun settlement(s: VenueSettlement): WireSettlement =
         WireSettlement(s.symbol, s.price.toPlainString(), s.timeMs, s.costs.map(::cost))
 
+    /** The order [body] became when it never reached the venue or the venue refused it, for [reason] at [nowMs]. */
+    fun rejected(
+        body: WireSubmit,
+        reason: String,
+        nowMs: Long,
+    ): WireOrder =
+        WireOrder(
+            clientOrderId = body.clientOrderId,
+            symbol = body.symbol,
+            side = body.side,
+            type = body.type,
+            quantity = body.quantity,
+            limitPrice = body.limitPrice,
+            stopPrice = body.stopPrice,
+            timeInForce = body.timeInForce,
+            reduceOnly = body.reduceOnly,
+            status = "rejected",
+            rejectReason = reason,
+            createdAt = nowMs,
+            updatedAt = nowMs,
+        )
+
     private fun cost(c: Cost) = WireCost(c.kind.wire(), c.amount.toPlainString(), c.currency)
 
     /** An enum's wire name: lowercase. */
