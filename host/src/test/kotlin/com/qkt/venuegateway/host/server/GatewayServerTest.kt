@@ -166,4 +166,27 @@ class GatewayServerTest {
         assertThat(missing).isEqualTo(404)
         assertThat(error).contains("not_found")
     }
+
+    @Test
+    fun `an order is changed by the trader, and a position is closed by the trader or the guardian`() {
+        start()
+        call("POST", "/v1/orders", body = submit("p-1").replace("\"market\"", "\"limit\",\"limit_price\":\"50000\""))
+        venue.net["BTC_USDC-PERPETUAL"] = BigDecimal("0.2")
+
+        val (changed, order) = call("PATCH", "/v1/orders/p-1", body = """{"limit_price":"49000"}""")
+        val (guardianPatch, _) = call("PATCH", "/v1/orders/p-1", token = "g-token", body = """{"limit_price":"1"}""")
+        val (closed, closing) =
+            call(
+                "POST",
+                "/v1/positions/close",
+                token = "g-token",
+                body = """{"symbol":"BTC_USDC-PERPETUAL"}""",
+            )
+
+        assertThat(changed).isEqualTo(200)
+        assertThat(order).contains("\"limit_price\":\"49000\"")
+        assertThat(guardianPatch).isEqualTo(401)
+        assertThat(closed).isEqualTo(200)
+        assertThat(closing).contains("\"side\":\"sell\"", "\"reduce_only\":true", "\"quantity\":\"0.2\"")
+    }
 }

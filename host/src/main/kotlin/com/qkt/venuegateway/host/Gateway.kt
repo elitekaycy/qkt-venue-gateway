@@ -9,6 +9,7 @@ import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.host.journal.Journal
 import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.orders.OrderDesk
+import com.qkt.venuegateway.host.orders.PositionCloser
 import com.qkt.venuegateway.host.server.Role
 import com.qkt.venuegateway.host.wire.WireMapping
 import com.qkt.venuegateway.host.wire.WireReads
@@ -48,6 +49,9 @@ class Gateway(
 
     /** Takes orders. */
     val desk = OrderDesk(journal, adapter, up::get, clock)
+
+    /** Flattens positions (`POST /v1/positions/close`). */
+    val closer = PositionCloser(desk, adapter, clock)
 
     /** Hears every quote the venue pushes (the quote hub sets it). */
     @Volatile var onQuote: (VenueQuote) -> Unit = {}

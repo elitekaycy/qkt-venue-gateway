@@ -121,7 +121,15 @@ internal class FakeAdapter : VenueAdapter {
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? = orders[clientOrderId]
+    ): VenueOrder? =
+        orders.computeIfPresent(clientOrderId) { _, o ->
+            o.copy(
+                quantity = change.quantity ?: o.quantity,
+                limitPrice = change.limitPrice ?: o.limitPrice,
+                stopPrice = change.stopPrice ?: o.stopPrice,
+                updatedAtMs = o.updatedAtMs + 1,
+            )
+        }
 
     override fun orderByLabel(clientOrderId: String): VenueOrder? = orders[clientOrderId]
 

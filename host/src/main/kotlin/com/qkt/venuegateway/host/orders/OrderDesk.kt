@@ -1,12 +1,15 @@
 package com.qkt.venuegateway.host.orders
 
+import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
 import com.qkt.venuegateway.host.journal.Journal
 import com.qkt.venuegateway.host.wire.WireMapping
+import com.qkt.vgp.WireChange
 import com.qkt.vgp.WireOrder
 import com.qkt.vgp.WireSubmit
+import java.math.BigDecimal
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.json.Json
@@ -44,7 +47,52 @@ class OrderDesk(
     private val json = Json { encodeDefaults = true }
 
     /** `POST /v1/orders`. */
-    fun submit(body: WireSubmit): DeskResult =
+    fun submit(body: WireSubmit): DeskResult = place(body, gated = true)
+
+    /** A flatten the gateway itself builds (`POST /v1/positions/close`): sent like a submit, never gated. */
+    internal fun flatten(body: WireSubmit): DeskResult = place(body, gated = false)
+
+    /**
+     * `PATCH /v1/orders/{id}`: [change] applied at the venue and journaled. While a kill scope covers
+     * the order's symbol only a pure size reduction passes.
+     */
+    fun modify(
+        clientOrderId: String,
+        change: WireChange,
+    ): DeskResult =
+        locked(clientOrderId) {
+            val current =
+                journal.order(clientOrderId)?.order
+                    ?: return@locked DeskResult.Refused(404, "not_found", "no order $clientOrderId")
+            val fields = listOf(change.quantity, change.limitPrice, change.stopPrice)
+            if (fields.all { it == null } || fields.any { it != null && positive(it) == null }) {
+                return@locked DeskResult.Refused(
+                    400,
+                    "invalid_request",
+                    "a change needs positive decimal fields: $change",
+                )
+            }
+            val parsed = OrderChange(positive(change.quantity), positive(change.limitPrice), positive(change.stopPrice))
+            val shrinks = parsed.quantity?.let { it < BigDecimal(current.quantity) } == true
+            val pureReduction = shrinks && parsed.limitPrice == null && parsed.stopPrice == null
+            if (gate.covers(current.symbol) && !pureReduction) {
+                return@locked DeskResult.Refused(423, "kill_switch", "the kill switch covers ${current.symbol}")
+            }
+            if (!venueUp()) return@locked unavailable("the venue link is down")
+            try {
+                venue.modify(clientOrderId, parsed)?.let { DeskResult.Ok(appended(it)) }
+                    ?: DeskResult.Refused(404, "not_found", "no order $clientOrderId")
+            } catch (e: VenueRefusedException) {
+                DeskResult.Refused(422, "venue_rejected", e.reason)
+            } catch (e: VenueUnavailableException) {
+                unavailable(e.message ?: "the venue did not answer")
+            }
+        }
+
+    private fun place(
+        body: WireSubmit,
+        gated: Boolean,
+    ): DeskResult =
         locked(body.clientOrderId) {
             val hash = hash(body)
             if (journal.isDead(body.clientOrderId)) return@locked conflict("${body.clientOrderId} was written off")
@@ -56,7 +104,7 @@ class OrderDesk(
             }
             record?.order?.let { return@locked DeskResult.Ok(it) }
             val order = WireMapping.newOrder(body)
-            gate.refusal(order)?.let { return@locked DeskResult.Refused(423, "kill_switch", it) }
+            if (gated) gate.refusal(order)?.let { return@locked DeskResult.Refused(423, "kill_switch", it) }
             if (!venueUp()) return@locked unavailable("the venue link is down")
             if (record == null) {
                 journal.writeAhead(body, hash)
@@ -92,6 +140,8 @@ class OrderDesk(
                     ?: return@locked DeskResult.Refused(404, "not_found", "no order $clientOrderId")
             DeskResult.Ok(appended(ended))
         }
+
+    private fun positive(text: String?): BigDecimal? = text?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
 
     private fun appended(order: com.qkt.venuegateway.adapter.VenueOrder): WireOrder =
         WireMapping.order(order).also { journal.appendOrder(it) }

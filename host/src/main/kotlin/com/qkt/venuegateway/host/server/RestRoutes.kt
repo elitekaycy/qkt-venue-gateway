@@ -5,6 +5,8 @@ import com.qkt.venuegateway.host.wire.InvalidRequestException
 import com.qkt.venuegateway.host.wire.WireMapping
 import com.qkt.venuegateway.host.wire.WireReads
 import com.qkt.vgp.WireAccount
+import com.qkt.vgp.WireChange
+import com.qkt.vgp.WireClose
 import com.qkt.vgp.WireDeals
 import com.qkt.vgp.WireHealth
 import com.qkt.vgp.WireInstrument
@@ -20,6 +22,7 @@ import io.ktor.server.request.receiveText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonObject
@@ -65,6 +68,18 @@ internal fun Route.restRoutes(gateway: Gateway) {
     }
     get("/v1/orders/{id}") {
         call.serve(gateway, ANY_ROLE) { desk(gateway.desk.get(id())) { json(WireOrder.serializer(), it.order) } }
+    }
+    patch("/v1/orders/{id}") {
+        call.serve(gateway, trader) {
+            val change = wireJson.decodeFromString(WireChange.serializer(), receiveText())
+            desk(gateway.desk.modify(id(), change)) { json(WireOrder.serializer(), it.order) }
+        }
+    }
+    post("/v1/positions/close") {
+        call.serve(gateway, trader + guardian) {
+            val request = wireJson.decodeFromString(WireClose.serializer(), receiveText())
+            desk(gateway.closer.close(request)) { json(WireOrder.serializer(), it.order) }
+        }
     }
     delete("/v1/orders/{id}") {
         call.serve(gateway, trader) { desk(gateway.desk.cancel(id())) { json(WireOrder.serializer(), it.order) } }

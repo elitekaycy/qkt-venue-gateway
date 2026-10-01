@@ -15,10 +15,12 @@ class KillSwitchGate(
     private val journal: Journal,
     private val venue: VenueAdapter,
 ) {
+    /** Whether a kill scope covers [symbol] now. */
+    fun covers(symbol: String): Boolean = journal.killSwitch().let { it.all || symbol in it.symbols }
+
     /** Why [order] may not be sent, or null when it may. */
     fun refusal(order: NewOrder): String? {
-        val scope = journal.killSwitch()
-        if (!scope.all && order.symbol !in scope.symbols) return null
+        if (!covers(order.symbol)) return null
         val held =
             venue
                 .positions()
