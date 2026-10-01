@@ -5,4 +5,5 @@ dependencies {
     "implementation"(project(":deribit-client"))
     "implementation"(libs.kotlinx.serialization.json)
     "implementation"(libs.slf4j.api)
+    "testImplementation"(project(":adapter-testkit"))
 }
