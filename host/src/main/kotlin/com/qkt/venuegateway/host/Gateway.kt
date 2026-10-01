@@ -21,7 +21,9 @@ import org.slf4j.LoggerFactory
  * One venue account's gateway: the [adapter], the [journal] every event goes through, the [desk]
  * that takes orders, and who may call it ([tokens] by role). What the venue pushes is journaled here
  * (an order update that changes nothing is dropped; fills and settlements are de-duplicated by the
- * journal) and [appended] carries the latest sequence number to every open stream.
+ * journal; orders and fills the gateway never placed, such as another tool's on the same account, are
+ * not the client's and are dropped) and [appended] carries the latest sequence number to every open
+ * stream.
  */
 class Gateway(
     val adapter: VenueAdapter,
@@ -87,13 +89,16 @@ class Gateway(
 
     internal val listener =
         object : AdapterListener {
+            /** Orders the gateway never placed (another tool's, on the same account) are not the client's. */
             override fun order(order: VenueOrder) {
-                if (order.clientOrderId.isBlank()) return
+                val known = journal.order(order.clientOrderId) ?: return
                 val wire = WireMapping.order(order)
-                if (journal.order(wire.clientOrderId)?.order != wire) journal.appendOrder(wire)
+                if (known.order != wire) journal.appendOrder(wire)
             }
 
+            /** A fill is always of an order the client sent through this gateway (wire spec §4). */
             override fun fill(fill: VenueFill) {
+                if (journal.order(fill.clientOrderId) == null) return
                 journal.appendFill(WireMapping.fill(fill))
             }
 

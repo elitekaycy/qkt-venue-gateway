@@ -91,4 +91,26 @@ class ReconcilerTest {
         assertThat(gateway.journal.unresolved()).isEmpty()
         gateway.close()
     }
+
+    @Test
+    fun `orders and fills the gateway never placed, labelled by another tool on the account, are never journaled`(
+        @TempDir dir: Path,
+    ) {
+        val gateway = gateway(dir)
+        gateway.desk.submit(submit("ours-1.x"))
+        venue.place(
+            com.qkt.venuegateway.host.wire.WireMapping
+                .newOrder(submit("other-tool-1")),
+        )
+        venue.fills += fill("other-tool-1", "f-other", now - 2_000)
+        venue.fills += fill("ours-1.x", "f-ours", now - 1_000)
+
+        Reconciler(gateway).reconcile()
+        venue.listener!!.fill(fill("other-tool-1", "f-other-2", now))
+
+        val journaled = gateway.journal.eventsAfter(0)
+        assertThat(journaled.map { it.type }).containsExactly("order", "fill")
+        assertThat(gateway.journal.order("other-tool-1")).isNull()
+        gateway.close()
+    }
 }
