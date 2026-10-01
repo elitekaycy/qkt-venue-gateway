@@ -54,12 +54,20 @@ class Journal private constructor(
     /** The oldest retained event's sequence number, or null when the log is empty. */
     fun oldestSeq(): Long? = synchronized(this) { records.long("SELECT MIN(seq) FROM events").takeIf { it > 0 } }
 
-    /** Records [order]'s current state and appends its `order` event. */
-    fun appendOrder(order: WireOrder) =
+    /**
+     * Records [order]'s state and appends its `order` event, unless the journal already holds exactly
+     * that state; true when appended. The check and the write are one step, so the same state reported
+     * at once by the order desk and by a venue push is journaled once.
+     */
+    fun appendOrder(order: WireOrder): Boolean =
         appending {
-            records.upsertOrder(order)
-            records.event("order", order.updatedAt, json.encodeToJsonElement(WireOrder.serializer(), order))
-            true
+            if (records.order(order.clientOrderId)?.order == order) {
+                false
+            } else {
+                records.upsertOrder(order)
+                records.event("order", order.updatedAt, json.encodeToJsonElement(WireOrder.serializer(), order))
+                true
+            }
         }
 
     /** Records [order]'s state without an event (a write-ahead record resolved quietly). */

@@ -91,9 +91,8 @@ class Gateway(
         object : AdapterListener {
             /** Orders the gateway never placed (another tool's, on the same account) are not the client's. */
             override fun order(order: VenueOrder) {
-                val known = journal.order(order.clientOrderId) ?: return
-                val wire = WireMapping.order(order)
-                if (known.order != wire) journal.appendOrder(wire)
+                if (journal.order(order.clientOrderId) == null) return
+                journal.appendOrder(WireMapping.order(order))
             }
 
             /** A fill is always of an order the client sent through this gateway (wire spec §4). */

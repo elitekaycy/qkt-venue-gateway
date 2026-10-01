@@ -94,13 +94,7 @@ class OrderDesk(
         }
 
     private fun appended(order: com.qkt.venuegateway.adapter.VenueOrder): WireOrder =
-        WireMapping.order(order).also { wire ->
-            if (journal.order(wire.clientOrderId)?.order !=
-                wire
-            ) {
-                journal.appendOrder(wire)
-            }
-        }
+        WireMapping.order(order).also { journal.appendOrder(it) }
 
     private fun hash(body: WireSubmit): String =
         MessageDigest

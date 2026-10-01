@@ -40,6 +40,23 @@ class JournalTest {
     ) = WireFill(id, "v-$id", fillId, "BTC_USDC-PERPETUAL", "buy", "0.1", "84000", time)
 
     @Test
+    fun `an order state already journaled is not appended again, from any number of threads at once`(
+        @TempDir dir: Path,
+    ) {
+        Journal.open(dir.resolve("j.db")).use { journal ->
+            val same = order("a-1")
+            val threads = (1..8).map { Thread { journal.appendOrder(same) } }
+
+            threads.forEach(Thread::start)
+            threads.forEach(Thread::join)
+
+            assertThat(journal.eventsAfter(0).map { it.type }).containsExactly("order")
+            assertThat(journal.appendOrder(same)).isFalse()
+            assertThat(journal.appendOrder(same.copy(status = "cancelled"))).isTrue()
+        }
+    }
+
+    @Test
     fun `every event takes the next sequence number, and a fill seen twice is journaled once`(
         @TempDir dir: Path,
     ) {
