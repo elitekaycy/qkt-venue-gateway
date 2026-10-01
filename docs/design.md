@@ -182,16 +182,28 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    from another adapter's public data (Deribit public feed, no account), fills market orders at the
    touch and limits when the opposite side reaches them, keeps positions and settles expiries at the
    venue's published delivery price. It runs the conformance suite in CI.
-2. **deribit** — USDC-linear options and futures first (qkt models linear contracts), over Deribit's API
-   v2 (JSON-RPC over WebSocket). The venue calls it will use, each to be verified against Deribit's
-   current API documentation and testnet before code: `public/auth` (client credentials),
-   `public/get_instruments`, `private/get_account_summary`, `private/get_positions`, `private/buy` /
-   `private/sell` with `label`, `private/cancel_by_label`, `private/get_order_state_by_label`,
-   `private/get_open_orders_by_currency`, `private/get_user_trades_by_currency`,
-   `private/get_settlement_history_by_currency`, and subscriptions to the user's orders and trades and
-   to instrument tickers. Testnet is `test.deribit.com` (`trade_mode: demo`).
+2. **deribit** — built and passing `AdapterContractTest` on testnet (2026-10-01), with qkt's own
+   connector round-tripping a perpetual and an option through it. USDC-linear contracts only (amounts
+   in coins); coin-margined contracts are refused. Every call was checked against testnet first and its
+   answer recorded as a fixture (`adapter-deribit/src/test/resources/fixtures/private`): `public/auth`
+   (client credentials, per connection), `public/set_heartbeat` (each `test_request` answered),
+   `private/subscribe` to `user.orders|trades.{future,option}.USDC.raw` (every channel must be
+   confirmed), `private/buy|sell` with `label`, `private/edit_by_label`, `private/cancel_by_label`,
+   `private/get_order_state_by_label`, `private/get_open_orders_by_currency`, `private/get_positions`,
+   `private/get_account_summary`, `private/get_user_trades_by_currency_and_time` (paged), and the public
+   listing, ticker and kline calls. Venue rules the adapter keeps (declared to qkt as parity rows
+   A50-A52): a stop fires on `stop_trigger` (`last_price` by default); a stop already crossed is refused;
+   market and stop orders take only GTC or DAY. Other facts: a future's position `size` is dollars (its
+   quantity is `size_currency`); a fired stop is a new Deribit order under the same label; labels are not
+   unique at Deribit, so only the host decides to resend; kline answers are cut silently at 5001, so they
+   are fetched in spans. **Still open:** `settlements` refuses as unavailable until a delivery has been
+   recorded from testnet (a held option settles 2026-10-02 08:00 UTC).
 3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.
+
+**Not yet served:** `GET /v1/contracts/{root}`. A futures contract carries no root on the wire (the
+spec gives `underlying` to options only), so serving the chain is a wire decision, taken with its first
+consumer, live continuous futures (qkt phase 46).
 
 ## 11. Deployment and operations
 
