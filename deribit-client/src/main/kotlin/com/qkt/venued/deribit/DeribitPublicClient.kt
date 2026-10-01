@@ -24,12 +24,12 @@ import okhttp3.Request
 class DeribitPublicClient(
     private val baseUrl: String = "https://www.deribit.com",
     timeoutMs: Long = 10_000,
-) {
+) : DeribitMarketData {
     private val http = OkHttpClient.Builder().callTimeout(Duration.ofMillis(timeoutMs)).build()
     private val json = Json { ignoreUnknownKeys = true }
 
     /** The live instruments of [currency] (`USDC`) of [kind] (`future`, `option`). */
-    fun instruments(
+    override fun instruments(
         currency: String,
         kind: String,
     ): List<DeribitInstrument> =
@@ -37,10 +37,11 @@ class DeribitPublicClient(
             .jsonArray
             .map { DeribitJson.instrument(it.jsonObject) }
 
-    fun ticker(name: String): DeribitTicker = DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
+    override fun ticker(name: String): DeribitTicker =
+        DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
 
     /** The klines of [name], [minutes] long, starting in `[fromMs, toMs]`; the last may still be forming. */
-    fun klines(
+    override fun klines(
         name: String,
         minutes: Long,
         fromMs: Long,
@@ -57,7 +58,7 @@ class DeribitPublicClient(
         )
 
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */
-    fun deliveryPrices(
+    override fun deliveryPrices(
         index: String,
         count: Int,
     ): List<Pair<LocalDate, BigDecimal>> =

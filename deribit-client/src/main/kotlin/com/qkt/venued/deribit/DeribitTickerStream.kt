@@ -25,7 +25,7 @@ class DeribitTickerStream(
     private val onTicker: (DeribitTicker) -> Unit,
     private val onConnection: (Boolean, String) -> Unit,
     private val interval: String = "100ms",
-) : AutoCloseable {
+) : DeribitTickers {
     private val log = LoggerFactory.getLogger(DeribitTickerStream::class.java)
     private val http = OkHttpClient.Builder().pingInterval(15, TimeUnit.SECONDS).build()
     private val json = Json { ignoreUnknownKeys = true }
@@ -45,10 +45,10 @@ class DeribitTickerStream(
 
     @Volatile private var stopped = false
 
-    fun start() = connect()
+    override fun start() = connect()
 
     /** Wants exactly [names]' tickers from now on. */
-    fun subscribe(names: Set<String>) =
+    override fun subscribe(names: Set<String>) =
         synchronized(lock) {
             val added = names - wanted
             val removed = wanted - names
