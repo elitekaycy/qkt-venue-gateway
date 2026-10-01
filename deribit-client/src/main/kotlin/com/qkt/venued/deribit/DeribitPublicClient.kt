@@ -37,6 +37,14 @@ class DeribitPublicClient(
             .jsonArray
             .map { DeribitJson.instrument(it.jsonObject) }
 
+    override fun instrument(name: String): DeribitInstrument =
+        DeribitJson.instrument(
+            call(
+                "get_instrument",
+                "instrument_name" to name,
+            ).obj(),
+        )
+
     override fun ticker(name: String): DeribitTicker =
         DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
 

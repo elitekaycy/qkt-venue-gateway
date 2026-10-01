@@ -10,6 +10,9 @@ interface DeribitMarketData {
         kind: String,
     ): List<DeribitInstrument>
 
+    /** One instrument by [name], expired ones included (Deribit keeps archived contracts answerable). */
+    fun instrument(name: String): DeribitInstrument
+
     fun ticker(name: String): DeribitTicker
 
     fun klines(

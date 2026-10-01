@@ -42,6 +42,7 @@ class DeribitPublicClientTest {
                                     }
                                 "get_tradingview_chart_data" -> "chart-1m"
                                 "get_delivery_prices" -> "delivery-prices"
+                                "get_instrument" -> "instrument-expired"
                                 else -> return MockResponse().setBody(
                                     """{"jsonrpc":"2.0","error":{"code":13009,"message":"bad"}}""",
                                 )
@@ -69,6 +70,9 @@ class DeribitPublicClientTest {
         assertThat(option.strike).isEqualByComparingTo("65000")
         assertThat(option.optionType).isEqualTo("call")
         assertThat(option.priceIndex).isEqualTo("btc_usdc")
+        val expired = client.instrument("BTC_USDC-30SEP26")
+        assertThat(expired.expiryMs).isNotNull()
+        assertThat(expired.contractSize).isEqualByComparingTo("0.0001")
     }
 
     @Test
