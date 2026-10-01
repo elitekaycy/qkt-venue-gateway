@@ -203,9 +203,8 @@ Runs at start, after every venue reconnect, and every 60 seconds:
 3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.
 
-**Not yet served:** `GET /v1/contracts/{root}`. A futures contract carries no root on the wire (the
-spec gives `underlying` to options only), so serving the chain is a wire decision, taken with its first
-consumer, live continuous futures (qkt phase 46).
+**Futures chains** are not part of v1 (wire spec §3): a dated future carries no root on the wire, so the
+chain endpoint is designed with its first consumer, live continuous futures (qkt phase 46).
 
 ## 11. Deployment and operations
 
