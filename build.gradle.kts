@@ -7,7 +7,7 @@ plugins {
 
 subprojects {
     group = "com.qkt.venuegateway"
-    version = "0.1.0"
+    version = rootProject.file("VERSION").readText().trim()
     repositories { mavenCentral() }
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
@@ -19,4 +19,6 @@ subprojects {
         "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
     }
     tasks.withType<Test> { useJUnitPlatform() }
+    // Adapters report the release they ship in (`adapter_version`) from their jar's manifest.
+    tasks.withType<Jar> { manifest { attributes("Implementation-Version" to project.version) } }
 }
