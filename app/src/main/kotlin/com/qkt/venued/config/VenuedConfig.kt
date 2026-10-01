@@ -1,17 +1,10 @@
 package com.qkt.venued.config
 
+import com.qkt.venued.host.server.Role
 import java.nio.file.Files
 import java.nio.file.Path
 import org.snakeyaml.engine.v2.api.Load
 import org.snakeyaml.engine.v2.api.LoadSettings
-
-/** Who a token belongs to: qkt trades with [TRADER]; guardrails watches and flips the kill switch as [GUARDIAN]. */
-enum class Role(
-    val key: String,
-) {
-    TRADER("trader"),
-    GUARDIAN("guardian"),
-}
 
 /**
  * One gateway's configuration: where it listens ([host]:[port]), where its journal lives ([stateDir]),

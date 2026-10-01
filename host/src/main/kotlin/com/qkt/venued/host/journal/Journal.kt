@@ -27,6 +27,12 @@ class Journal private constructor(
 ) : AutoCloseable {
     internal val json = Json { ignoreUnknownKeys = true }
     private val records = JournalRecords(db, json)
+    private val listeners = java.util.concurrent.CopyOnWriteArrayList<(Long) -> Unit>()
+
+    /** Calls [listener] with the latest sequence number after every committed event, outside the lock. */
+    fun onAppend(listener: (Long) -> Unit) {
+        listeners += listener
+    }
 
     /** The event log's identity; a new journal file has a new one. */
     val stream: String =
@@ -49,7 +55,7 @@ class Journal private constructor(
 
     /** Records [order]'s current state and appends its `order` event. */
     fun appendOrder(order: WireOrder) =
-        transaction {
+        appending {
             records.upsertOrder(order)
             records.event("order", order.updatedAt, json.encodeToJsonElement(WireOrder.serializer(), order))
             true
@@ -60,14 +66,14 @@ class Journal private constructor(
 
     /** Appends [fill] and its event unless its fill id was journaled before; true when new. */
     fun appendFill(fill: WireFill): Boolean =
-        transaction {
+        appending {
             records.insertFill(fill) &&
                 records.event("fill", fill.time, json.encodeToJsonElement(WireFill.serializer(), fill)).let { true }
         }
 
     /** Appends [settlement] and its event unless the same symbol and time were journaled before; true when new. */
     fun appendSettlement(settlement: WireSettlement): Boolean =
-        transaction {
+        appending {
             records.insertSettlement(settlement) &&
                 records
                     .event(
@@ -123,6 +129,16 @@ class Journal private constructor(
         }
 
     override fun close() = synchronized(this) { db.close() }
+
+    /** A transaction that may append an event: listeners hear the new sequence number once it is committed. */
+    private fun appending(block: () -> Boolean): Boolean {
+        val appended = transaction(block)
+        if (appended) {
+            val seq = latestSeq()
+            listeners.forEach { it(seq) }
+        }
+        return appended
+    }
 
     private fun <T> transaction(block: () -> T): T =
         synchronized(this) {

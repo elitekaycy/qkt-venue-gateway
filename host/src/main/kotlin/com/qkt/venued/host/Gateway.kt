@@ -1,0 +1,119 @@
+package com.qkt.venued.host
+
+import com.qkt.venued.adapter.AdapterListener
+import com.qkt.venued.adapter.VenueAdapter
+import com.qkt.venued.adapter.VenueFill
+import com.qkt.venued.adapter.VenueOrder
+import com.qkt.venued.adapter.VenueQuote
+import com.qkt.venued.adapter.VenueSettlement
+import com.qkt.venued.host.journal.Journal
+import com.qkt.venued.host.orders.OrderDesk
+import com.qkt.venued.host.server.Role
+import com.qkt.venued.host.wire.WireMapping
+import com.qkt.vgp.WireHealth
+import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import org.slf4j.LoggerFactory
+
+/**
+ * One venue account's gateway: the [adapter], the [journal] every event goes through, the [desk]
+ * that takes orders, and who may call it ([tokens] by role). What the venue pushes is journaled here
+ * (an order update that changes nothing is dropped; fills and settlements are de-duplicated by the
+ * journal) and [appended] carries the latest sequence number to every open stream.
+ */
+class Gateway(
+    val adapter: VenueAdapter,
+    val journal: Journal,
+    private val tokens: Map<Role, String>,
+    private val clock: () -> Long,
+) : AutoCloseable {
+    private val log = LoggerFactory.getLogger(Gateway::class.java)
+    private val up = AtomicBoolean(false)
+    private val latest = MutableStateFlow(journal.latestSeq())
+
+    /** Whether the venue link is up now. */
+    val venueConnected: Boolean get() = up.get()
+
+    /** The latest journaled sequence number, as it moves. */
+    val appended: StateFlow<Long> get() = latest
+
+    /** Takes orders. */
+    val desk = OrderDesk(journal, adapter, up::get)
+
+    /** Hears every quote the venue pushes (the quote hub sets it). */
+    @Volatile var onQuote: (VenueQuote) -> Unit = {}
+
+    /** Hears every venue link change after it is recorded (the reconciler sets it). */
+    @Volatile var onConnection: (Boolean) -> Unit = {}
+
+    init {
+        journal.onAppend { latest.value = it }
+    }
+
+    /** Opens the venue link. */
+    fun start() = adapter.connect(listener)
+
+    /** The role [authorization] (`Bearer <token>`) carries, or null when it carries none. */
+    fun roleOf(authorization: String?): Role? {
+        val token =
+            authorization?.removePrefix("Bearer ")?.takeIf { authorization.startsWith("Bearer ") } ?: return null
+        return tokens.entries.firstOrNull { (_, expected) -> sameBytes(expected, token) }?.key
+    }
+
+    /** `GET /v1/health`: identity, venue link, kill switch, and the stream anchor read together. */
+    fun health(): WireHealth {
+        val identity = adapter.identity()
+        return WireHealth(
+            protocol = "vgp1",
+            adapter = adapter.id,
+            adapterVersion = adapter.version,
+            accountLogin = identity.login,
+            tradeMode = identity.mode.name.lowercase(),
+            venueConnected = up.get(),
+            killSwitch = journal.killSwitch(),
+            serverTime = clock(),
+            stream = journal.stream,
+            seq = journal.latestSeq(),
+        )
+    }
+
+    override fun close() {
+        adapter.close()
+        journal.close()
+    }
+
+    internal val listener =
+        object : AdapterListener {
+            override fun order(order: VenueOrder) {
+                if (order.clientOrderId.isBlank()) return
+                val wire = WireMapping.order(order)
+                if (journal.order(wire.clientOrderId)?.order != wire) journal.appendOrder(wire)
+            }
+
+            override fun fill(fill: VenueFill) {
+                journal.appendFill(WireMapping.fill(fill))
+            }
+
+            override fun settlement(settlement: VenueSettlement) {
+                journal.appendSettlement(WireMapping.settlement(settlement))
+            }
+
+            override fun quote(quote: VenueQuote) = onQuote(quote)
+
+            override fun connection(
+                up: Boolean,
+                reason: String,
+            ) {
+                log.info("venue link {}: {}", if (up) "up" else "down", reason)
+                this@Gateway.up.set(up)
+                onConnection(up)
+            }
+        }
+
+    private fun sameBytes(
+        a: String,
+        b: String,
+    ) = MessageDigest.isEqual(a.toByteArray(), b.toByteArray())
+}

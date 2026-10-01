@@ -1,5 +1,6 @@
 package com.qkt.venued.config
 
+import com.qkt.venued.host.server.Role
 import java.nio.file.Files
 import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
