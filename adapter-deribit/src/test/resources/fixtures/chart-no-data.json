@@ -1,0 +1,1 @@
+{"jsonrpc": "2.0", "id": 1, "result": {"close": [], "high": [], "low": [], "open": [], "status": "no_data", "cost": [], "volume": [], "ticks": []}, "usIn": 1790870410223079, "usOut": 1790870410265752, "usDiff": 42673, "testnet": true}

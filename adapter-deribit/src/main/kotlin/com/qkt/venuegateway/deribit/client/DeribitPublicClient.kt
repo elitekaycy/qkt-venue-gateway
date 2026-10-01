@@ -48,22 +48,36 @@ class DeribitPublicClient(
     override fun ticker(name: String): DeribitTicker =
         DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
 
-    /** The klines of [name], [minutes] long, starting in `[fromMs, toMs]`; the last may still be forming. */
+    /**
+     * The klines of [name], [minutes] long, from the one holding [fromMs] to [toMs], oldest first; the
+     * last may still be forming. Deribit answers at most 5001 klines, the newest, without saying it cut
+     * the rest, so the range is asked for in spans of [KLINES_PER_CALL] and joined, each kline once.
+     */
     override fun klines(
         name: String,
         minutes: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<DeribitKline> =
-        DeribitJson.klines(
-            call(
-                "get_tradingview_chart_data",
-                "instrument_name" to name,
-                "resolution" to resolution(minutes),
-                "start_timestamp" to fromMs.toString(),
-                "end_timestamp" to toMs.toString(),
-            ).obj(),
-        )
+    ): List<DeribitKline> {
+        val resolution = resolution(minutes)
+        val span = minutes * MINUTE_MS * KLINES_PER_CALL
+        val byStart = sortedMapOf<Long, DeribitKline>()
+        var start = fromMs
+        while (start <= toMs) {
+            val end = minOf(toMs, start + span - 1)
+            val answer =
+                call(
+                    "get_tradingview_chart_data",
+                    "instrument_name" to name,
+                    "resolution" to resolution,
+                    "start_timestamp" to start.toString(),
+                    "end_timestamp" to end.toString(),
+                )
+            DeribitJson.klines(answer.obj()).forEach { byStart.putIfAbsent(it.startMs, it) }
+            start = end + 1
+        }
+        return byStart.values.toList()
+    }
 
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */
     override fun deliveryPrices(
@@ -78,11 +92,18 @@ class DeribitPublicClient(
                 LocalDate.parse(o["date"]!!.jsonPrimitive.content) to DeribitJson.decimal(o["delivery_price"])!!
             }
 
+    private companion object {
+        const val MINUTE_MS = 60_000L
+
+        /** Klines asked for per call, safely under Deribit's 5001 cap. */
+        const val KLINES_PER_CALL = 4_000L
+    }
+
     private fun resolution(minutes: Long): String =
         when (minutes) {
-            1L, 3L, 5L, 10L, 15L, 30L, 60L, 120L, 180L, 360L, 720L -> minutes.toString()
+            !in DERIBIT_KLINE_MINUTES -> throw IllegalArgumentException("Deribit has no $minutes-minute klines")
             1_440L -> "1D"
-            else -> throw IllegalArgumentException("Deribit has no $minutes-minute klines")
+            else -> minutes.toString()
         }
 
     private fun call(
