@@ -44,56 +44,76 @@ guardian ───┘   (bearer)     │    │                       ▲       
 | `paper` | Matching on Deribit's public prices, no account needed | Built in. Futures, perpetuals and options. |
 | `deribit` | Deribit (testnet and mainnet) | Built in. Passes the adapter contract suite on testnet; qkt trades perpetuals, futures and options through it end to end. Settlement history is not served yet. |
 
-Mainnet is never a default: a Deribit config must say `environment: testnet` or `environment: mainnet`.
+Mainnet is never a default: a Deribit gateway must be told `testnet` or `mainnet`.
 
 ## Quickstart (paper, no account)
 
-Requires JDK 21.
+Requires Docker. The gateway runs as its own service beside qkt, one container per venue account.
 
 ```bash
 git clone https://github.com/elitekaycy/qkt-venue-gateway && cd qkt-venue-gateway
-./gradlew build
+cp .env.example .env              # set PAPER_TRADER_TOKEN and PAPER_GUARDIAN_TOKEN
+docker compose up -d              # the paper account on 127.0.0.1:8443
+
+source .env
+curl -H "Authorization: Bearer $PAPER_TRADER_TOKEN" http://127.0.0.1:8443/v1/health
+curl -H "Authorization: Bearer $PAPER_TRADER_TOKEN" http://127.0.0.1:8443/v1/instruments/BTC_USDC-PERPETUAL
 ```
 
-`paper.yaml`:
-
-```yaml
-listen: 127.0.0.1:8443
-state_dir: ./state/paper
-tokens: { trader: env:GATEWAY_TRADER_TOKEN, guardian: env:GATEWAY_GUARDIAN_TOKEN }
-adapter:
-  type: paper
-  settings: { currency: USDC, starting_balance: "10000" }
-```
+Or one container by hand:
 
 ```bash
-export GATEWAY_TRADER_TOKEN=change-me GATEWAY_GUARDIAN_TOKEN=change-me-too
-./gradlew :app:run --args="paper.yaml"
-
-curl -H "Authorization: Bearer $GATEWAY_TRADER_TOKEN" http://127.0.0.1:8443/v1/health
-curl -H "Authorization: Bearer $GATEWAY_TRADER_TOKEN" http://127.0.0.1:8443/v1/instruments/BTC_USDC-PERPETUAL
+docker build -t qkt-venue-gateway .
+docker run -d -p 127.0.0.1:8443:8443 -v gw-paper:/data \
+  -e GATEWAY_TRADER_TOKEN=change-me -e GATEWAY_GUARDIAN_TOKEN=change-me-too qkt-venue-gateway
 ```
 
-Tokens and credentials are always references (`env:VAR` or `file:/path`), never inline, so a config file
-carries no secret.
+Without Docker (JDK 21): `GATEWAY_TRADER_TOKEN=… GATEWAY_GUARDIAN_TOKEN=… ./gradlew :app:run`.
+
+## Configuration
+
+Everything is a `GATEWAY_*` environment variable. Defaults live in one place,
+[`GatewayConfig`](app/src/main/kotlin/com/qkt/venuegateway/config/GatewayConfig.kt); a variable with
+no default is required, and the gateway refuses to start naming it.
+
+| Variable | Default | |
+|---|---|---|
+| `GATEWAY_TRADER_TOKEN` | required | bearer token qkt trades with |
+| `GATEWAY_GUARDIAN_TOKEN` | required | bearer token guardrails reads and flips the kill switch with |
+| `GATEWAY_ADAPTER` | `paper` | the venue adapter: `paper`, `deribit`, or a plugin's type |
+| `GATEWAY_LISTEN` | `127.0.0.1:8443` (`0.0.0.0:8443` in the image) | `<host>:<port>` to serve VGP on |
+| `GATEWAY_STATE_DIR` | `./state` (`/data` in the image) | the journal and the adapter's state; keep it on a volume |
+| `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | venue credentials, both or neither |
+| `GATEWAY_PLUGINS_DIR` | none | a directory of adapter jars beside the built-in ones |
+| `GATEWAY_SETTING_<KEY>` | the adapter's | adapter setting `<key>`: `GATEWAY_SETTING_STOP_TRIGGER` is `stop_trigger` |
+
+Any variable but a setting can be given as `<NAME>_FILE` instead, the path of a file holding the value
+(a Docker or Kubernetes secret).
+
+Adapter settings:
+
+| Adapter | Setting | Default |
+|---|---|---|
+| `paper` | `currency` | `USDC` |
+| | `starting_balance` | `10000` |
+| | `fee_rate` | `0` |
+| | `login` | `paper` |
+| | `deribit_url`, `deribit_ws_url` | Deribit mainnet's public endpoints |
+| `deribit` | `environment` | required: `testnet`, or `mainnet` for real money |
+| | `currency` | `USDC` (the only one supported) |
+| | `stop_trigger` | `last_price` (or `mark_price`, `index_price`) |
 
 ## A Deribit account
 
 Create an API key with read and trade scopes only (never withdrawal). The login is the key's client id,
-which qkt checks; the secret never leaves the gateway.
+which qkt checks; the secret never leaves the gateway. Fill the `DERIBIT_*` lines of `.env`, then:
 
-```yaml
-listen: 127.0.0.1:8443
-state_dir: /var/lib/qkt-venue-gateway/deribit
-tokens: { trader: env:GATEWAY_TRADER_TOKEN, guardian: env:GATEWAY_GUARDIAN_TOKEN }
-adapter:
-  type: deribit
-  credentials: { login: env:DERIBIT_CLIENT_ID, secret: env:DERIBIT_CLIENT_SECRET }
-  settings:
-    environment: testnet          # mainnet is real money
-    currency: USDC                # the account currency qkt books in
-    stop_trigger: last_price      # or mark_price, index_price
+```bash
+docker compose --profile deribit up -d    # the Deribit account on 127.0.0.1:8444
 ```
+
+Mainnet is never a default: `DERIBIT_ENVIRONMENT` (the gateway's `GATEWAY_SETTING_ENVIRONMENT`) must
+say `testnet` or `mainnet`.
 
 ## Trading through it from qkt
 
@@ -103,8 +123,8 @@ One `type: gateway` broker entry per account in qkt's config; the entry name is 
 brokers:
   deribit:
     type: gateway
-    gateway_url: http://127.0.0.1:8443
-    api_key: env:GATEWAY_TRADER_TOKEN
+    gateway_url: http://127.0.0.1:8444      # http://gateway-deribit:8443 from a container on the compose network
+    api_key: env:DERIBIT_TRADER_TOKEN       # the gateway's GATEWAY_TRADER_TOKEN
     expected_adapter: deribit
     expected_account_login: "<your client id>"
     expected_trade_mode: demo
@@ -150,7 +170,7 @@ One venue is one module, `adapter-<venue>`, depending only on `adapter-api`:
 
 The host gives every adapter the same guarantees (journal, idempotency, recovery from fills, kill switch,
 quote refresh), so an adapter that passes the contract suite works with qkt as it is. Build the jar, put
-it in `plugins_dir`, and set `adapter.type`. `adapter-deribit` is the worked example; the interface and
+it in `GATEWAY_PLUGINS_DIR`, and set `GATEWAY_ADAPTER`. `adapter-deribit` is the worked example; the interface and
 its rules are in [docs/design.md](docs/design.md) §3.
 
 ## Repository
@@ -163,7 +183,7 @@ its rules are in [docs/design.md](docs/design.md) §3.
 | `adapter-testkit` | `AdapterContractTest`, the behaviour every adapter must pass |
 | `adapter-deribit` | Deribit: its JSON-RPC `client`, the mapping, the adapter |
 | `adapter-paper` | venue-free matching on Deribit's public prices |
-| `app` | config, adapter loading, startup |
+| `app` | config from `GATEWAY_*` variables, adapter loading, startup; the `Dockerfile` builds it |
 
 The build enforces the boundaries: the host never sees a venue API, and an adapter only sees `adapter-api`.
 
