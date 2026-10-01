@@ -196,7 +196,9 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    market and stop orders take only GTC or DAY. Other facts: a future's position `size` is dollars (its
    quantity is `size_currency`); a fired stop is a new Deribit order under the same label; labels are not
    unique at Deribit, so only the host decides to resend; kline answers are cut silently at 5001, so they
-   are fetched in spans. **Still open:** `settlements` refuses as unavailable until a delivery has been
+   are fetched in spans; a closed order is answered by label for under an hour (measured: found 27 min
+   after closing, gone after about an hour, and absent from order history too), while trades stay, so
+   the host resolves an order it lost track of from its fills (`OrderRecovery`). **Still open:** `settlements` refuses as unavailable until a delivery has been
    recorded from testnet (a held option settles 2026-10-02 08:00 UTC).
 3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.
