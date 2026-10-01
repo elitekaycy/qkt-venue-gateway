@@ -1,7 +1,8 @@
 name: check
 
-# Compile, ktlint and every module's tests on each push and pull request into main. The Deribit
-# contract suite needs a testnet key and skips without one; everything else runs on recorded fixtures.
+# Compile, ktlint and every module's tests, and build the image, on each push and pull request into
+# main. The Deribit contract suite needs a testnet key and skips without one; everything else runs on
+# recorded fixtures.
 
 on:
   push:
@@ -27,3 +28,9 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build --no-daemon
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t qkt-venue-gateway:check .
