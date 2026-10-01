@@ -111,4 +111,33 @@ class OrderRecoveryTest {
         assertThat(gateway.journal.eventsAfter(0).map { it.type }).contains("fill")
         gateway.close()
     }
+
+    @Test
+    fun `a journaled working order that ended while away is resolved from its fills, or closed when none`(
+        @TempDir dir: Path,
+    ) {
+        val gateway = gateway(dir)
+        gateway.desk.submit(body)
+        gateway.desk.submit(body.copy(clientOrderId = "quiet-1.x"))
+        venue.orders.remove(body.clientOrderId)
+        venue.orders.remove("quiet-1.x")
+        venue.fills += fill("f1", "0.3", "84000", now - 1_000)
+
+        Reconciler(gateway).reconcile()
+
+        assertThat(
+            gateway.journal
+                .order(body.clientOrderId)
+                ?.order
+                ?.status,
+        ).isEqualTo("filled")
+        assertThat(
+            gateway.journal
+                .order("quiet-1.x")
+                ?.order
+                ?.status,
+        ).isEqualTo("cancelled")
+        assertThat(gateway.journal.workingOrders()).isEmpty()
+        gateway.close()
+    }
 }

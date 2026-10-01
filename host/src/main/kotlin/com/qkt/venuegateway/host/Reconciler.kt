@@ -7,7 +7,8 @@ import org.slf4j.LoggerFactory
 
 /**
  * Brings the journal back to the venue's truth (design §6): every open order as the venue reports it;
- * a journaled working order the venue no longer lists, by its label; a write-ahead record the venue's
+ * a journaled working order the venue no longer lists, resolved by [OrderRecovery] or, with no trace
+ * left, closed as cancelled (it is not working: the venue would list it); a write-ahead record the venue's
  * answer never reached, resolved by [OrderRecovery] (by label, else from its fills) or closed as
  * rejected when the venue holds no trace of it; and every
  * fill and settlement since the newest journaled one (less [overlapMs]; [lookbackMs] on a new journal),
@@ -40,7 +41,13 @@ class Reconciler(
         open.forEach(listener::order)
         val listed = open.map { it.clientOrderId }.toSet()
         journal.workingOrders().filter { it.clientOrderId !in listed }.forEach { gone ->
-            venue.orderByLabel(gone.clientOrderId)?.let(listener::order)
+            val found = gateway.desk.recovery.find(WireMapping.submitOf(gone))
+            if (found != null) {
+                found.fills.forEach(listener::fill)
+                listener.order(found.order)
+            } else {
+                journal.appendOrder(gone.copy(status = "cancelled", updatedAt = gateway.clock()))
+            }
         }
         for (body in journal.unresolved()) {
             val found = gateway.desk.recovery.find(body)

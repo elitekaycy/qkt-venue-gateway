@@ -88,6 +88,20 @@ object WireMapping {
     fun settlement(s: VenueSettlement): WireSettlement =
         WireSettlement(s.symbol, s.price.toPlainString(), s.timeMs, s.costs.map(::cost))
 
+    /** The submit [order] was sent as. */
+    fun submitOf(order: WireOrder) =
+        WireSubmit(
+            order.clientOrderId,
+            order.symbol,
+            order.side,
+            order.type,
+            order.quantity,
+            order.limitPrice,
+            order.stopPrice,
+            order.timeInForce,
+            order.reduceOnly,
+        )
+
     /** The order [body] became when it never reached the venue or the venue refused it, for [reason] at [nowMs]. */
     fun rejected(
         body: WireSubmit,
