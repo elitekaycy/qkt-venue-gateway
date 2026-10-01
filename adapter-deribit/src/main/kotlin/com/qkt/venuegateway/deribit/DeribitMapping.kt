@@ -2,8 +2,6 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Cost
 import com.qkt.venuegateway.adapter.CostKind
-import com.qkt.venuegateway.adapter.Instrument
-import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
@@ -12,44 +10,18 @@ import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueOrder
-import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitNewOrder
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitPosition
 import com.qkt.venuegateway.deribit.client.DeribitTrade
-import java.math.BigDecimal
 
 /**
- * The one place Deribit's words become the gateway's neutral types, for linear (USDC/USDT-settled)
- * contracts, whose amounts are in the base coin: an amount is a quantity as it is, so an instrument's
- * contract size (the P&L multiplier) is 1 and Deribit's `contract_size` is the volume step. Orders and
- * trades without a label were not sent through the gateway and map to null. A Deribit value this
- * mapping does not know fails by name rather than being guessed.
+ * Where Deribit's account words become the gateway's neutral types (the market side is
+ * [DeribitMarketMapping]), for linear contracts, whose amounts are in the base coin and so are
+ * quantities as they are. Orders and trades without a label were not sent through the gateway and map
+ * to null. A Deribit value this mapping does not know fails by name rather than being guessed.
  */
 object DeribitMapping {
-    fun instrument(i: DeribitInstrument) =
-        Instrument(
-            code = i.name,
-            kind =
-                when {
-                    i.kind == "option" -> InstrumentKind.OPTION
-                    i.perpetual -> InstrumentKind.PERPETUAL
-                    else -> InstrumentKind.FUTURE
-                },
-            currency = i.settlementCurrency,
-            contractSize = BigDecimal.ONE,
-            tickSize = i.tickSize,
-            volumeStep = i.contractSize,
-            volumeMin = i.minTradeAmount,
-            expiryMs = i.expiryMs,
-            strike = i.strike,
-            right = i.optionType,
-            underlying = if (i.kind == "option") root(i.name) else null,
-        )
-
-    /** The root an instrument [name] belongs to, its first field (`BTC_USDC-9OCT26-82000-P` → `BTC_USDC`). */
-    fun root(name: String): String = name.substringBefore('-')
-
     /** [o] as the order the client sent: a stop that fired is reported as the stop it was. */
     fun order(o: DeribitOrder): VenueOrder? {
         val label = o.label ?: return null

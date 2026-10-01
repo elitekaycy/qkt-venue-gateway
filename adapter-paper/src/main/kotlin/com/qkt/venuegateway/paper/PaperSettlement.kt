@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueSettlement
+import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import java.math.BigDecimal
@@ -18,7 +19,7 @@ import org.slf4j.LoggerFactory
  */
 class PaperSettlement(
     private val market: DeribitMarketData,
-    private val listing: PaperListing,
+    private val listing: DeribitListing,
     private val clock: () -> Long,
     private val periodMs: Long = 60_000,
 ) : AutoCloseable {

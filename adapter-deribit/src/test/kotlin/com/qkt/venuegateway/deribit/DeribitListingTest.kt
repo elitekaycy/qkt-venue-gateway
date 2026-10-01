@@ -1,7 +1,6 @@
-package com.qkt.venuegateway.paper
+package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.InstrumentKind
-import com.qkt.venuegateway.deribit.DeribitMapping
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -11,7 +10,7 @@ import java.time.LocalDate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class PaperListingTest {
+class DeribitListingTest {
     private fun instrument(
         name: String,
         kind: String,
@@ -61,7 +60,12 @@ class PaperListingTest {
 
     @Test
     fun `linear contracts are listed in coins, with contract size 1 and the venue contract size as volume step`() {
-        val listed = PaperListing(market, "USDC", { 0L }).all().map(DeribitMapping::instrument).associateBy { it.code }
+        val listed =
+            DeribitListing(
+                market,
+                "USDC",
+                { 0L },
+            ).all().map(DeribitMarketMapping::instrument).associateBy { it.code }
 
         val perp = listed.getValue("BTC_USDC-PERPETUAL")
         assertThat(perp.kind).isEqualTo(InstrumentKind.PERPETUAL)

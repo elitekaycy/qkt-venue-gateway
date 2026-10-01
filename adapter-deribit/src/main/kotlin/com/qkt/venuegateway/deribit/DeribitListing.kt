@@ -1,17 +1,16 @@
-package com.qkt.venuegateway.paper
+package com.qkt.venuegateway.deribit
 
-import com.qkt.venuegateway.deribit.DeribitMapping
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The instruments the paper venue trades: Deribit's live [currency] perpetuals, futures and options,
- * re-read at most every [refreshMs], listed to clients through [DeribitMapping.instrument]. A contract
+ * The instruments a Deribit account trades: the live [currency] perpetuals, futures and options,
+ * re-read at most every [refreshMs], listed to clients through [DeribitMarketMapping.instrument]. A contract
  * that expired leaves the live listing but is still looked up one by one ([held]), so a held position
  * settles.
  */
-class PaperListing(
+class DeribitListing(
     private val market: DeribitMarketData,
     private val currency: String,
     private val clock: () -> Long,
@@ -38,7 +37,7 @@ class PaperListing(
 
     /** The listed options of [root]. */
     fun optionsOf(root: String): List<String> =
-        all().filter { it.kind == "option" && DeribitMapping.root(it.name) == root }.map { it.name }
+        all().filter { it.kind == "option" && DeribitMarketMapping.root(it.name) == root }.map { it.name }
 
     private companion object {
         const val MISS_RELOAD_MS = 60_000L

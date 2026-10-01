@@ -16,7 +16,8 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
-import com.qkt.venuegateway.deribit.DeribitMapping
+import com.qkt.venuegateway.deribit.DeribitListing
+import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
@@ -40,7 +41,7 @@ class PaperAdapter(
     override val id = "paper"
     override val version = "0.1.0"
     private val currency = context.settings["currency"] ?: "USDC"
-    private val listing = PaperListing(market, currency, context.clock)
+    private val listing = DeribitListing(market, currency, context.clock)
     private val book =
         PaperBook(
             PaperLedger(BigDecimal(context.settings["starting_balance"] ?: "10000")),
@@ -75,7 +76,7 @@ class PaperAdapter(
 
     override fun identity() = VenueIdentity(context.settings["login"] ?: "paper", TradeMode.DEMO, currency)
 
-    override fun instruments() = venue { listing.all().map(DeribitMapping::instrument) }
+    override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
     override fun account(): AccountSnapshot =
         synchronized(book) {
@@ -145,8 +146,13 @@ class PaperAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenueBar> =
-        venue { market.klines(code, windowMs / MINUTE_MS, fromMs, toMs) }
-            .map { VenueBar(it.startMs, it.open, it.high, it.low, it.close, it.volume) }
+        DeribitMarketMapping.closedBars(
+            venue {
+                market.klines(code, windowMs / MINUTE_MS, fromMs, toMs)
+            },
+            windowMs,
+            context.clock(),
+        )
 
     override fun subscribeQuotes(
         codes: Set<String>,

@@ -1,6 +1,8 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueQuote
+import com.qkt.venuegateway.deribit.DeribitListing
+import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.util.concurrent.ConcurrentHashMap
@@ -11,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
  * trades (working orders and positions, from [trading]), so matching and marks never go blind.
  */
 class PaperFeed(
-    private val listing: PaperListing,
+    private val listing: DeribitListing,
     private val trading: () -> Collection<String>,
 ) {
     private val latest = ConcurrentHashMap<String, DeribitTicker>()
@@ -31,17 +33,7 @@ class PaperFeed(
     /** Records [ticker] as the latest of its instrument and returns it as a quote. */
     fun heard(ticker: DeribitTicker): VenueQuote {
         latest[ticker.name] = ticker
-        return VenueQuote(
-            ticker.name,
-            ticker.bid,
-            ticker.ask,
-            ticker.bidAmount,
-            ticker.askAmount,
-            ticker.mark,
-            ticker.markIv,
-            ticker.underlyingPrice,
-            ticker.timestampMs,
-        )
+        return DeribitMarketMapping.quote(ticker)
     }
 
     /** Clients want [codes] and [roots] from now on. */
