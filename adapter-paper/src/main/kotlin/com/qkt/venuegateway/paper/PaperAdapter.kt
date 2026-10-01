@@ -16,6 +16,7 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
+import com.qkt.venuegateway.deribit.DeribitMapping
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
@@ -74,7 +75,7 @@ class PaperAdapter(
 
     override fun identity() = VenueIdentity(context.settings["login"] ?: "paper", TradeMode.DEMO, currency)
 
-    override fun instruments() = venue { listing.all().map(listing::neutral) }
+    override fun instruments() = venue { listing.all().map(DeribitMapping::instrument) }
 
     override fun account(): AccountSnapshot =
         synchronized(book) {

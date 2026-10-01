@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.InstrumentKind
+import com.qkt.venuegateway.deribit.DeribitMapping
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -60,7 +61,7 @@ class PaperListingTest {
 
     @Test
     fun `linear contracts are listed in coins, with contract size 1 and the venue contract size as volume step`() {
-        val listed = PaperListing(market, "USDC", { 0L }).let { l -> l.all().map(l::neutral) }.associateBy { it.code }
+        val listed = PaperListing(market, "USDC", { 0L }).all().map(DeribitMapping::instrument).associateBy { it.code }
 
         val perp = listed.getValue("BTC_USDC-PERPETUAL")
         assertThat(perp.kind).isEqualTo(InstrumentKind.PERPETUAL)
