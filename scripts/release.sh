@@ -52,7 +52,7 @@ printf '%s\n' "$version" >VERSION
 previous=
 if [[ -f CHANGELOG.md ]]; then previous=$(sed -n '/^## /,$p' CHANGELOG.md); fi
 {
-  printf '# Changelog\n\nWritten by the promote workflow from Conventional Commits (scripts/release.sh); not edited by hand.\n\n'
+  printf '# Changelog\n\nWritten at each release by scripts/release.sh from Conventional Commits; not edited by hand.\n\n'
   cat "$notes"
   [[ -n $previous ]] && printf '\n%s\n' "$previous"
 } >CHANGELOG.md
