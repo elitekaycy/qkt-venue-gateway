@@ -1,0 +1,26 @@
+{
+ "method": "private/buy",
+ "params": {
+  "instrument_name": "BTC_USDC-PERPETUAL",
+  "amount": 0.0001,
+  "type": "stop_market",
+  "trigger_price": 126268.8,
+  "label": "kit-stop-1790867163-a"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "error": {
+   "code": -32602,
+   "data": {
+    "reason": "trigger is required",
+    "param": "trigger"
+   },
+   "message": "Invalid params"
+  },
+  "testnet": true,
+  "usIn": 1790867163968963,
+  "usOut": 1790867163969310,
+  "usDiff": 347
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

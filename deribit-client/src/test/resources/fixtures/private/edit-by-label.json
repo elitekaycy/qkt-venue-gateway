@@ -1,0 +1,48 @@
+{
+ "method": "private/edit_by_label",
+ "params": {
+  "label": "kit-stop-1790867163-d",
+  "instrument_name": "BTC_USDC-PERPETUAL",
+  "amount": 0.0002,
+  "price": 50497.5
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+   "order": {
+    "label": "kit-stop-1790867163-d",
+    "price": 50497.5,
+    "user_id": 1,
+    "direction": "buy",
+    "time_in_force": "good_til_day",
+    "instrument_name": "BTC_USDC-PERPETUAL",
+    "web": false,
+    "api": true,
+    "amount": 0.0002,
+    "order_id": "USDC-210049234017850888",
+    "creation_timestamp": 1790867164470,
+    "filled_amount": 0.0,
+    "average_price": 0.0,
+    "mmp": false,
+    "post_only": false,
+    "replaced": true,
+    "reduce_only": false,
+    "starbase_order_id": 231431479366778880,
+    "last_update_timestamp": 1790867165160,
+    "contracts": 2.0,
+    "order_state": "open",
+    "order_type": "limit",
+    "starbase_last_update_timestamp": 1790867165160346306,
+    "is_liquidation": false,
+    "risk_reducing": false
+   },
+   "trades": []
+  },
+  "usIn": 1790867165155791,
+  "usOut": 1790867165162197,
+  "usDiff": 6406,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

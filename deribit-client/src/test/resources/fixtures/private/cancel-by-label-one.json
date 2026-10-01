@@ -1,0 +1,17 @@
+{
+ "method": "private/cancel_by_label",
+ "params": {
+  "label": "kit-probe-1790866831",
+  "currency": "USDC"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": 1,
+  "usIn": 1790866832106199,
+  "usOut": 1790866832110200,
+  "usDiff": 4001,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

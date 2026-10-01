@@ -1,0 +1,81 @@
+{
+ "method": "private/buy",
+ "params": {
+  "instrument_name": "BTC_USDC-PERPETUAL",
+  "amount": 0.0001,
+  "type": "market",
+  "label": "kit-fill-1790866869-o"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+   "order": {
+    "label": "kit-fill-1790866869-o",
+    "price": 86584.7,
+    "user_id": 1,
+    "direction": "buy",
+    "time_in_force": "good_til_cancelled",
+    "instrument_name": "BTC_USDC-PERPETUAL",
+    "web": false,
+    "api": true,
+    "amount": 0.0001,
+    "order_id": "USDC-210049234016551753",
+    "creation_timestamp": 1790866869705,
+    "filled_amount": 0.0001,
+    "average_price": 84058.7,
+    "mmp": false,
+    "post_only": false,
+    "replaced": false,
+    "reduce_only": false,
+    "starbase_order_id": 231430243032760324,
+    "last_update_timestamp": 1790866869705,
+    "contracts": 1.0,
+    "order_state": "filled",
+    "order_type": "market",
+    "starbase_last_update_timestamp": 1790866869705508656,
+    "is_liquidation": false,
+    "risk_reducing": false
+   },
+   "trades": [
+    {
+     "label": "kit-fill-1790866869-o",
+     "timestamp": 1790866869705,
+     "state": "filled",
+     "price": 84058.7,
+     "user_id": 1,
+     "direction": "buy",
+     "index_price": 84024.37,
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "trade_seq": 14198200,
+     "api": true,
+     "amount": 0.0001,
+     "mark_price": 84062.77,
+     "order_id": "USDC-210049234016551753",
+     "matching_id": null,
+     "tick_direction": 3,
+     "profit_loss": 0.0,
+     "mmp": false,
+     "post_only": false,
+     "reduce_only": false,
+     "starbase_order_id": 231430243032760324,
+     "starbase_match_id": 231430243032768512,
+     "trade_id": "USDC-55455987",
+     "self_trade": false,
+     "contracts": 1.0,
+     "fee_currency": "USDC",
+     "starbase_timestamp": 1790866869705508656,
+     "fee": 0.00420293,
+     "order_type": "market",
+     "risk_reducing": false,
+     "liquidity": "T"
+    }
+   ]
+  },
+  "usIn": 1790866869704368,
+  "usOut": 1790866869711728,
+  "usDiff": 7360,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

@@ -1,0 +1,40 @@
+{
+ "method": "private/get_positions",
+ "params": {
+  "currency": "USDC",
+  "kind": "option"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+   {
+    "size": 10000.0,
+    "kind": "option",
+    "user_id": 1,
+    "maintenance_margin": 0.0,
+    "initial_margin": 0.0,
+    "direction": "buy",
+    "index_price": 0.33341,
+    "instrument_name": "TRX_USDC-2OCT26-0d342-C",
+    "settlement_price": 0.00129501,
+    "mark_price": 0.00012372,
+    "delta": 551.82783,
+    "gamma": 211483.73424,
+    "vega": 0.16359,
+    "theta": -1.23723,
+    "average_price": 0.00015,
+    "floating_profit_loss": -0.262765834,
+    "realized_profit_loss": 0.0,
+    "total_profit_loss": -0.262765834,
+    "average_price_usd": 0.00015,
+    "floating_profit_loss_usd": -0.26276583
+   }
+  ],
+  "usIn": 1790866988551331,
+  "usOut": 1790866988552165,
+  "usDiff": 834,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

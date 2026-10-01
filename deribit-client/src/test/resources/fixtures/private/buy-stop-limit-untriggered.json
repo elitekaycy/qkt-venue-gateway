@@ -1,0 +1,50 @@
+{
+ "method": "private/buy",
+ "params": {
+  "instrument_name": "BTC_USDC-PERPETUAL",
+  "amount": 0.0001,
+  "type": "stop_limit",
+  "trigger_price": 126268.8,
+  "price": 126278.8,
+  "trigger": "last_price",
+  "label": "kit-stop-1790867163-c"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+   "order": {
+    "label": "kit-stop-1790867163-c",
+    "price": 126278.8,
+    "user_id": 1,
+    "direction": "buy",
+    "time_in_force": "good_til_cancelled",
+    "instrument_name": "BTC_USDC-PERPETUAL",
+    "web": false,
+    "api": true,
+    "amount": 0.0001,
+    "order_id": "USDC-SLTB-186057",
+    "creation_timestamp": 1790867164312,
+    "trigger": "last_price",
+    "trigger_price": 126268.8,
+    "mmp": false,
+    "post_only": false,
+    "replaced": false,
+    "reduce_only": false,
+    "triggered": false,
+    "last_update_timestamp": 1790867164312,
+    "contracts": 1.0,
+    "order_state": "untriggered",
+    "order_type": "stop_limit",
+    "is_liquidation": false,
+    "risk_reducing": false
+   },
+   "trades": []
+  },
+  "usIn": 1790867164308816,
+  "usOut": 1790867164312974,
+  "usDiff": 4158,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

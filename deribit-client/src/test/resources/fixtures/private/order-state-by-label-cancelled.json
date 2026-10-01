@@ -1,0 +1,46 @@
+{
+ "method": "private/get_order_state_by_label",
+ "params": {
+  "currency": "USDC",
+  "label": "kit-probe-1790866831"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+   {
+    "label": "kit-probe-1790866831",
+    "price": 50461.9,
+    "user_id": 1,
+    "direction": "buy",
+    "time_in_force": "good_til_cancelled",
+    "instrument_name": "BTC_USDC-PERPETUAL",
+    "web": false,
+    "api": true,
+    "amount": 0.0001,
+    "order_id": "USDC-210049234016384431",
+    "creation_timestamp": 1790866831549,
+    "filled_amount": 0.0,
+    "average_price": 0.0,
+    "mmp": false,
+    "post_only": false,
+    "replaced": false,
+    "reduce_only": false,
+    "starbase_order_id": 231430082994896896,
+    "last_update_timestamp": 1790866832108,
+    "cancel_reason": "user_request",
+    "contracts": 1.0,
+    "order_state": "cancelled",
+    "order_type": "limit",
+    "starbase_last_update_timestamp": 1790866832108258580,
+    "is_liquidation": false,
+    "risk_reducing": false
+   }
+  ],
+  "usIn": 1790866832270191,
+  "usOut": 1790866832270747,
+  "usDiff": 556,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

@@ -1,0 +1,16 @@
+{
+ "method": "private/buy",
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 4,
+  "error": {
+   "code": 10035,
+   "message": "trigger_price_too_low"
+  },
+  "usIn": 1790867185248243,
+  "usOut": 1790867185252335,
+  "usDiff": 4092,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

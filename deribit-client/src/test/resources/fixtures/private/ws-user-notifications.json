@@ -1,0 +1,224 @@
+{
+ "recorded": "2026-10-01 Deribit testnet",
+ "notifications": [
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.orders.future.USDC.raw",
+    "data": {
+     "label": "kit-ws-1790867074-r",
+     "price": 50507.6,
+     "user_id": 1,
+     "direction": "buy",
+     "time_in_force": "good_til_cancelled",
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "web": false,
+     "api": true,
+     "amount": 0.0001,
+     "order_id": "USDC-210049234017437153",
+     "creation_timestamp": 1790867074192,
+     "filled_amount": 0.0,
+     "average_price": 0.0,
+     "mmp": false,
+     "post_only": false,
+     "replaced": false,
+     "reduce_only": false,
+     "starbase_order_id": 231431100713402376,
+     "last_update_timestamp": 1790867074192,
+     "contracts": 1.0,
+     "order_state": "open",
+     "order_type": "limit",
+     "starbase_last_update_timestamp": 1790867074192561743,
+     "is_liquidation": false,
+     "risk_reducing": false
+    }
+   }
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.orders.future.USDC.raw",
+    "data": {
+     "label": "kit-ws-1790867074-r",
+     "price": 50507.6,
+     "user_id": 1,
+     "direction": "buy",
+     "time_in_force": "good_til_cancelled",
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "web": false,
+     "api": true,
+     "amount": 0.0001,
+     "order_id": "USDC-210049234017437153",
+     "creation_timestamp": 1790867074192,
+     "filled_amount": 0.0,
+     "average_price": 0.0,
+     "mmp": false,
+     "post_only": false,
+     "replaced": false,
+     "reduce_only": false,
+     "starbase_order_id": 231431100713402376,
+     "last_update_timestamp": 1790867074325,
+     "cancel_reason": "user_request",
+     "contracts": 1.0,
+     "order_state": "cancelled",
+     "order_type": "limit",
+     "starbase_last_update_timestamp": 1790867074325617835,
+     "is_liquidation": false,
+     "risk_reducing": false
+    }
+   }
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.trades.future.USDC.raw",
+    "data": [
+     {
+      "label": "kit-ws-1790867074-o",
+      "timestamp": 1790867074452,
+      "state": "filled",
+      "price": 84179.5,
+      "user_id": 1,
+      "direction": "buy",
+      "index_price": 84152.2,
+      "instrument_name": "BTC_USDC-PERPETUAL",
+      "trade_seq": 14198695,
+      "api": true,
+      "amount": 0.0001,
+      "mark_price": 84186.02,
+      "order_id": "USDC-210049234017438185",
+      "matching_id": null,
+      "tick_direction": 3,
+      "profit_loss": 0.0,
+      "mmp": false,
+      "post_only": false,
+      "reduce_only": false,
+      "starbase_order_id": 231431101803921415,
+      "starbase_match_id": 231431101803929600,
+      "trade_id": "USDC-55456507",
+      "self_trade": false,
+      "contracts": 1.0,
+      "fee_currency": "USDC",
+      "starbase_timestamp": 1790867074452983894,
+      "fee": 0.00420898,
+      "order_type": "market",
+      "risk_reducing": false,
+      "liquidity": "T"
+     }
+    ]
+   }
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.orders.future.USDC.raw",
+    "data": {
+     "label": "kit-ws-1790867074-o",
+     "price": 86711.7,
+     "user_id": 1,
+     "direction": "buy",
+     "time_in_force": "good_til_cancelled",
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "web": false,
+     "api": true,
+     "amount": 0.0001,
+     "order_id": "USDC-210049234017438185",
+     "creation_timestamp": 1790867074452,
+     "filled_amount": 0.0001,
+     "average_price": 84179.5,
+     "mmp": false,
+     "post_only": false,
+     "replaced": false,
+     "reduce_only": false,
+     "starbase_order_id": 231431101803921415,
+     "last_update_timestamp": 1790867074452,
+     "contracts": 1.0,
+     "order_state": "filled",
+     "order_type": "market",
+     "starbase_last_update_timestamp": 1790867074452983894,
+     "is_liquidation": false,
+     "risk_reducing": false
+    }
+   }
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.orders.future.USDC.raw",
+    "data": {
+     "label": "kit-ws-1790867074-c",
+     "price": 81660.4,
+     "user_id": 1,
+     "direction": "sell",
+     "time_in_force": "good_til_cancelled",
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "web": false,
+     "api": true,
+     "amount": 0.0001,
+     "order_id": "USDC-210049234017439128",
+     "creation_timestamp": 1790867074580,
+     "filled_amount": 0.0001,
+     "average_price": 84179.4,
+     "mmp": false,
+     "post_only": false,
+     "replaced": false,
+     "reduce_only": true,
+     "starbase_order_id": 231431102340792324,
+     "last_update_timestamp": 1790867074580,
+     "contracts": 1.0,
+     "order_state": "filled",
+     "order_type": "market",
+     "starbase_last_update_timestamp": 1790867074580894072,
+     "is_liquidation": false,
+     "risk_reducing": false
+    }
+   }
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "subscription",
+   "params": {
+    "channel": "user.trades.future.USDC.raw",
+    "data": [
+     {
+      "label": "kit-ws-1790867074-c",
+      "timestamp": 1790867074580,
+      "state": "filled",
+      "price": 84179.4,
+      "user_id": 1,
+      "direction": "sell",
+      "index_price": 84152.25,
+      "instrument_name": "BTC_USDC-PERPETUAL",
+      "trade_seq": 14198697,
+      "api": true,
+      "amount": 0.0001,
+      "mark_price": 84186.07,
+      "order_id": "USDC-210049234017439128",
+      "matching_id": null,
+      "tick_direction": 2,
+      "profit_loss": -1e-05,
+      "mmp": false,
+      "post_only": false,
+      "reduce_only": true,
+      "starbase_order_id": 231431102340792324,
+      "starbase_match_id": 231431102340800512,
+      "trade_id": "USDC-55456509",
+      "self_trade": false,
+      "contracts": 1.0,
+      "fee_currency": "USDC",
+      "starbase_timestamp": 1790867074580894072,
+      "fee": 0.00420897,
+      "order_type": "market",
+      "risk_reducing": false,
+      "liquidity": "T"
+     }
+    ]
+   }
+  }
+ ]
+}

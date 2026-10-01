@@ -1,0 +1,27 @@
+{
+ "method": "private/buy",
+ "params": {
+  "instrument_name": "BTC_USDC-PERPETUAL",
+  "amount": 0.00015000000000000001,
+  "type": "limit",
+  "price": 50461.9,
+  "label": "kit-probe-1790866831-bad"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+   "code": -32602,
+   "data": {
+    "reason": "must be a multiple of contract size",
+    "param": "amount"
+   },
+   "message": "Invalid params"
+  },
+  "usIn": 1790866832616020,
+  "usOut": 1790866832616366,
+  "usDiff": 346,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}

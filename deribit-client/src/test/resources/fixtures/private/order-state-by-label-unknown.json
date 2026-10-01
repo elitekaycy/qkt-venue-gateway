@@ -1,0 +1,17 @@
+{
+ "method": "private/get_order_state_by_label",
+ "params": {
+  "currency": "USDC",
+  "label": "kit-never-used-x"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [],
+  "usIn": 1790866831887416,
+  "usOut": 1790866831888210,
+  "usDiff": 794,
+  "testnet": true
+ },
+ "recorded": "2026-10-01 Deribit testnet"
+}
