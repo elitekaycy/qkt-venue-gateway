@@ -38,12 +38,19 @@ consumer of VGP, and a gateway can be replaced, written in another language, or 
 | `vgp-wire` | the qkt-facing DTOs (decimal strings, error envelope) | venues |
 | `adapter-api` | `VenueAdapter` and the neutral types adapters hand the host | HTTP to qkt, the journal |
 | `host` | the VGP server: auth, journal, orders, stream, reconciler, kill switch, quotes, bars | any venue API |
-| `deribit-client` | Deribit's JSON-RPC (auth, public and private calls, subscriptions) | VGP, the host |
-| `adapter-deribit` | maps `deribit-client` onto `adapter-api` | VGP, the host |
-| `adapter-paper` | venue-free matching on any quote source (first: `deribit-client`'s public feed) | VGP, the host |
+| `adapter-testkit` | `AdapterContractTest`: the behaviour every adapter must pass | the host |
+| `adapter-deribit` | Deribit, whole: its JSON-RPC in the `client` package (socket, auth, public and private calls, subscriptions), the mapping onto `adapter-api`, the adapter | VGP, the host |
+| `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client`) | VGP, the host |
 | `app` | config, choosing the adapter, starting the host | — |
 
 An adapter speaks only its venue's transport; everything qkt sees (HTTP, WebSocket, JSON) is the host's.
+
+**One venue, one module.** An adapter module holds everything for its venue, layered by package: a
+`client` package that speaks the venue's protocol in the venue's own words and knows nothing of VGP,
+a mapping that is the only place venue words become `adapter-api` types, and the adapter itself.
+When the venue changes a field or an endpoint, the fix is in `client` and the recorded fixture that
+breaks names the call; when it changes what a value means, the fix is in the mapping. A third-party
+adapter follows the same shape and depends only on `adapter-api` (and `adapter-testkit` in tests).
 
 ## 2. Goals and non-goals
 

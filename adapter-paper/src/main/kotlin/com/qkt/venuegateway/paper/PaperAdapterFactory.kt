@@ -3,8 +3,8 @@ package com.qkt.venuegateway.paper
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueAdapterFactory
-import com.qkt.venuegateway.deribit.DeribitPublicClient
-import com.qkt.venuegateway.deribit.DeribitTickerStream
+import com.qkt.venuegateway.deribit.client.DeribitPublicClient
+import com.qkt.venuegateway.deribit.client.DeribitTickerStream
 
 /**
  * `adapter.type: paper`: the paper venue on Deribit's public data. Optional settings beyond

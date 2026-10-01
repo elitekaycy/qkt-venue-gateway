@@ -1,7 +1,7 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.Side
-import com.qkt.venuegateway.deribit.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
 
 /** The price a [side] order trades at on [ticker]: the ask to buy, the bid to sell; null when that side is not quoted. */

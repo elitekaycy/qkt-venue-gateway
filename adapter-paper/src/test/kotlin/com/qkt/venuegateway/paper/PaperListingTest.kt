@@ -1,10 +1,10 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.InstrumentKind
-import com.qkt.venuegateway.deribit.DeribitInstrument
-import com.qkt.venuegateway.deribit.DeribitKline
-import com.qkt.venuegateway.deribit.DeribitMarketData
-import com.qkt.venuegateway.deribit.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitKline
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
 import java.time.LocalDate
 import org.assertj.core.api.Assertions.assertThat

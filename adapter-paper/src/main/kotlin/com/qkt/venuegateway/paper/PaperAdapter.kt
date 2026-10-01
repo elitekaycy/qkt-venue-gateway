@@ -16,9 +16,9 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
-import com.qkt.venuegateway.deribit.DeribitMarketData
-import com.qkt.venuegateway.deribit.DeribitTicker
-import com.qkt.venuegateway.deribit.DeribitTickers
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.io.IOException
 import java.math.BigDecimal
 import java.util.concurrent.Executors

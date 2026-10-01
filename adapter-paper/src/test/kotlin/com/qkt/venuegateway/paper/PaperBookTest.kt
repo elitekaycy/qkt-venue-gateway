@@ -6,7 +6,7 @@ import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
-import com.qkt.venuegateway.deribit.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

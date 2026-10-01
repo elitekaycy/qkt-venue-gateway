@@ -1,5 +1,11 @@
+// One venue, one module: the Deribit protocol (`client/`), its mapping to adapter-api, and the adapter.
+plugins { alias(libs.plugins.kotlin.serialization) }
+
 dependencies {
-    "implementation"(project(":adapter-api"))
-    "implementation"(project(":deribit-client"))
+    "api"(project(":adapter-api"))
+    "implementation"(libs.okhttp)
+    "implementation"(libs.kotlinx.serialization.json)
     "implementation"(libs.slf4j.api)
+    "testImplementation"(project(":adapter-testkit"))
+    "testImplementation"(libs.okhttp.mockwebserver)
 }

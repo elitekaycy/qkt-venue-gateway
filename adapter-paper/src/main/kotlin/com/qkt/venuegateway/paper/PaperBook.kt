@@ -7,7 +7,7 @@ import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueSettlement
-import com.qkt.venuegateway.deribit.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
 
 /** What one book change produced: orders that changed and the fills they made. */

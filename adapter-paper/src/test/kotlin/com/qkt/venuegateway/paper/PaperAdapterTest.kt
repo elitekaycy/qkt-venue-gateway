@@ -12,11 +12,11 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
-import com.qkt.venuegateway.deribit.DeribitInstrument
-import com.qkt.venuegateway.deribit.DeribitKline
-import com.qkt.venuegateway.deribit.DeribitMarketData
-import com.qkt.venuegateway.deribit.DeribitTicker
-import com.qkt.venuegateway.deribit.DeribitTickers
+import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitKline
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.LocalDate

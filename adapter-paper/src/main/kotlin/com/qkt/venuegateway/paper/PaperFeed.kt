@@ -1,8 +1,8 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueQuote
-import com.qkt.venuegateway.deribit.DeribitTicker
-import com.qkt.venuegateway.deribit.DeribitTickers
+import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.util.concurrent.ConcurrentHashMap
 
 /**

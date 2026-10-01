@@ -5,11 +5,11 @@ import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
-import com.qkt.venuegateway.deribit.DeribitInstrument
-import com.qkt.venuegateway.deribit.DeribitKline
-import com.qkt.venuegateway.deribit.DeribitMarketData
-import com.qkt.venuegateway.deribit.DeribitTicker
-import com.qkt.venuegateway.deribit.DeribitTickers
+import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitKline
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.testkit.AdapterContractTest
 import java.math.BigDecimal
 import java.nio.file.Path

@@ -2,8 +2,8 @@ package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
-import com.qkt.venuegateway.deribit.DeribitInstrument
-import com.qkt.venuegateway.deribit.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import java.math.BigDecimal
 
 /**

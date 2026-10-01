@@ -6,8 +6,9 @@ to the venue through one adapter. Design: `docs/design.md`. Plans: `docs/plans/`
 
 ## Module boundaries (enforced by the build)
 - `host` serves everything qkt sees and never imports a venue API.
-- Adapters (`adapter-*`) see only `adapter-api` and their venue client; they never speak HTTP to qkt.
-- `deribit-client` knows Deribit's JSON-RPC and nothing about VGP.
+- One venue, one module (`adapter-<venue>`): its `client` package speaks the venue's protocol and
+  knows nothing about VGP; its mapping is the only place venue words become `adapter-api` types.
+- Adapters see only `adapter-api`; they never speak HTTP to qkt. Each passes `adapter-testkit`.
 
 ## Rules
 - Kotlin 2.1, JVM 21. Files ≤ 200 lines (tests ≤ 220), KDoc on public API, ktlint clean.
