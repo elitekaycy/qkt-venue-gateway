@@ -161,3 +161,10 @@ internal class JournalRecords(
             st.executeQuery().use { rs -> buildList { while (rs.next()) add(read(rs)) } }
         }
 }
+
+/** One order the client sent: its [bodyHash] (null when it reached the journal another way) and last known [order]. */
+data class OrderRecord(
+    val clientOrderId: String,
+    val bodyHash: String?,
+    val order: WireOrder?,
+)

@@ -61,6 +61,7 @@ class Reconciler(
         val now = gateway.clock()
         venue.fills(since(journal.latestFillTime(), now), now).forEach(listener::fill)
         venue.settlements(since(journal.latestSettlementTime(), now), now).forEach(listener::settlement)
+        gateway.positions.refresh(null)
     }
 
     override fun close() {

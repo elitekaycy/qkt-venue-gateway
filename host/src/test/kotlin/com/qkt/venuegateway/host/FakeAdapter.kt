@@ -30,6 +30,9 @@ internal class FakeAdapter : VenueAdapter {
     val orders = ConcurrentHashMap<String, VenueOrder>()
     val placed = CopyOnWriteArrayList<String>()
     val net = ConcurrentHashMap<String, BigDecimal>()
+
+    /** The threads [positions] was read on, in order. */
+    val positionReads = CopyOnWriteArrayList<String>()
     val fills = CopyOnWriteArrayList<VenueFill>()
     val settlements = CopyOnWriteArrayList<VenueSettlement>()
     var listener: AdapterListener? = null
@@ -76,8 +79,10 @@ internal class FakeAdapter : VenueAdapter {
     override fun account() =
         AccountSnapshot("USDC", BigDecimal("10000"), BigDecimal("10000"), BigDecimal.ZERO, BigDecimal("10000"))
 
-    override fun positions() =
-        Positions(Accounting.NETTING, net.map { (s, q) -> PositionRow(s, q, BigDecimal("84000")) })
+    override fun positions(): Positions {
+        positionReads += Thread.currentThread().name
+        return Positions(Accounting.NETTING, net.map { (s, q) -> PositionRow(s, q, BigDecimal("84000")) })
+    }
 
     override fun openOrders() = orders.values.filter { it.status == OrderStatus.WORKING }
 

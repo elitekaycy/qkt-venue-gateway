@@ -47,6 +47,9 @@ class Gateway(
     /** The latest journaled sequence number, as it moves. */
     val appended: StateFlow<Long> get() = latest
 
+    /** Tells clients each position change. */
+    internal val positions = PositionWatch(adapter, journal, clock)
+
     /** Takes orders. */
     val desk = OrderDesk(journal, adapter, up::get, clock)
 
@@ -97,6 +100,7 @@ class Gateway(
     }
 
     override fun close() {
+        positions.close()
         adapter.close()
         journal.close()
         shelf.close()
@@ -113,11 +117,11 @@ class Gateway(
             /** A fill is always of an order the client sent through this gateway (wire spec §4). */
             override fun fill(fill: VenueFill) {
                 if (journal.order(fill.clientOrderId) == null) return
-                journal.appendFill(WireMapping.fill(fill))
+                if (journal.appendFill(WireMapping.fill(fill))) positions.changed(fill.symbol)
             }
 
             override fun settlement(settlement: VenueSettlement) {
-                journal.appendSettlement(WireMapping.settlement(settlement))
+                if (journal.appendSettlement(WireMapping.settlement(settlement))) positions.changed(settlement.symbol)
             }
 
             override fun quote(quote: VenueQuote) = onQuote(quote)

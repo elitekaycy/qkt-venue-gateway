@@ -4,6 +4,7 @@ import com.qkt.vgp.WireEvent
 import com.qkt.vgp.WireFill
 import com.qkt.vgp.WireKillSwitch
 import com.qkt.vgp.WireOrder
+import com.qkt.vgp.WirePosition
 import com.qkt.vgp.WireSettlement
 import com.qkt.vgp.WireSubmit
 import java.nio.file.Files
@@ -78,6 +79,15 @@ class Journal private constructor(
         appending {
             records.insertFill(fill) &&
                 records.event("fill", fill.time, json.encodeToJsonElement(WireFill.serializer(), fill)).let { true }
+        }
+
+    /** Appends a `position` event: [position] as the venue holds it after a change, at [time]. */
+    fun appendPosition(
+        position: WirePosition,
+        time: Long,
+    ): Boolean =
+        appending {
+            records.event("position", time, json.encodeToJsonElement(WirePosition.serializer(), position)).let { true }
         }
 
     /** Appends [settlement] and its event unless the same symbol and time were journaled before; true when new. */
@@ -185,10 +195,3 @@ class Journal private constructor(
         }
     }
 }
-
-/** One order the client sent: its [bodyHash] (null when it reached the journal another way) and last known [order]. */
-data class OrderRecord(
-    val clientOrderId: String,
-    val bodyHash: String?,
-    val order: WireOrder?,
-)
