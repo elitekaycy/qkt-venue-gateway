@@ -1,6 +1,7 @@
 # qkt-venue-gateway — the VGP v1 gateway host and its adapters — design
 
-**Status:** design for review, no code yet. **Builds on:** the wire spec
+**Status:** built: the host, the paper adapter and the Deribit adapter (contract suite passed on
+testnet; qkt trades through it end to end). Deribit settlement history is not served yet. **Builds on:** the wire spec
 `2026-10-01-vgp-v1-wire.md` (what any gateway must do), the qkt client in `connector/gateway` (what it
 relies on), and `docs/research/2026-09-18-venue-plugin-architecture.md` §2 (why adapters run in a
 separate host: the kill switch must be a choke point outside qkt).

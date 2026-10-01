@@ -18,5 +18,5 @@ to the venue through one adapter. Design: `docs/design.md`. Plans: `docs/plans/`
 
 ## Commits
 - Author and committer: `Dickson Anyaele <dicksonanyaele1234@gmail.com>`.
-- Conventional subject (`feat(host): …`), no body needed, no reference to Claude or AI anywhere; a
+- Conventional subject (`feat(host): …`), no body needed, no tool or AI attribution of any kind; a
   session link, when attached, is one line `session(<type>): <link>`.
