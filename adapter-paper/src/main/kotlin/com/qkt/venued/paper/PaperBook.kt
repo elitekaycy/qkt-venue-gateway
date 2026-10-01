@@ -29,10 +29,9 @@ class PaperBook(
     val ledger: PaperLedger,
     val currency: String,
     private val feeRate: BigDecimal,
-    private val contractSizeOf: (String) -> BigDecimal,
 ) {
     /** The orders, fills and settlements this book made. */
-    val state = PaperOrders(ledger, currency, feeRate, contractSizeOf)
+    val state = PaperOrders(ledger, currency, feeRate)
 
     /** Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. */
     fun place(

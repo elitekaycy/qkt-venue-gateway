@@ -42,10 +42,9 @@ class PaperAdapter(
     private val listing = PaperListing(market, currency, context.clock)
     private val book =
         PaperBook(
-            PaperLedger(BigDecimal(context.settings["starting_balance"] ?: "10000"), listing::contractSize),
+            PaperLedger(BigDecimal(context.settings["starting_balance"] ?: "10000")),
             currency,
             BigDecimal(context.settings["fee_rate"] ?: "0"),
-            listing::contractSize,
         )
     private val store = PaperStore(context.stateDir).also { it.load(book) }
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }

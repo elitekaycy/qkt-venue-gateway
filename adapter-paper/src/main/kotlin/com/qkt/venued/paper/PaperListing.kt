@@ -11,6 +11,9 @@ import java.math.BigDecimal
  * re-read at most every [refreshMs]. An option's `underlying` is its name's first field
  * (`BTC_USDC-9OCT26-82000-P` → `BTC_USDC`), the root clients subscribe to. A contract that expired
  * leaves the live listing but is still looked up one by one ([held]), so a held position settles.
+ * Deribit takes the amount of a linear (USDC) contract in its base coin, so one unit of quantity is one
+ * coin: every instrument is listed with contract size 1, and Deribit's own `contract_size` becomes the
+ * volume step.
  */
 class PaperListing(
     private val market: DeribitMarketData,
@@ -37,9 +40,6 @@ class PaperListing(
     /** [name]'s listing even after it expired and left the live listing (a held contract to settle). */
     fun held(name: String): DeribitInstrument = find(name) ?: archived.getOrPut(name) { market.instrument(name) }
 
-    /** [name]'s contract size; 1 for a name the venue does not list (it can never trade). */
-    fun contractSize(name: String): BigDecimal = find(name)?.contractSize ?: BigDecimal.ONE
-
     /** The listed options of [root]. */
     fun optionsOf(root: String): List<String> =
         all().filter { it.kind == "option" && underlying(it) == root }.map { it.name }
@@ -55,9 +55,9 @@ class PaperListing(
                     else -> InstrumentKind.FUTURE
                 },
             currency = i.settlementCurrency,
-            contractSize = i.contractSize,
+            contractSize = BigDecimal.ONE,
             tickSize = i.tickSize,
-            volumeStep = i.minTradeAmount,
+            volumeStep = i.contractSize,
             volumeMin = i.minTradeAmount,
             expiryMs = i.expiryMs,
             strike = i.strike,

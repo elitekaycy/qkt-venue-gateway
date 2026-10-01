@@ -11,13 +11,12 @@ data class PaperPosition(
 )
 
 /**
- * The paper account's money: cash [balance] and netting positions. A fill on the other side of a
- * position realizes `(price − entry) × closed × contract size` into cash (signed by the position); what
- * is left over opens at the fill price. Not thread-safe: the adapter calls it under one lock.
+ * The paper account's money: cash [balance] and netting positions, quantity in underlying units. A fill
+ * on the other side of a position realizes `(price − entry) × closed` into cash (signed by the position);
+ * what is left over opens at the fill price. Not thread-safe: the adapter calls it under one lock.
  */
 class PaperLedger(
     var balance: BigDecimal,
-    private val contractSizeOf: (String) -> BigDecimal,
 ) {
     val positions = LinkedHashMap<String, PaperPosition>()
 
@@ -28,7 +27,6 @@ class PaperLedger(
         quantity: BigDecimal,
         price: BigDecimal,
     ) {
-        val size = contractSizeOf(symbol)
         val signed = if (side == Side.BUY) quantity else quantity.negate()
         val held = positions.remove(symbol) ?: PaperPosition(BigDecimal.ZERO, price)
         val opposite = held.quantity.signum() != 0 && held.quantity.signum() != signed.signum()
@@ -40,7 +38,6 @@ class PaperLedger(
                     price
                         .subtract(held.avgPrice)
                         .multiply(closing)
-                        .multiply(size)
                         .multiply(direction),
                 )
         }
@@ -67,7 +64,7 @@ class PaperLedger(
         price: BigDecimal,
     ): Boolean {
         val held = positions.remove(symbol) ?: return false
-        balance = balance.add(price.subtract(held.avgPrice).multiply(held.quantity).multiply(contractSizeOf(symbol)))
+        balance = balance.add(price.subtract(held.avgPrice).multiply(held.quantity))
         return true
     }
 
@@ -75,7 +72,7 @@ class PaperLedger(
     fun equity(markOf: (String) -> BigDecimal?): BigDecimal =
         positions.entries.fold(balance) { sum, (symbol, p) ->
             val mark = markOf(symbol) ?: p.avgPrice
-            sum.add(mark.subtract(p.avgPrice).multiply(p.quantity).multiply(contractSizeOf(symbol)))
+            sum.add(mark.subtract(p.avgPrice).multiply(p.quantity))
         }
 
     /** Why a `reduce_only` order of [quantity] on [side] may not go, or null when it reduces without flipping. */

@@ -18,7 +18,6 @@ class PaperOrders(
     private val ledger: PaperLedger,
     private val currency: String,
     private val feeRate: BigDecimal,
-    private val contractSizeOf: (String) -> BigDecimal,
 ) {
     val orders = LinkedHashMap<String, VenueOrder>()
     val fills = ArrayList<VenueFill>()
@@ -31,7 +30,7 @@ class PaperOrders(
         price: BigDecimal,
         nowMs: Long,
     ): PaperChange {
-        val fee = feeRate.multiply(price).multiply(order.quantity).multiply(contractSizeOf(order.symbol))
+        val fee = feeRate.multiply(price).multiply(order.quantity)
         ledger.apply(order.symbol, order.side, order.quantity, price)
         ledger.balance = ledger.balance.subtract(fee)
         val costs = if (fee.signum() == 0) emptyList() else listOf(Cost(CostKind.COMMISSION, fee, currency))

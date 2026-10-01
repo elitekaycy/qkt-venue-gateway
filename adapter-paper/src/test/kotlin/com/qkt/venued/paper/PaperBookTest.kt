@@ -14,14 +14,7 @@ import org.junit.jupiter.api.Test
 class PaperBookTest {
     private val symbol = "BTC_USDC-PERPETUAL"
 
-    private fun book(fee: String = "0") =
-        PaperBook(
-            PaperLedger(BigDecimal("10000")) {
-                BigDecimal.ONE
-            },
-            "USDC",
-            BigDecimal(fee),
-        ) { BigDecimal.ONE }
+    private fun book(fee: String = "0") = PaperBook(PaperLedger(BigDecimal("10000")), "USDC", BigDecimal(fee))
 
     private fun ticker(
         bid: String?,
