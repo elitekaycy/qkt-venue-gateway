@@ -169,9 +169,10 @@ One venue is one module, `adapter-<venue>`, depending only on `adapter-api`:
   `adapter-testkit`, run against the venue's test environment.
 
 The host gives every adapter the same guarantees (journal, idempotency, recovery from fills, kill switch,
-quote refresh), so an adapter that passes the contract suite works with qkt as it is. Build the jar, put
-it in `GATEWAY_PLUGINS_DIR`, and set `GATEWAY_ADAPTER`. `adapter-deribit` is the worked example; the interface and
-its rules are in [docs/design.md](docs/design.md) §3.
+quote refresh), so an adapter that passes the contract suite works with qkt as it is. A venue is built
+on its own `adapter/<venue>` branch through the checkpoints in [docs/adapters.md](docs/adapters.md), and
+CI runs its contract suite against the venue's test environment. An out-of-tree adapter is a jar in
+`GATEWAY_PLUGINS_DIR`, selected by `GATEWAY_ADAPTER`. `adapter-deribit` is the worked example.
 
 ## Repository
 
