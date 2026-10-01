@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.host.FakeAdapter
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.market.InstrumentShelf
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.concurrent.LinkedBlockingQueue
@@ -31,7 +32,15 @@ class GatewayServerTest {
     private var base = ""
 
     private fun start() {
-        gateway = Gateway(venue, Journal.open(dir.resolve("j.db")), tokens) { 1_000L }
+        gateway =
+            Gateway(
+                venue,
+                Journal.open(dir.resolve("j.db")),
+                InstrumentShelf.open(dir.resolve("i.db")) {
+                    1_000L
+                },
+                tokens,
+            ) { 1_000L }
         gateway.start()
         venue.listener!!.connection(true, "test")
         server =
@@ -143,5 +152,18 @@ class GatewayServerTest {
         assertThat(call("POST", "/v1/orders", body = submit("a-1.x")).second).contains("\"code\":\"kill_switch\"")
         assertThat(call("POST", "/v1/kill/release", token = "g-token", body = all).second).contains("\"all\":false")
         assertThat(call("POST", "/v1/orders", body = submit("a-2.x")).first).isEqualTo(201)
+    }
+
+    @Test
+    fun `one instrument is served by its code, and a code neither the venue nor the shelf holds is not found`() {
+        start()
+
+        val (status, body) = call("GET", "/v1/instruments/BTC_USDC-9OCT26-82000-P")
+        val (missing, error) = call("GET", "/v1/instruments/BTC_USDC-1JAN20-1-C")
+
+        assertThat(status).isEqualTo(200)
+        assertThat(body).contains("\"code\":\"BTC_USDC-9OCT26-82000-P\"", "\"right\":\"put\"")
+        assertThat(missing).isEqualTo(404)
+        assertThat(error).contains("not_found")
     }
 }

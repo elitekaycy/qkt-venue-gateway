@@ -7,10 +7,13 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.orders.OrderDesk
 import com.qkt.venuegateway.host.server.Role
 import com.qkt.venuegateway.host.wire.WireMapping
+import com.qkt.venuegateway.host.wire.WireReads
 import com.qkt.vgp.WireHealth
+import com.qkt.vgp.WireInstrument
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,7 @@ import org.slf4j.LoggerFactory
 class Gateway(
     val adapter: VenueAdapter,
     val journal: Journal,
+    private val shelf: InstrumentShelf,
     private val tokens: Map<Role, String>,
     /** The gateway's time, epoch milliseconds. */
     val clock: () -> Long,
@@ -58,6 +62,12 @@ class Gateway(
     /** Opens the venue link. */
     fun start() = adapter.connect(listener)
 
+    /** The instruments clients see: the venue's live listing and the dated contracts kept after it ([InstrumentShelf]). */
+    fun instruments(): List<WireInstrument> = shelf.listing(adapter.instruments().map(WireReads::instrument))
+
+    /** One instrument by [code], live or kept; null when neither holds it. */
+    fun instrument(code: String): WireInstrument? = shelf.find(code, adapter.instruments().map(WireReads::instrument))
+
     /** The role [authorization] (`Bearer <token>`) carries, or null when it carries none. */
     fun roleOf(authorization: String?): Role? {
         val token =
@@ -85,6 +95,7 @@ class Gateway(
     override fun close() {
         adapter.close()
         journal.close()
+        shelf.close()
     }
 
     internal val listener =

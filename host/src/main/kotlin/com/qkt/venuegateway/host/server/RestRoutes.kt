@@ -35,8 +35,13 @@ internal fun Route.restRoutes(gateway: Gateway) {
         call.serve(gateway, ANY_ROLE) { json(WireAccount.serializer(), WireReads.account(gateway.adapter.account())) }
     }
     get("/v1/instruments") {
+        call.serve(gateway, ANY_ROLE) { json(ListSerializer(WireInstrument.serializer()), gateway.instruments()) }
+    }
+    get("/v1/instruments/{code}") {
         call.serve(gateway, ANY_ROLE) {
-            json(ListSerializer(WireInstrument.serializer()), gateway.adapter.instruments().map(WireReads::instrument))
+            val code = parameters["code"]!!
+            gateway.instrument(code)?.let { json(WireInstrument.serializer(), it) }
+                ?: error(404, "not_found", "no instrument $code")
         }
     }
     get("/v1/positions") {

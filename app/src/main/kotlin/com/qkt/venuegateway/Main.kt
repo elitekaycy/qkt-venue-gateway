@@ -5,6 +5,7 @@ import com.qkt.venuegateway.config.GatewayConfig
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.Reconciler
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.market.QuoteHub
 import com.qkt.venuegateway.host.server.GatewayServer
 import java.nio.file.Files
@@ -34,7 +35,14 @@ fun start(
         factory.create(
             AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials),
         )
-    val gateway = Gateway(adapter, Journal.open(config.stateDir.resolve("journal.db")), config.tokens, clock)
+    val gateway =
+        Gateway(
+            adapter,
+            Journal.open(config.stateDir.resolve("journal.db")),
+            InstrumentShelf.open(config.stateDir.resolve("instruments.db"), clock = clock),
+            config.tokens,
+            clock,
+        )
     val hub = QuoteHub(gateway).also { it.start() }
     gateway.start()
     val reconciler = Reconciler(gateway).also { it.start() }

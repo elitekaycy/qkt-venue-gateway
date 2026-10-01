@@ -18,7 +18,15 @@ class QuoteHubTest {
         @TempDir dir: Path,
     ) {
         val venue = FakeAdapter()
-        val gateway = Gateway(venue, Journal.open(dir.resolve("j.db")), mapOf(Role.TRADER to "t")) { 1_000L }
+        val gateway =
+            Gateway(
+                venue,
+                Journal.open(dir.resolve("j.db")),
+                InstrumentShelf.open(dir.resolve("i.db")) { 1_000L },
+                mapOf(
+                    Role.TRADER to "t",
+                ),
+            ) { 1_000L }
         gateway.start()
         val hub = QuoteHub(gateway).also { it.start() }
         val got = CopyOnWriteArrayList<VenueQuote>()

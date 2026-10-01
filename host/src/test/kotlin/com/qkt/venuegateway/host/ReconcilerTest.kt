@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.server.Role
 import com.qkt.vgp.WireSubmit
 import java.math.BigDecimal
@@ -18,7 +19,14 @@ class ReconcilerTest {
     private val now = 10_000_000L
 
     private fun gateway(dir: Path) =
-        Gateway(venue, Journal.open(dir.resolve("j.db")), mapOf(Role.TRADER to "t")) { now }.also {
+        Gateway(
+            venue,
+            Journal.open(dir.resolve("j.db")),
+            InstrumentShelf.open(dir.resolve("i.db")) { now },
+            mapOf(
+                Role.TRADER to "t",
+            ),
+        ) { now }.also {
             it.start()
             venue.listener!!.connection(true, "test")
         }

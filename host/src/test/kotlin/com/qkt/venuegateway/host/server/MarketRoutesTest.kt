@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.host.FakeAdapter
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.market.QuoteHub
 import java.math.BigDecimal
 import java.nio.file.Path
@@ -31,7 +32,15 @@ class MarketRoutesTest {
     private var base = ""
 
     private fun start() {
-        gateway = Gateway(venue, Journal.open(dir.resolve("j.db")), mapOf(Role.TRADER to "t")) { now }
+        gateway =
+            Gateway(
+                venue,
+                Journal.open(dir.resolve("j.db")),
+                InstrumentShelf.open(dir.resolve("i.db")) { now },
+                mapOf(
+                    Role.TRADER to "t",
+                ),
+            ) { now }
         gateway.start()
         venue.listener!!.connection(true, "test")
         hub = QuoteHub(gateway, refreshMs = 100).also { it.start() }
