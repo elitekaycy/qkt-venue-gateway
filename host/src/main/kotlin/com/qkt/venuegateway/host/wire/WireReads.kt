@@ -66,6 +66,7 @@ object WireReads {
             q.markIv?.toPlainString(),
             q.underlying?.toPlainString(),
             q.timeMs,
+            q.index?.toPlainString(),
         )
 
     fun bar(b: VenueBar): WireBar =

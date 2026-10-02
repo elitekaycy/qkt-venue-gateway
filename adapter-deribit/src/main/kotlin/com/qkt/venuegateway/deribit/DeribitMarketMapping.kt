@@ -38,5 +38,16 @@ object DeribitMarketMapping {
 
     /** [t] as a quote; a side Deribit did not quote stays null. */
     fun quote(t: DeribitTicker) =
-        VenueQuote(t.name, t.bid, t.ask, t.bidAmount, t.askAmount, t.mark, t.markIv, t.underlyingPrice, t.timestampMs)
+        VenueQuote(
+            t.name,
+            t.bid,
+            t.ask,
+            t.bidAmount,
+            t.askAmount,
+            t.mark,
+            t.markIv,
+            t.underlyingPrice,
+            t.timestampMs,
+            t.indexPrice,
+        )
 }
