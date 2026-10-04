@@ -2,7 +2,7 @@ package com.qkt.venuegateway.host.server
 
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.journal.killSwitch
-import com.qkt.venuegateway.host.journal.setKillSwitch
+import com.qkt.venuegateway.host.journal.updateKillSwitch
 import com.qkt.venuegateway.host.wire.InvalidRequestException
 import com.qkt.venuegateway.host.wire.WireMapping
 import com.qkt.venuegateway.host.wire.WireReads
@@ -126,20 +126,20 @@ private suspend fun ApplicationCall.killSwitch(
     val body =
         wireJson.parseToJsonElement(receiveText()) as? JsonObject
             ?: throw InvalidRequestException("body is not an object")
-    val now = gateway.journal.killSwitch()
-    val next =
-        when (body["scope"]?.jsonPrimitive?.content) {
-            "all" -> now.copy(all = engage)
-            "symbols" -> {
-                val symbols =
-                    body["symbols"]?.jsonArray?.map { it.jsonPrimitive.content }
-                        ?: throw InvalidRequestException("symbols missing")
-                now.copy(symbols = if (engage) (now.symbols + symbols).distinct() else now.symbols - symbols.toSet())
+    val scope = body["scope"]?.jsonPrimitive?.content
+    val symbols = body["symbols"]?.jsonArray?.map { it.jsonPrimitive.content }
+    if (scope == "symbols" && symbols == null) throw InvalidRequestException("symbols missing")
+    if (scope != "all" && scope != "symbols") throw InvalidRequestException("scope must be all or symbols")
+    val switch =
+        gateway.journal.updateKillSwitch { now ->
+            if (scope == "all") {
+                now.copy(all = engage)
+            } else {
+                val named = symbols.orEmpty()
+                now.copy(symbols = if (engage) (now.symbols + named).distinct() else now.symbols - named.toSet())
             }
-            else -> throw InvalidRequestException("scope must be all or symbols")
         }
-    gateway.journal.setKillSwitch(next)
-    json(WireKillSwitch.serializer(), gateway.journal.killSwitch())
+    json(WireKillSwitch.serializer(), switch)
 }
 
 private fun ApplicationCall.id(): String = parameters["id"] ?: throw InvalidRequestException("client_order_id missing")
