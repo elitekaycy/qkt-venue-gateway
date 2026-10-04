@@ -5,6 +5,10 @@ real gateway, with no venue account or API key.
 
 - Market orders fill at the best bid or ask. Limits fill when the market reaches them.
 - Positions persist across restarts. Expired contracts settle at Deribit's delivery price.
+- Held perpetuals pay funding at Deribit's published hourly rates: `quantity × index × interest_1h` per
+  hour, a long paying a positive rate and a short paid it, rounded to 8 decimals. A position pays each
+  hour whose rate is published while it is held, the hour it opened in full; Deribit accrues by the
+  millisecond, so paper funding is close to Deribit's, not equal. Funding rates are served from Deribit.
 - No margin: all equity is available. Trade mode is always `demo`.
 
 ## Start
@@ -23,7 +27,7 @@ docker compose up -d     # gateway-paper on 127.0.0.1:8443
 | `GATEWAY_SETTING_CURRENCY` | `USDC` | Account currency |
 | `GATEWAY_SETTING_FEE_RATE` | `0` | Fee per fill, as a fraction of notional |
 | `GATEWAY_SETTING_LOGIN` | `paper` | Account login reported to qkt |
-| `GATEWAY_SETTING_SETTLEMENT_CHECK_MS` | `60000` | How often expiries are checked |
+| `GATEWAY_SETTING_SETTLEMENT_CHECK_MS` | `60000` | How often expiries and funding are checked |
 | `GATEWAY_SETTING_DERIBIT_URL`, `GATEWAY_SETTING_DERIBIT_WS_URL` | Deribit mainnet public API | Price source. Testnet: `https://test.deribit.com`, `wss://test.deribit.com/ws/api/v2` |
 
 In Compose, `PAPER_STARTING_BALANCE` in `.env` sets the opening balance.

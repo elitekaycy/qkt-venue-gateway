@@ -33,6 +33,9 @@ class PaperBook(
     /** The orders, fills and settlements this book made. */
     val state = PaperOrders(ledger, currency, feeRate)
 
+    /** The funding charged on held perpetuals ([PaperFunding]). */
+    val funding = PaperFundingLedger()
+
     /**
      * Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. The change
      * always reports the order as it ends up, so an order left working is acknowledged and saved.
