@@ -142,6 +142,10 @@ The journal is the gateway's memory and the source of the event stream.
 - **A crash between the write-ahead record and the venue's answer** is resolved on restart by
   `orderByLabel`: found means the venue has it (journal its state and fills); not found after the venue
   link is up means it was never placed (mark it rejected, journal the event).
+- **A lost journal file** loses the records of orders already sent. While the journal was created by the
+  running process, a submit with no record is first looked up through `OrderRecovery` (by label, else its
+  fills); found means a resend of an order the venue holds: it is journaled under the body's hash and
+  answered, never placed again.
 - **GET /v1/orders/{id}:** the stored order, or the venue's by label when the journal lost it; `404`
   only when neither knows it, and that id is then written to `dead_ids` so a late POST of it can never
   place an order (the client's resolve-by-id relies on this).
