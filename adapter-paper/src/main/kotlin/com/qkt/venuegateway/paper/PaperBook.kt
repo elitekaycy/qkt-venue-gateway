@@ -1,8 +1,11 @@
 package com.qkt.venuegateway.paper
 
+import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
+import com.qkt.venuegateway.adapter.PositionRow
+import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueOrder
@@ -148,3 +151,10 @@ class PaperBook(
         return state.fill(order, price, nowMs)
     }
 }
+
+/** The book's working orders. */
+internal fun PaperBook.working(): List<VenueOrder> = state.orders.values.filter { it.status == OrderStatus.WORKING }
+
+/** The book's positions as a netting venue reports them: one row per symbol held. */
+internal fun PaperBook.positionRows() =
+    Positions(Accounting.NETTING, ledger.positions.map { (s, p) -> PositionRow(s, p.quantity, p.avgPrice) })

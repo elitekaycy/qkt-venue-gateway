@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.AdapterContext
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
@@ -134,6 +135,23 @@ class PaperAdapterTest {
             check(System.currentTimeMillis() < deadline) { "timed out; heard $heard" }
             Thread.sleep(10)
         }
+    }
+
+    @Test
+    fun `it serves deribit's present open interest, recorded in its state, and again after a restart`(
+        @TempDir dir: Path,
+    ) {
+        market.tickers[perp] = ticker(perp, "84000", "84000.5").copy(openInterest = BigDecimal("1477.6341"))
+        val first = adapter(dir).also { assertThat(it.capabilities).contains(Capability.OPEN_INTEREST) }
+        val served = first.openInterest(perp, now - 60_000, now)
+        first.close()
+        market.tickers.clear()
+        now += 3_600_000
+
+        assertThat(served.map { it.timeMs to it.openInterest.toPlainString() }).containsExactly(
+            now - 3_600_000 to "1477.6341",
+        )
+        assertThat(adapter(dir).openInterest(perp, 0, now - 3_600_000)).isEqualTo(served)
     }
 
     @Test
