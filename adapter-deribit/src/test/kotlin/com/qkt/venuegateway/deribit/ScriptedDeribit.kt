@@ -96,6 +96,7 @@ internal class ScriptedDeribit(
     fun adapter(
         dir: Path,
         market: DeribitMarketData,
+        history: DeribitMarketData = market,
         onTickerConnection: ((Boolean, String) -> Unit) -> Unit = {},
     ): Pair<DeribitAdapter, RecordingListener> {
         val adapter =
@@ -119,6 +120,7 @@ internal class ScriptedDeribit(
                         override fun close() {}
                     }
                 },
+                history = history,
             )
         val listener = RecordingListener()
         adapter.connect(listener)

@@ -1,11 +1,15 @@
 package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.deribit.client.DeribitTickers
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory
 
 /**
  * The tickers clients want: the [codes][want] they name, and every listed option of each root. A
  * root's options are expanded from the [listing] again on every [refresh], so expiries Deribit lists
- * after the subscription (it lists new ones daily) are quoted too.
+ * after the subscription (it lists new ones daily) are quoted too, every `refreshMs` once [start]ed; a
+ * refresh that fails is logged and tried again at the next.
  */
 class DeribitQuoteFeed(
     private val listing: DeribitListing,
@@ -13,8 +17,20 @@ class DeribitQuoteFeed(
 ) : AutoCloseable {
     private var codes = emptySet<String>()
     private var roots = emptySet<String>()
+    private val log = LoggerFactory.getLogger(DeribitQuoteFeed::class.java)
+    private val timer =
+        Executors.newSingleThreadScheduledExecutor {
+            Thread(it, "deribit-refresh").apply {
+                isDaemon =
+                    true
+            }
+        }
 
-    fun start() = tickers.start()
+    /** Opens the ticker link and refreshes what is wanted every [refreshMs]. */
+    fun start(refreshMs: Long) {
+        tickers.start()
+        timer.scheduleWithFixedDelay(::refreshLogged, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
+    }
 
     /** Clients want [codes] and the options of [roots] from now on. */
     fun want(
@@ -34,5 +50,12 @@ class DeribitQuoteFeed(
         tickers.subscribe(wantedCodes + wantedRoots.flatMap(listing::optionsOf))
     }
 
-    override fun close() = tickers.close()
+    private fun refreshLogged() {
+        runCatching { refresh() }.onFailure { log.warn("deribit quote refresh failed: {}", it.message) }
+    }
+
+    override fun close() {
+        timer.shutdownNow()
+        tickers.close()
+    }
 }
