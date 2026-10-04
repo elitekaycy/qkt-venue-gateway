@@ -58,6 +58,9 @@ class OrderDesk(
     /** A flatten the gateway itself builds (`POST /v1/positions/close`): sent like a submit, never gated. */
     internal fun flatten(body: WireSubmit): DeskResult = place(body, gated = false)
 
+    /** The body [clientOrderId] was sent with, whatever became of it; null when it never was. */
+    internal fun sent(clientOrderId: String): WireSubmit? = journal.submitted(clientOrderId)
+
     /**
      * `PATCH /v1/orders/{id}`: [change] applied at the venue and journaled. While a kill scope covers
      * the order's symbol only a pure size reduction passes.

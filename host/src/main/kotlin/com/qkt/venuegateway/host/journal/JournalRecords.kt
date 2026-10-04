@@ -91,6 +91,11 @@ internal class JournalRecords(
             json.decodeFromString(WireSubmit.serializer(), it.getString(1))
         }.firstOrNull()
 
+    fun body(id: String): WireSubmit? =
+        query("SELECT body_json FROM orders WHERE client_order_id = ? AND body_json IS NOT NULL", id) {
+            json.decodeFromString(WireSubmit.serializer(), it.getString(1))
+        }.firstOrNull()
+
     fun insertFill(fill: WireFill): Boolean =
         update(
             "INSERT OR IGNORE INTO fills(fill_id, client_order_id, time, fill_json) VALUES(?, ?, ?, ?)",
