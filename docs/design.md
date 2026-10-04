@@ -175,6 +175,9 @@ Runs at start, after every venue reconnect, and every 60 seconds:
   later, by refreshing the instrument list every 10 minutes).
 - Each subscribed quote is pushed on change and **re-sent with `time` advanced at least every 5 seconds
   while it holds** (wire spec §4a), so a quiet book stays fresh and a stopped venue feed goes stale.
+  It holds only while the venue link and the adapter's own quote feed are up: an adapter whose quotes
+  come over a link apart from the venue link (Deribit's public ticker socket) reports that link through
+  `AdapterListener.quoteFeed`, and while it is down nothing is re-sent, so qkt's stale-data gate trips.
 - Quotes are never journaled and never replayed.
 
 ## 9. Testing

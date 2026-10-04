@@ -43,10 +43,14 @@ class Gateway(
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(Gateway::class.java)
     private val up = AtomicBoolean(false)
+    private val quotesUp = AtomicBoolean(true)
     private val latest = MutableStateFlow(journal.latestSeq())
 
     /** Whether the venue link is up now. */
     val venueConnected: Boolean get() = up.get()
+
+    /** Whether quotes still arrive: the venue link, and the adapter's own quote feed when it has one, are up. */
+    val quotesLive: Boolean get() = up.get() && quotesUp.get()
 
     /** The latest journaled sequence number, as it moves. */
     val appended: StateFlow<Long> get() = latest
@@ -135,6 +139,14 @@ class Gateway(
             }
 
             override fun quote(quote: VenueQuote) = onQuote(quote)
+
+            override fun quoteFeed(
+                up: Boolean,
+                reason: String,
+            ) {
+                log.info("venue quote feed {}: {}", if (up) "up" else "down", reason)
+                quotesUp.set(up)
+            }
 
             override fun connection(
                 up: Boolean,

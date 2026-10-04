@@ -29,6 +29,11 @@ internal class HeardListener(
 
     override fun quote(quote: VenueQuote) {}
 
+    override fun quoteFeed(
+        up: Boolean,
+        reason: String,
+    ) {}
+
     override fun connection(
         up: Boolean,
         reason: String,
