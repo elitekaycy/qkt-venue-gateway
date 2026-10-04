@@ -160,7 +160,7 @@ abstract class AdapterContractTest {
     }
 
     @Test
-    fun `settlements and funding answer in shape when declared and are refused as unsupported when not`(
+    fun `optional histories answer in shape when declared and are refused as unsupported when not`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = connect(dir)
@@ -170,6 +170,7 @@ abstract class AdapterContractTest {
         CapabilityChecks.settlements(adapter, fromMs, toMs)
         CapabilityChecks.funding(adapter, fromMs, toMs)
         CapabilityChecks.fundingRates(adapter, perpetualCode, fromMs, toMs)
+        CapabilityChecks.marks(adapter, activeCode, barWindowMs)
     }
 
     @Test

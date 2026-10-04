@@ -164,9 +164,9 @@ class AcmeContractTest : AdapterContractTest() {
 ```
 
 Declare `capabilities` honestly. The suite checks each declared one in shape (funding records unique,
-in their window and never zero; funding rates ascending at positive prices; settlements in their window)
-and requires every other one of settlements, funding and funding rates to throw
-`VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
+in their window and never zero; funding rates ascending at positive prices; settlements in their window;
+`activeCode`'s marks over its last 30 bar windows, at most one a window, positive) and requires every other
+one of settlements, funding, funding rates and mark prices to throw `VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
 it, qkt will not trade them.
 
 Run it against testnet until it passes:
