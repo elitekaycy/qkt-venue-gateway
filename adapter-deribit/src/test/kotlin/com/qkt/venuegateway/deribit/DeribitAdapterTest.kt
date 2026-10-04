@@ -87,7 +87,7 @@ class DeribitAdapterTest {
     }
 
     @Test
-    fun `only the account link is the venue connection, and unlabelled orders are never reported`(
+    fun `only the account link is the venue connection, the ticker link the quote feed, unlabelled orders unreported`(
         @TempDir dir: Path,
     ) {
         val (adapter, listener) = adapter(dir)
@@ -98,6 +98,7 @@ class DeribitAdapterTest {
         deribit.onOrder(open)
 
         assertThat(listener.connections).containsExactly(true, false)
+        assertThat(listener.quoteFeed).containsExactly(false)
         assertThat(listener.orders.map { it.clientOrderId }).containsExactly("kit-probe-1790866831")
         assertThat(adapter.openOrders().map { it.clientOrderId }).containsExactly("kit-probe-1790866831")
         adapter.close()

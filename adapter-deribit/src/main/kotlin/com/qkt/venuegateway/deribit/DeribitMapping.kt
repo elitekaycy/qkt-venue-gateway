@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.deribit
 
+import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Cost
 import com.qkt.venuegateway.adapter.CostKind
 import com.qkt.venuegateway.adapter.NewOrder
@@ -11,6 +12,7 @@ import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.deribit.client.DeribitAccount
 import com.qkt.venuegateway.deribit.client.DeribitNewOrder
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitPosition
@@ -65,6 +67,18 @@ object DeribitMapping {
         val position = t.position.takeIf { t.type == "settlement" }
         return VenueFunding("tx-${t.id}", instrument, gain.negate(), t.currency, position, t.timestampMs)
     }
+
+    /** The account's money: margin used is Deribit's initial margin, what is available its available funds. */
+    fun account(a: DeribitAccount) =
+        AccountSnapshot(
+            a.currency,
+            a.balance,
+            a.equity,
+            a.initialMargin,
+            a.availableFunds,
+            a.initialMargin,
+            a.maintenanceMargin,
+        )
 
     /** [t] as a fill, its fee a commission (positive charged, negative rebated); zero fees are omitted. */
     fun fill(t: DeribitTrade): VenueFill? {
