@@ -101,6 +101,22 @@ class MarketRoutesTest {
     }
 
     @Test
+    fun `a quote is not refreshed while the adapter's quote feed is down, so a stopped feed reads stale`() {
+        start()
+        val received = quotes("symbols=BTC_USDC-PERPETUAL")
+        venue.listener!!.quote(
+            VenueQuote("BTC_USDC-PERPETUAL", BigDecimal("84000"), BigDecimal("84000.5"), timeMs = now),
+        )
+        awaitMessage(received) { it.contains("\"time\":$now") }
+
+        venue.listener!!.quoteFeed(false, "ticker socket dropped")
+        now += 5_000
+        Thread.sleep(500)
+
+        assertThat(generateSequence { received.poll() }.toList()).noneMatch { it.contains("\"time\":$now") }
+    }
+
+    @Test
     fun `bars are closed ones only, and a window that does not divide a day is refused`() {
         start()
         venue.bars +=

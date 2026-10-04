@@ -16,6 +16,7 @@ class RecordingListener : AdapterListener {
     val funding = CopyOnWriteArrayList<VenueFunding>()
     val quotes = CopyOnWriteArrayList<VenueQuote>()
     val connections = CopyOnWriteArrayList<Boolean>()
+    val quoteFeed = CopyOnWriteArrayList<Boolean>()
 
     override fun order(order: VenueOrder) {
         orders += order
@@ -35,6 +36,13 @@ class RecordingListener : AdapterListener {
 
     override fun quote(quote: VenueQuote) {
         quotes += quote
+    }
+
+    override fun quoteFeed(
+        up: Boolean,
+        reason: String,
+    ) {
+        quoteFeed += up
     }
 
     override fun connection(

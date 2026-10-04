@@ -107,6 +107,16 @@ interface AdapterListener {
 
     fun quote(quote: VenueQuote)
 
+    /**
+     * The adapter's quote feed went [up] or down, when it is a link apart from the venue link (Deribit's
+     * public ticker socket): while it is down, quotes are not refreshed as if they still held. An adapter
+     * whose quotes come over the venue link never calls it.
+     */
+    fun quoteFeed(
+        up: Boolean,
+        reason: String,
+    )
+
     /** The venue link went [up] or down, with a [reason] for the logs. */
     fun connection(
         up: Boolean,
