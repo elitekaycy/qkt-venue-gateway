@@ -130,7 +130,8 @@ The journal is the gateway's memory and the source of the event stream.
   `seq` increases by exactly one per event.
 - **Replay:** `GET /v1/stream?since=<seq>` first sends every retained event with `seq > since`, then
   live ones. Retention keeps at least 7 days; a `since` older than the oldest retained event, or from
-  another stream, gets a `reset` first.
+  another stream (named by the optional `stream` parameter, or beyond the latest `seq`), gets a `reset`
+  first.
 - **Health anchor:** `GET /v1/health` reads `stream` and the latest `seq` in the same transaction the
   client's REST reconcile follows, so nothing falls between them.
 

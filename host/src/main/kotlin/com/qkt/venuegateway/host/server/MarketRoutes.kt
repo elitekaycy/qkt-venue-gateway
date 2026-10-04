@@ -8,10 +8,7 @@ import com.qkt.vgp.WireBars
 import com.qkt.vgp.WireQuote
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
-import io.ktor.server.websocket.webSocket
-import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
-import io.ktor.websocket.close
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 
@@ -19,7 +16,8 @@ import kotlinx.coroutines.channels.Channel
  * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only, a page of at most
  * [BARS_PAGE] windows, each page asked of the adapter alone (so no venue call is larger than a page),
  * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
- * and roots, never replayed. A slow client loses its oldest buffered quotes, never the newest.
+ * and roots, never replayed (a missing or wrong token is `401` before the upgrade). A slow client loses its
+ * oldest buffered quotes, never the newest.
  */
 internal fun Route.marketRoutes(
     gateway: Gateway,
@@ -50,11 +48,7 @@ internal fun Route.marketRoutes(
             json(WireBars.serializer(), WireBars(page.map(WireReads::bar), end.takeIf { it < last }))
         }
     }
-    webSocket("/v1/quotes") {
-        if (gateway.roleOf(call.request.headers["Authorization"]) == null) {
-            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "unauthorized"))
-            return@webSocket
-        }
+    tokenWebSocket(gateway, "/v1/quotes") {
         val q = call.request.queryParameters
         val codes =
             q["symbols"]
