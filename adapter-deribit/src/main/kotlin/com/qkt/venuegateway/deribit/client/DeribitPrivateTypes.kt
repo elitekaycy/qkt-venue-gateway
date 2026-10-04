@@ -77,7 +77,8 @@ data class DeribitPage<T>(
 /**
  * One row of the account's transaction log (`private/get_transaction_log`), by Deribit's own [id]: [type]
  * `trade`, `settlement`, `delivery`, `expiry`, `deposit`…; [interestPl] is the funding the row realized
- * on a perpetual (positive a gain to the account), [position] the instrument's position after it.
+ * on a perpetual (positive a gain to the account), [position] the instrument's position after it,
+ * [commission] the fee the row charged (on an `expiry` row, the delivery fee).
  */
 data class DeribitTransaction(
     val id: Long,
@@ -86,5 +87,18 @@ data class DeribitTransaction(
     val currency: String,
     val interestPl: BigDecimal?,
     val position: BigDecimal?,
+    val commission: BigDecimal?,
+    val timestampMs: Long,
+)
+
+/**
+ * One row of the account's settlement history (`private/get_settlement_history_by_currency`): [type]
+ * `settlement` (the daily session settlement), `delivery` (a future expired) or `exercise` (an option
+ * expired); on the last two [indexPrice] is the delivery price the contract settled at.
+ */
+data class DeribitSettlement(
+    val type: String,
+    val instrument: String,
+    val indexPrice: BigDecimal,
     val timestampMs: Long,
 )

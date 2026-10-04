@@ -37,6 +37,7 @@ class DeribitPrivateClient(
         }
     private val socket =
         DeribitSocket(url, "private", HEARTBEAT_SECONDS, requestTimeoutMs, ::onNotification, onConnection, ::open)
+    private val histories = DeribitHistories(socket::request)
 
     override fun start() = socket.start()
 
@@ -122,31 +123,19 @@ class DeribitPrivateClient(
             )
         }
 
-    /** Deribit pages its log newest first by a continuation id; every page is read, then the rows ascend. */
+    /** The transaction log, newest-first pages read in full ([DeribitHistories]). */
     override fun transactions(
         currency: String,
         fromMs: Long,
         toMs: Long,
-    ): List<DeribitTransaction> {
-        val rows = LinkedHashMap<Long, DeribitTransaction>()
-        var continuation: Long? = null
-        do {
-            val (page, next) =
-                DeribitPrivateJson.transactionPage(
-                    call("private/get_transaction_log") {
-                        put("currency", currency)
-                        put("start_timestamp", fromMs)
-                        put("end_timestamp", toMs)
-                        put("count", LOG_PAGE)
-                        continuation?.let { put("continuation", it) }
-                    }.jsonObject,
-                )
-            page.forEach { rows.putIfAbsent(it.id, it) }
-            check(next == null || next != continuation) { "deribit transaction log does not advance past $next" }
-            continuation = next.takeIf { page.isNotEmpty() }
-        } while (continuation != null)
-        return rows.values.sortedWith(compareBy({ it.timestampMs }, { it.id }))
-    }
+    ) = histories.transactions(currency, fromMs, toMs)
+
+    /** The settlement history, newest-first pages read back past [fromMs] ([DeribitHistories]). */
+    override fun settlements(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = histories.settlements(currency, fromMs, toMs)
 
     private fun open(call: (String, JsonObject) -> JsonElement) {
         call(
@@ -188,6 +177,5 @@ class DeribitPrivateClient(
         val KINDS = listOf("future", "option")
         const val HEARTBEAT_SECONDS = 30
         const val PAGE = 1000
-        const val LOG_PAGE = 250
     }
 }

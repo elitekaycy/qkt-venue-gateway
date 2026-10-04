@@ -61,6 +61,13 @@ interface DeribitTrading : AutoCloseable {
         toMs: Long,
     ): List<DeribitTransaction>
 
+    /** The account's settlement history rows of every type from [fromMs] to [toMs], oldest first. */
+    fun settlements(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitSettlement>
+
     /** The account's executions from [fromMs] to [toMs], oldest first, across every page. */
     fun trades(
         currency: String,

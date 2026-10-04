@@ -1,7 +1,6 @@
 package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Capability
-import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitPrivateJson
 import java.math.BigDecimal
@@ -9,7 +8,6 @@ import java.nio.file.Path
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -27,14 +25,18 @@ class DeribitFundingTest {
     private val deribit = ScriptedDeribit(open)
 
     @Test
-    fun `it declares bars, quotes, funding and funding rates, and refuses settlements as unsupported`(
+    fun `it declares bars, quotes, settlements, funding and funding rates`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = deribit.adapter(dir, unusedMarket())
 
-        assertThat(adapter.capabilities)
-            .containsExactlyInAnyOrder(Capability.BARS, Capability.QUOTES, Capability.FUNDING, Capability.FUNDING_RATES)
-        assertThatThrownBy { adapter.settlements(0, 1) }.isInstanceOf(VenueUnsupportedException::class.java)
+        assertThat(adapter.capabilities).containsExactlyInAnyOrder(
+            Capability.BARS,
+            Capability.QUOTES,
+            Capability.SETTLEMENTS,
+            Capability.FUNDING,
+            Capability.FUNDING_RATES,
+        )
         adapter.close()
     }
 

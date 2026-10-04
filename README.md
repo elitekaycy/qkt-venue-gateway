@@ -66,7 +66,7 @@ qkt refuses to start if the gateway's adapter, account or trade mode don't match
 | Adapter | Venue | Status |
 |---|---|---|
 | `paper` | Simulated account on Deribit's public prices | Stable. [Settings](adapter-paper/README.md) |
-| `deribit` | Deribit testnet and mainnet | Stable; settlement history not served yet. [Setup](adapter-deribit/README.md) |
+| `deribit` | Deribit testnet and mainnet | Stable. [Setup](adapter-deribit/README.md) |
 
 Want another venue? See [writing an adapter](docs/writing-an-adapter.md).
 

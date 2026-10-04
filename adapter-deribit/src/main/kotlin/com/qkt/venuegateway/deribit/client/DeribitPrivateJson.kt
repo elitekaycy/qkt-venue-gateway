@@ -82,6 +82,7 @@ internal object DeribitPrivateJson {
             currency = o.need("currency"),
             interestPl = o.dec("interest_pl"),
             position = o.dec("position"),
+            commission = o.dec("commission"),
             timestampMs = o.long("timestamp"),
         )
 
@@ -89,6 +90,18 @@ internal object DeribitPrivateJson {
     fun transactionPage(o: JsonObject): Pair<List<DeribitTransaction>, Long?> =
         o["logs"]!!.jsonArray.map { transaction(it.jsonObject) } to
             (o["continuation"] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toLongOrNull()
+
+    /** One page of the settlement history, newest first, and the continuation to the next (null on the last). */
+    fun settlementPage(o: JsonObject): Pair<List<DeribitSettlement>, String?> =
+        o["settlements"]!!.jsonArray.map {
+            val row = it.jsonObject
+            DeribitSettlement(
+                row.need("type"),
+                row.need("instrument_name"),
+                row.req("index_price"),
+                row.long("timestamp"),
+            )
+        } to o.text("continuation")?.takeIf { it != "none" }
 
     private fun JsonObject.need(key: String): String = text(key) ?: error("deribit field $key missing")
 

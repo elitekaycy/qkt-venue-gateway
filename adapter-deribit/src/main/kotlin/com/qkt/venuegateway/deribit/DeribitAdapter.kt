@@ -16,7 +16,6 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
-import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitOrder
@@ -53,8 +52,8 @@ class DeribitAdapter(
     override val id = "deribit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
 
-    /** Settlements are not declared until a delivery is recorded from the venue. */
-    override val capabilities = setOf(Capability.BARS, Capability.QUOTES, Capability.FUNDING, Capability.FUNDING_RATES)
+    override val capabilities =
+        setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
     private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
@@ -141,11 +140,15 @@ class DeribitAdapter(
         toMs: Long,
     ) = venue { account.trades(currency, fromMs, toMs) }.mapNotNull(DeribitMapping::fill)
 
-    /** Not mapped until a delivery is recorded from the venue; refused as unsupported rather than invented. */
+    /** Deliveries and exercises at the price each unit settled at ([DeribitSettlementMapping]); expired codes looked up one by one. */
     override fun settlements(
         fromMs: Long,
         toMs: Long,
-    ): List<VenueSettlement> = throw VenueUnsupportedException("deribit settlements")
+    ): List<VenueSettlement> =
+        venue {
+            val rows = account.settlements(currency, fromMs, toMs)
+            DeribitSettlementMapping.settlements(rows, listing::held) { account.transactions(currency, fromMs, toMs) }
+        }
 
     /** The funding the transaction log shows realized on perpetuals; Deribit pushes none, the host reconciles it. */
     override fun funding(

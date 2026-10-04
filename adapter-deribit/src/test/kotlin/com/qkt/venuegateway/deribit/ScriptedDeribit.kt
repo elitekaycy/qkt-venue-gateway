@@ -7,6 +7,7 @@ import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitNewOrder
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitPosition
+import com.qkt.venuegateway.deribit.client.DeribitSettlement
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.deribit.client.DeribitTrade
 import com.qkt.venuegateway.deribit.client.DeribitTrading
@@ -22,6 +23,8 @@ internal class ScriptedDeribit(
     val byLabel = mutableMapOf<String, List<DeribitOrder>>()
     val edits = mutableListOf<String>()
     val transactions = mutableListOf<DeribitTransaction>()
+    val settled = mutableListOf<DeribitSettlement>()
+    var logReads = 0
     var cancelled = 0
     lateinit var onOrder: (DeribitOrder) -> Unit
     lateinit var onTrade: (DeribitTrade) -> Unit
@@ -70,7 +73,16 @@ internal class ScriptedDeribit(
         currency: String,
         fromMs: Long,
         toMs: Long,
-    ) = transactions.filter { it.timestampMs in fromMs..toMs }
+    ): List<DeribitTransaction> {
+        logReads++
+        return transactions.filter { it.timestampMs in fromMs..toMs }
+    }
+
+    override fun settlements(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = settled.filter { it.timestampMs in fromMs..toMs }
 
     override fun trades(
         currency: String,
