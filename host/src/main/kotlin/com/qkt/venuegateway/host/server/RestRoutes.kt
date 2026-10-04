@@ -4,7 +4,6 @@ import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.journal.killSwitch
 import com.qkt.venuegateway.host.journal.updateKillSwitch
 import com.qkt.venuegateway.host.wire.InvalidRequestException
-import com.qkt.venuegateway.host.wire.WireMapping
 import com.qkt.venuegateway.host.wire.WireReads
 import com.qkt.vgp.WireAccount
 import com.qkt.vgp.WireChange
@@ -57,7 +56,7 @@ internal fun Route.restRoutes(gateway: Gateway) {
     }
     get("/v1/orders") {
         call.serve(gateway, ANY_ROLE) {
-            json(WireOrders.serializer(), WireOrders(gateway.adapter.openOrders().map(WireMapping::order)))
+            json(WireOrders.serializer(), WireOrders(gateway.workingOrders()))
         }
     }
     post("/v1/orders") {
