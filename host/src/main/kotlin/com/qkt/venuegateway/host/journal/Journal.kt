@@ -120,12 +120,6 @@ class Journal private constructor(
     /** The submits of write-ahead records the venue's answer never reached (a crash in between). */
     fun unresolved(): List<WireSubmit> = synchronized(this) { records.pendingBodies() }
 
-    /** The newest journaled fill's time; 0 before any. */
-    fun latestFillTime(): Long = synchronized(this) { records.latestTime("fills") }
-
-    /** The newest journaled settlement's time; 0 before any. */
-    fun latestSettlementTime(): Long = synchronized(this) { records.latestTime("settlements") }
-
     fun fills(
         fromMs: Long,
         toMs: Long,

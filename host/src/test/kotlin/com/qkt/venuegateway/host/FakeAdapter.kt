@@ -50,6 +50,9 @@ internal class FakeAdapter : VenueAdapter {
 
     @Volatile var unreachable = false
 
+    /** Positions cannot be read. */
+    @Volatile var positionsUnavailable = false
+
     /** Settlement history cannot be read (an adapter that does not map it yet). */
     @Volatile var settlementsUnavailable = false
 
@@ -92,6 +95,7 @@ internal class FakeAdapter : VenueAdapter {
         AccountSnapshot("USDC", BigDecimal("10000"), BigDecimal("10000"), BigDecimal.ZERO, BigDecimal("10000"))
 
     override fun positions(): Positions {
+        if (positionsUnavailable) throw VenueUnavailableException("positions down")
         positionReads += Thread.currentThread().name
         return Positions(Accounting.NETTING, net.map { (s, q) -> PositionRow(s, q, BigDecimal("84000")) })
     }
