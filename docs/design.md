@@ -88,6 +88,7 @@ interface VenueAdapter : AutoCloseable {
     fun funding(fromMs: Long, toMs: Long): List<VenueFunding>              // only with FUNDING
     fun fundingRates(code: String, fromMs: Long, toMs: Long): List<VenueFundingRate>  // only with FUNDING_RATES
     fun marks(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueMark>  // only with MARK_PRICES
+    fun openInterest(code: String, fromMs: Long, toMs: Long): List<VenueOpenInterest>  // only with OPEN_INTEREST
     fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
     fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
 }
@@ -104,8 +105,9 @@ Rules every adapter keeps, checked by the conformance suite (§9):
 - **Fills carry the venue's own execution id**, so a fill seen twice (push and backfill) is one fill.
 - **Capabilities are declared, never faked.** `capabilities` names the optional services the adapter
   serves: `BARS`, `QUOTES`, `SETTLEMENTS`, `FUNDING` (what the venue charged or credited the account for
-  holding a perpetual), `FUNDING_RATES` (a perpetual's public rate history) and `MARK_PRICES` (a contract's
-  mark and index history, the last report in each window). The host reports them in
+  holding a perpetual), `FUNDING_RATES` (a perpetual's public rate history), `MARK_PRICES` (a contract's
+  mark and index history, the last report in each window) and `OPEN_INTEREST` (a contract's open
+  interest over time, each figure at the instant the venue made it known). The host reports them in
   `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
   undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
   does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without

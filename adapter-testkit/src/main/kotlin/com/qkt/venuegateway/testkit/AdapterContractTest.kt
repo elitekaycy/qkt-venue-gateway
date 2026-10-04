@@ -41,7 +41,7 @@ abstract class AdapterContractTest {
     /** An order the venue itself refuses, such as a size off its volume step. */
     protected abstract fun refusedOrder(clientOrderId: String): NewOrder
 
-    /** A listed code with recent trading, for bars and quotes. */
+    /** A listed code with recent trading, for bars, quotes and open interest. */
     protected abstract val activeCode: String
 
     /** A listed perpetual, whose funding rates are checked when the adapter declares funding rates. */
@@ -171,6 +171,7 @@ abstract class AdapterContractTest {
         CapabilityChecks.funding(adapter, fromMs, toMs)
         CapabilityChecks.fundingRates(adapter, perpetualCode, fromMs, toMs)
         CapabilityChecks.marks(adapter, activeCode, barWindowMs)
+        CapabilityChecks.openInterest(adapter, activeCode, fromMs, toMs + CLOCK_SKEW_MS)
     }
 
     @Test

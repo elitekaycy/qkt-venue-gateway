@@ -8,8 +8,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 
 /**
  * What each optional capability promises: declared, it answers in shape; not declared, settlements, funding,
- * funding rates and mark prices are refused as [VenueUnsupportedException] (bars and quotes are only checked when
- * declared: a venue without them has nothing to refuse).
+ * funding rates, mark prices and open interest are refused as [VenueUnsupportedException] (bars and quotes
+ * are only checked when declared: a venue without them has nothing to refuse).
  */
 internal object CapabilityChecks {
     /** When declared, [activeCode]'s recent bars are well formed and a subscription quotes it, bid at or below ask. */
@@ -98,6 +98,31 @@ internal object CapabilityChecks {
             assertThat(it.mark ?: it.index).describedAs("mark or index at ${it.timeMs}").isNotNull
             it.mark?.let { mark -> assertThat(mark).describedAs("mark at ${it.timeMs}").isPositive }
             it.index?.let { index -> assertThat(index).describedAs("index at ${it.timeMs}").isPositive }
+        }
+    }
+
+    /** [code]'s open interest up to now: its present figure at least, oldest first, in the window, never negative. */
+    fun openInterest(
+        adapter: VenueAdapter,
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) {
+        if (Capability.OPEN_INTEREST !in adapter.capabilities) {
+            assertThatThrownBy { adapter.openInterest(code, fromMs, toMs) }
+                .isInstanceOf(VenueUnsupportedException::class.java)
+            return
+        }
+        val figures = adapter.openInterest(code, fromMs, toMs)
+        assertThat(figures).describedAs("open interest of $code up to now").isNotEmpty
+        assertThat(
+            figures.zipWithNext().all { (a, b) ->
+                a.timeMs < b.timeMs
+            },
+        ).describedAs("open interest ascends").isTrue
+        figures.forEach {
+            assertThat(it.timeMs).describedAs("open interest time").isBetween(fromMs, toMs)
+            assertThat(it.openInterest.signum()).describedAs("open interest at ${it.timeMs}").isNotNegative
         }
     }
 

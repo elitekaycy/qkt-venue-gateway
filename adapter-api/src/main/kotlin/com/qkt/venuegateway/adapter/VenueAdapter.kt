@@ -91,6 +91,13 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueMark> = throw VenueUnsupportedException("mark prices")
 
+    /** The open interest of [code] published from [fromMs] to [toMs], oldest first; only with [Capability.OPEN_INTEREST]. */
+    fun openInterest(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueOpenInterest> = throw VenueUnsupportedException("open interest")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,
