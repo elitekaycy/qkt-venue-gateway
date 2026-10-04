@@ -27,10 +27,7 @@ internal fun Route.marketRoutes(
         call.serve(gateway, ANY_ROLE) {
             val q = request.queryParameters
             val code = q["symbol"] ?: throw InvalidRequestException("symbol missing")
-            val window = q["window_ms"]?.toLongOrNull() ?: throw InvalidRequestException("window_ms missing")
-            if (window <= 0 || window % MINUTE_MS != 0L || DAY_MS % window != 0L) {
-                throw InvalidRequestException("window_ms must be whole minutes dividing a day: $window")
-            }
+            val window = windowMs(q["window_ms"])
             val from = q["from"]?.toLongOrNull() ?: throw InvalidRequestException("from missing")
             val to = q["to"]?.toLongOrNull() ?: throw InvalidRequestException("to missing")
             val closedBy = gateway.clock()
@@ -67,6 +64,15 @@ internal fun Route.marketRoutes(
             for (quote in buffer) send(Frame.Text(wireJson.encodeToString(WireQuote.serializer(), quote)))
         }
     }
+}
+
+/** [raw] as a window length: whole minutes dividing a day, or a bad request naming it. */
+internal fun windowMs(raw: String?): Long {
+    val window = raw?.toLongOrNull() ?: throw InvalidRequestException("window_ms missing")
+    if (window <= 0 || window % MINUTE_MS != 0L || DAY_MS % window != 0L) {
+        throw InvalidRequestException("window_ms must be whole minutes dividing a day: $window")
+    }
+    return window
 }
 
 private const val BARS_PAGE = 1000

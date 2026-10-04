@@ -18,6 +18,7 @@ import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -177,6 +178,16 @@ internal class FakeAdapter : VenueAdapter {
         fromMs: Long,
         toMs: Long,
     ) = rates.toList().also { rateCalls += fromMs to toMs }
+
+    val marks = CopyOnWriteArrayList<VenueMark>()
+    val markCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
+
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ) = marks.toList().also { markCalls += fromMs to toMs }
 
     val bars = CopyOnWriteArrayList<VenueBar>()
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()

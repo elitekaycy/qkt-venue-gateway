@@ -54,14 +54,16 @@ internal fun Route.fundingRoutes(gateway: Gateway) {
     }
 }
 
-private fun Gateway.require(
+/** Refuses as unsupported what [capability] serves when the adapter does not declare it. */
+internal fun Gateway.require(
     capability: Capability,
     what: String,
 ) {
     if (capability !in adapter.capabilities) throw VenueUnsupportedException(what)
 }
 
-private fun ApplicationCall.long(name: String): Long =
+/** Query parameter [name] as epoch milliseconds, or a bad request naming it. */
+internal fun ApplicationCall.long(name: String): Long =
     request.queryParameters[name]?.toLongOrNull() ?: throw InvalidRequestException("$name must be epoch milliseconds")
 
 private const val RATES_PAGE = 1000
