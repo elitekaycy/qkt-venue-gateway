@@ -77,6 +77,7 @@ internal object DeribitJson {
             markIv = o.dec("mark_iv"),
             underlyingPrice = o.dec("underlying_price"),
             indexPrice = o.dec("index_price"),
+            openInterest = o.dec("open_interest"),
         )
     }
 
