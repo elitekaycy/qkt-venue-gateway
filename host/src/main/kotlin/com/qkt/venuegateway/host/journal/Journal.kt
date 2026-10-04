@@ -54,13 +54,16 @@ class Journal private constructor(
     fun oldestSeq(): Long? = synchronized(this) { records.long("SELECT MIN(seq) FROM events").takeIf { it > 0 } }
 
     /**
-     * Records [order]'s state and appends its `order` event, unless the journal already holds exactly
-     * that state; true when appended. The check and the write are one step, so the same state reported
-     * at once by the order desk and by a venue push is journaled once.
+     * Records [order]'s state and appends its `order` event, unless the journal already holds that state
+     * or a later one; true when appended. The check and the write are one step, so the same state reported
+     * at once by the order desk and by a venue push is journaled once, and an older state arriving after a
+     * newer one (a place answer overtaken by its fill push, a reconciler snapshot overtaken by a fill) is
+     * dropped: an order never goes back from final to working, nor does its filled quantity shrink.
      */
     fun appendOrder(order: WireOrder): Boolean =
         appending {
-            if (records.order(order.clientOrderId)?.order == order) {
+            val held = records.order(order.clientOrderId)?.order
+            if (held == order || (held != null && OrderProgress.regresses(held, order))) {
                 false
             } else {
                 records.upsertOrder(order)
@@ -110,6 +113,9 @@ class Journal private constructor(
 
     /** Orders the venue holds as working, as last journaled. */
     fun workingOrders(): List<WireOrder> = synchronized(this) { records.ordersWithStatus("working") }
+
+    /** The submit of [clientOrderId] while it is only a write-ahead record (no venue answer yet), else null. */
+    fun pendingSubmit(clientOrderId: String): WireSubmit? = synchronized(this) { records.pendingBody(clientOrderId) }
 
     /** The submits of write-ahead records the venue's answer never reached (a crash in between). */
     fun unresolved(): List<WireSubmit> = synchronized(this) { records.pendingBodies() }

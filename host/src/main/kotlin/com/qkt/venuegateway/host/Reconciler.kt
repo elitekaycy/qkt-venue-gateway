@@ -53,15 +53,7 @@ class Reconciler(
                 journal.appendOrder(gone.copy(status = "cancelled", updatedAt = gateway.clock()))
             }
         }
-        for (body in journal.unresolved()) {
-            val found = gateway.desk.recovery.find(body)
-            if (found != null) {
-                found.fills.forEach(listener::fill)
-                listener.order(found.order)
-            } else {
-                journal.appendOrder(WireMapping.rejected(body, "the venue holds no trace of it", gateway.clock()))
-            }
-        }
+        journal.unresolved().forEach { gateway.desk.resolve(it) }
         gateway.positions.refresh(null)
         val now = gateway.clock()
         venue.fills(since(journal.latestFillTime(), now), now).forEach(listener::fill)
