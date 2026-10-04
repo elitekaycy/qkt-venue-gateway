@@ -1,7 +1,7 @@
 # qkt-venue-gateway — the VGP v1 gateway host and its adapters — design
 
 **Status:** built: the host, the paper adapter and the Deribit adapter (contract suite passed on
-testnet; qkt trades through it end to end). Deribit settlement history is not served yet. **Builds on:** the wire spec
+testnet; qkt trades through it end to end). Deribit expiries are served from its settlement history. **Builds on:** the wire spec
 `2026-10-01-vgp-v1-wire.md` (what any gateway must do), the qkt client in `connector/gateway` (what it
 relies on), and `docs/research/2026-09-18-venue-plugin-architecture.md` §2 (why adapters run in a
 separate host: the kill switch must be a choke point outside qkt).
@@ -213,8 +213,9 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    unique at Deribit, so only the host decides to resend; kline answers are cut silently at 5001, so they
    are fetched in spans; a closed order is answered by label for under an hour (measured: found 27 min
    after closing, gone after about an hour, and absent from order history too), while trades stay, so
-   the host resolves an order it lost track of from its fills (`OrderRecovery`). **Still open:** `settlements` is undeclared (refused as unsupported) until a delivery has been
-   recorded from testnet (a held option settles 2026-10-02 08:00 UTC).
+   the host resolves an order it lost track of from its fills (`OrderRecovery`). Expiries are settled from
+   Deribit's settlement history (`delivery` rows for futures, `exercise` rows for options at intrinsic
+   value from the delivery price), recorded from the option the testnet account held to 2026-10-02.
 3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.
 
