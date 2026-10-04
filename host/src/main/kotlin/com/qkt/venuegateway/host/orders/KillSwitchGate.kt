@@ -4,6 +4,7 @@ import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.journal.killSwitch
 import java.math.BigDecimal
 
 /**

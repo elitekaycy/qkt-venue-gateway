@@ -1,6 +1,8 @@
 package com.qkt.venuegateway.host.server
 
 import com.qkt.venuegateway.host.Gateway
+import com.qkt.venuegateway.host.journal.killSwitch
+import com.qkt.venuegateway.host.journal.setKillSwitch
 import com.qkt.venuegateway.host.wire.InvalidRequestException
 import com.qkt.venuegateway.host.wire.WireMapping
 import com.qkt.venuegateway.host.wire.WireReads

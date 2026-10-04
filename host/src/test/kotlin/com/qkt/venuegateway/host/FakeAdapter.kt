@@ -3,6 +3,7 @@ package com.qkt.venuegateway.host
 import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterListener
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.NewOrder
@@ -14,6 +15,8 @@ import com.qkt.venuegateway.adapter.TradeMode
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueFill
+import com.qkt.venuegateway.adapter.VenueFunding
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
@@ -35,7 +38,13 @@ internal class FakeAdapter : VenueAdapter {
     val positionReads = CopyOnWriteArrayList<String>()
     val fills = CopyOnWriteArrayList<VenueFill>()
     val settlements = CopyOnWriteArrayList<VenueSettlement>()
+    val funding = CopyOnWriteArrayList<VenueFunding>()
+    val rates = CopyOnWriteArrayList<VenueFundingRate>()
+    val rateCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
     var listener: AdapterListener? = null
+
+    /** What the fake declares; every capability unless a test narrows it. */
+    @Volatile override var capabilities: Set<Capability> = Capability.entries.toSet()
 
     @Volatile var refuseNext: String? = null
 
@@ -153,6 +162,17 @@ internal class FakeAdapter : VenueAdapter {
         if (settlementsUnavailable) throw VenueUnavailableException("settlements not mapped")
         return settlements.filter { it.timeMs in fromMs..toMs }
     }
+
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ) = funding.filter { it.timeMs in fromMs..toMs }
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = rates.toList().also { rateCalls += fromMs to toMs }
 
     val bars = CopyOnWriteArrayList<VenueBar>()
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()

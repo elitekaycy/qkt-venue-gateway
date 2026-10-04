@@ -2,7 +2,6 @@ package com.qkt.venuegateway.host.journal
 
 import com.qkt.vgp.WireEvent
 import com.qkt.vgp.WireFill
-import com.qkt.vgp.WireKillSwitch
 import com.qkt.vgp.WireOrder
 import com.qkt.vgp.WirePosition
 import com.qkt.vgp.WireSettlement
@@ -12,15 +11,13 @@ import java.nio.file.Path
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.UUID
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 /**
  * The gateway's memory, one SQLite file per account: the event log the stream replays (`seq` rises by
  * exactly one per event within [stream]), every order the client sent with its body hash (idempotent
- * submits), every fill and settlement once (by venue fill id; by symbol and time), the ids written off
- * as dead, and the kill switch. Each event is appended in the same transaction as its de-duplication
+ * submits), every fill, settlement and funding record once (by venue fill id; by symbol and time; by
+ * funding id), the ids written off as dead, and the kill switch ([killSwitch], [appendFunding]). Each event is appended in the same transaction as its de-duplication
  * row. A new file starts a new [stream], which tells every client to resynchronize. Thread-safe: one
  * connection, used under this object's lock.
  */
@@ -28,7 +25,8 @@ class Journal private constructor(
     private val db: Connection,
 ) : AutoCloseable {
     internal val json = Json { ignoreUnknownKeys = true }
-    private val records = JournalRecords(db, json)
+    internal val records = JournalRecords(db, json)
+    internal val fundingRecords = FundingRecords(db, json)
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<(Long) -> Unit>()
 
     /** Calls [listener] with the latest sequence number after every committed event, outside the lock. */
@@ -141,22 +139,10 @@ class Journal private constructor(
     /** Writes [clientOrderId] off: no order may ever be placed under it. */
     fun markDead(clientOrderId: String) = transaction { records.markDead(clientOrderId) }
 
-    fun killSwitch(): WireKillSwitch =
-        synchronized(this) {
-            val symbols = meta("kill_symbols")?.let { json.decodeFromString(ListSerializer(String.serializer()), it) }
-            WireKillSwitch(meta("kill_all") == "true", symbols.orEmpty())
-        }
-
-    fun setKillSwitch(scope: WireKillSwitch) =
-        transaction {
-            setMeta("kill_all", scope.all.toString())
-            setMeta("kill_symbols", json.encodeToString(ListSerializer(String.serializer()), scope.symbols))
-        }
-
     override fun close() = synchronized(this) { db.close() }
 
     /** A transaction that may append an event: listeners hear the new sequence number once it is committed. */
-    private fun appending(block: () -> Boolean): Boolean {
+    internal fun appending(block: () -> Boolean): Boolean {
         val appended = transaction(block)
         if (appended) {
             val seq = latestSeq()
@@ -165,7 +151,7 @@ class Journal private constructor(
         return appended
     }
 
-    private fun <T> transaction(block: () -> T): T =
+    internal fun <T> transaction(block: () -> T): T =
         synchronized(this) {
             db.autoCommit = false
             try {
@@ -178,9 +164,9 @@ class Journal private constructor(
             }
         }
 
-    private fun meta(key: String): String? = records.meta(key)
+    internal fun meta(key: String): String? = records.meta(key)
 
-    private fun setMeta(
+    internal fun setMeta(
         key: String,
         value: String,
     ) = records.setMeta(key, value)
