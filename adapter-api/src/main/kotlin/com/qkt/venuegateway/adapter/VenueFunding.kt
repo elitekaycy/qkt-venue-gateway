@@ -21,6 +21,9 @@ enum class Capability {
 
     /** The venue's public funding-rate history of its perpetuals ([VenueAdapter.fundingRates]). */
     FUNDING_RATES,
+
+    /** The history of a contract's mark and index prices, sampled per window ([VenueAdapter.marks]). */
+    MARK_PRICES,
 }
 
 /**

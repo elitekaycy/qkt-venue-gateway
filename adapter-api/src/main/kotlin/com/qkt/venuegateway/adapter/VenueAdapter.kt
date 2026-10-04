@@ -79,6 +79,18 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueFundingRate> = throw VenueUnsupportedException("funding rates")
 
+    /**
+     * [code]'s mark and index, one per window [windowMs] long starting in `[fromMs, toMs)` in which the
+     * venue reported them: the last report in the window, at its own time, oldest first; only with
+     * [Capability.MARK_PRICES].
+     */
+    fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueMark> = throw VenueUnsupportedException("mark prices")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,
