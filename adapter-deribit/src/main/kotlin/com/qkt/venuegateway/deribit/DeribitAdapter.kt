@@ -4,6 +4,7 @@ import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.AdapterListener
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
@@ -12,7 +13,7 @@ import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueSettlement
-import com.qkt.venuegateway.adapter.VenueUnavailableException
+import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitOrder
@@ -47,6 +48,9 @@ class DeribitAdapter(
 ) : VenueAdapter {
     override val id = "deribit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
+
+    /** Settlements are not declared until a delivery is recorded from the venue. */
+    override val capabilities = setOf(Capability.BARS, Capability.QUOTES)
     private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
@@ -140,11 +144,11 @@ class DeribitAdapter(
         toMs: Long,
     ) = venue { account.trades(currency, fromMs, toMs) }.mapNotNull(DeribitMapping::fill)
 
-    /** Not mapped until a delivery is recorded from the venue; refused as unavailable rather than invented. */
+    /** Not mapped until a delivery is recorded from the venue; refused as unsupported rather than invented. */
     override fun settlements(
         fromMs: Long,
         toMs: Long,
-    ): List<VenueSettlement> = throw VenueUnavailableException("deribit settlements are not mapped yet")
+    ): List<VenueSettlement> = throw VenueUnsupportedException("deribit settlements")
 
     override fun bars(
         code: String,
