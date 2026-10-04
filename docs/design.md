@@ -72,6 +72,7 @@ venue-neutral VGP shape (decimal strings become `BigDecimal` at this boundary, n
 interface VenueAdapter : AutoCloseable {
     val id: String                                     // "deribit" — reported as health.adapter
     val version: String
+    val capabilities: Set<Capability>                  // optional services served (default: bars, quotes, settlements)
     fun connect(listener: AdapterListener)             // opens the venue link; listener gets pushes
     fun identity(): VenueIdentity                      // account login, trade mode (demo|real), currency
     fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying
@@ -84,13 +85,15 @@ interface VenueAdapter : AutoCloseable {
     fun orderByLabel(clientOrderId: String): VenueOrder?   // venue lookup by our id; null = venue never saw it
     fun fills(fromMs: Long, toMs: Long): List<VenueFill>   // executions with venue fill ids and costs
     fun settlements(fromMs: Long, toMs: Long): List<VenueSettlement>
+    fun funding(fromMs: Long, toMs: Long): List<VenueFunding>              // only with FUNDING
+    fun fundingRates(code: String, fromMs: Long, toMs: Long): List<VenueFundingRate>  // only with FUNDING_RATES
     fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
     fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
 }
 
 interface AdapterListener {
     fun order(o: VenueOrder); fun fill(f: VenueFill); fun settlement(s: VenueSettlement)
-    fun quote(q: VenueQuote); fun connection(up: Boolean, reason: String)
+    fun funding(f: VenueFunding); fun quote(q: VenueQuote); fun connection(up: Boolean, reason: String)
 }
 ```
 
@@ -98,6 +101,13 @@ Rules every adapter keeps, checked by the conformance suite (§9):
 - **Our id travels with the order.** `place` puts `client_order_id` in the venue's label/client-id field
   so `orderByLabel` can find it after any crash. A venue without such a field cannot be adapted.
 - **Fills carry the venue's own execution id**, so a fill seen twice (push and backfill) is one fill.
+- **Capabilities are declared, never faked.** `capabilities` names the optional services the adapter
+  serves: `BARS`, `QUOTES`, `SETTLEMENTS`, `FUNDING` (what the venue charged or credited the account for
+  holding a perpetual) and `FUNDING_RATES` (a perpetual's public rate history). The host reports them in
+  `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
+  undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
+  does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without
+  funding.
 - **Pushes may arrive late, twice or out of order;** the host orders and dedupes them. An adapter never
   drops a push it cannot classify; it reports it as an error.
 - **No threads, clocks, env or HTTP clients of its own:** the host hands them in (`HostServices`, as the
@@ -111,11 +121,11 @@ The journal is the gateway's memory and the source of the event stream.
   `BEGIN IMMEDIATE` (the shared-DB locking lesson from the research DB). Tables: `meta` (stream id,
   created at), `events` (seq INTEGER PRIMARY KEY, type, time, data JSON), `orders` (client_order_id
   PRIMARY KEY, body hash, status, venue order id, last order JSON), `fills` (venue fill id PRIMARY KEY),
-  `settlements` (symbol, time PRIMARY KEY), `dead_ids`.
+  `settlements` (symbol, time PRIMARY KEY), `funding` (venue funding id PRIMARY KEY), `dead_ids`.
 - **Stream identity:** a random `stream` id is created with the journal. Losing the journal file means a
   new stream id, which tells every client to resynchronize from REST (`reset`), exactly as the wire spec
   defines.
-- **Appending:** each order change, new fill or settlement is written in one transaction with its
+- **Appending:** each order change, new fill, settlement or funding record is written in one transaction with its
   dedupe row (a fill whose venue id exists is not appended again), then published to open streams.
   `seq` increases by exactly one per event.
 - **Replay:** `GET /v1/stream?since=<seq>` first sends every retained event with `seq > since`, then
@@ -145,7 +155,8 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    label and its final state and fills journaled.
 2. Venue fills since the last reconciled fill time (minus a 5-minute overlap) are journaled through the
    fill dedupe, so a push lost during a disconnect becomes an event late but exactly once.
-3. Venue settlements since the last reconciled settlement are journaled the same way.
+3. Venue settlements since the last reconciled settlement, and funding since the last reconciled funding
+   record, are journaled the same way, each only when the adapter declares it.
 4. Positions are not journaled; they are served live from the venue (the client checks holdings).
 
 ## 7. Kill switch
@@ -199,7 +210,7 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    unique at Deribit, so only the host decides to resend; kline answers are cut silently at 5001, so they
    are fetched in spans; a closed order is answered by label for under an hour (measured: found 27 min
    after closing, gone after about an hour, and absent from order history too), while trades stay, so
-   the host resolves an order it lost track of from its fills (`OrderRecovery`). **Still open:** `settlements` refuses as unavailable until a delivery has been
+   the host resolves an order it lost track of from its fills (`OrderRecovery`). **Still open:** `settlements` is undeclared (refused as unsupported) until a delivery has been
    recorded from testnet (a held option settles 2026-10-02 08:00 UTC).
 3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.

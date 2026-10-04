@@ -20,6 +20,9 @@ interface VenueAdapter : AutoCloseable {
     /** The adapter's version. */
     val version: String
 
+    /** The optional services this adapter serves; by default the three every v1 adapter served. */
+    val capabilities: Set<Capability> get() = setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS)
+
     /**
      * Opens the venue link and returns at once; pushes go to [listener] from then on. The adapter
      * reports `connection(true)` once it can serve calls (the host takes no orders before it), and
@@ -63,6 +66,19 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueSettlement>
 
+    /** Funding charged or credited from [fromMs] to [toMs], oldest first; only with [Capability.FUNDING]. */
+    fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFunding> = throw VenueUnsupportedException("funding")
+
+    /** Published funding rates of perpetual [code] from [fromMs] to [toMs], oldest first; only with [Capability.FUNDING_RATES]. */
+    fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFundingRate> = throw VenueUnsupportedException("funding rates")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,
@@ -85,6 +101,9 @@ interface AdapterListener {
     fun fill(fill: VenueFill)
 
     fun settlement(settlement: VenueSettlement)
+
+    /** Funding the venue charged or credited; an adapter whose venue pushes none reports it from [VenueAdapter.funding]. */
+    fun funding(funding: VenueFunding)
 
     fun quote(quote: VenueQuote)
 

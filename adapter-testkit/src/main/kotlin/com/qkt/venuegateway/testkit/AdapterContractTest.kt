@@ -44,6 +44,9 @@ abstract class AdapterContractTest {
     /** A listed code with recent trading, for bars and quotes. */
     protected abstract val activeCode: String
 
+    /** A listed perpetual, whose funding rates are checked when the adapter declares funding rates. */
+    protected open val perpetualCode: String? = null
+
     /** The bar length checked; the venue must serve it. */
     protected open val barWindowMs: Long = 60_000L
 
@@ -148,28 +151,25 @@ abstract class AdapterContractTest {
     }
 
     @Test
-    fun `bars are closed, ordered, aligned to their window and consistent`(
-        @TempDir dir: Path,
-    ) {
-        val (adapter, _) = connect(dir)
-        val nowMs = System.currentTimeMillis()
-        val fromMs = nowMs - BARS_CHECKED * barWindowMs
-
-        ContractChecks.bars(adapter.bars(activeCode, barWindowMs, fromMs, nowMs), barWindowMs, fromMs, nowMs, nowMs)
-    }
-
-    @Test
-    fun `a subscribed code is quoted, with the bid never above the ask`(
+    fun `bars and quotes, when declared, are closed and aligned, and quote the bid at or below the ask`(
         @TempDir dir: Path,
     ) {
         val (adapter, listener) = connect(dir)
 
-        adapter.subscribeQuotes(setOf(activeCode), emptySet())
+        CapabilityChecks.barsAndQuotes(adapter, listener, activeCode, barWindowMs, pushTimeoutMs)
+    }
 
-        listener.await("a quote of $activeCode", pushTimeoutMs) { listener.quotes.any { it.symbol == activeCode } }
-        val quote = listener.quotes.first { it.symbol == activeCode }
-        assertThat(quote.timeMs).isPositive
-        if (quote.bid != null && quote.ask != null) assertThat(quote.bid).isLessThanOrEqualTo(quote.ask)
+    @Test
+    fun `settlements and funding answer in shape when declared and are refused as unsupported when not`(
+        @TempDir dir: Path,
+    ) {
+        val (adapter, _) = connect(dir)
+        val toMs = System.currentTimeMillis()
+        val fromMs = toMs - HISTORY_CHECKED_MS
+
+        CapabilityChecks.settlements(adapter, fromMs, toMs)
+        CapabilityChecks.funding(adapter, fromMs, toMs)
+        CapabilityChecks.fundingRates(adapter, perpetualCode, fromMs, toMs)
     }
 
     @Test
@@ -190,6 +190,6 @@ abstract class AdapterContractTest {
 
     private companion object {
         const val CLOCK_SKEW_MS = 60_000L
-        const val BARS_CHECKED = 30L
+        const val HISTORY_CHECKED_MS = 2 * 86_400_000L
     }
 }

@@ -52,6 +52,7 @@ fun Application.gatewayModule(
     }
     routing {
         restRoutes(gateway)
+        fundingRoutes(gateway)
         streamRoute(gateway)
         marketRoutes(gateway, hub)
     }

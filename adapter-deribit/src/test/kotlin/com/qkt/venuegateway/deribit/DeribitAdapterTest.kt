@@ -1,11 +1,12 @@
 package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.AdapterContext
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.Credentials
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.TradeMode
-import com.qkt.venuegateway.adapter.VenueUnavailableException
+import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.deribit.client.DeribitAccount
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitNewOrder
@@ -207,12 +208,13 @@ class DeribitAdapterTest {
     }
 
     @Test
-    fun `settlements are refused as unavailable until a delivery has been recorded from the venue`(
+    fun `settlements are undeclared and refused as unsupported until a delivery is recorded from the venue`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = adapter(dir)
 
-        assertThatThrownBy { adapter.settlements(0, 1) }.isInstanceOf(VenueUnavailableException::class.java)
+        assertThat(adapter.capabilities).doesNotContain(Capability.SETTLEMENTS)
+        assertThatThrownBy { adapter.settlements(0, 1) }.isInstanceOf(VenueUnsupportedException::class.java)
         adapter.close()
     }
 }
