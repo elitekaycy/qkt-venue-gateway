@@ -19,6 +19,3 @@ fun Journal.funding(
     fromMs: Long,
     toMs: Long,
 ): List<WireFunding> = synchronized(this) { fundingRecords.between(fromMs, toMs) }
-
-/** The newest journaled funding record's time; 0 before any. */
-fun Journal.latestFundingTime(): Long = synchronized(this) { records.latestTime("funding") }

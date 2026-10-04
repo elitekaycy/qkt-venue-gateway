@@ -1,7 +1,6 @@
 package com.qkt.venuegateway.host
 
 import com.qkt.venuegateway.adapter.Capability
-import com.qkt.venuegateway.host.journal.latestFundingTime
 import com.qkt.venuegateway.host.wire.WireMapping
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -13,10 +12,11 @@ import org.slf4j.LoggerFactory
  * left, closed as cancelled (it is not working: the venue would list it); a write-ahead record the venue's
  * answer never reached, resolved by [OrderRecovery] (by label, else from its fills) or closed as
  * rejected when the venue holds no trace of it; every position that changed ([PositionWatch]), read
- * before the history so it is told even when the history cannot be read; and every fill, settlement and
- * funding record (the last two when the adapter declares them) since the newest journaled one (less
- * [overlapMs]; [lookbackMs] on a new journal), which the journal
- * journals once. Runs on [start], each time the venue link comes back, and every
+ * before the history (its failure is logged and the history still read); and every fill, settlement and
+ * funding record (the last two when the adapter declares them) since the last run that read them in full
+ * (less [overlapMs]; the last [lookbackMs] on a new journal), which the journal journals once. Reading from
+ * the last full run, not from the newest record, keeps a fill missed in an outage from being skipped when
+ * a later one arrives by push first. Runs on [start], each time the venue link comes back, and every
  * [periodMs]; one failed run is logged and the next tries again.
  */
 class Reconciler(
@@ -54,25 +54,28 @@ class Reconciler(
             }
         }
         journal.unresolved().forEach { gateway.desk.resolve(it) }
-        gateway.positions.refresh(null)
+        // A position the venue cannot report must not hold back the history below.
+        runCatching {
+            gateway.positions.refresh(
+                null,
+            )
+        }.onFailure { log.warn("positions not refreshed: {}", it.message) }
         val now = gateway.clock()
-        venue.fills(since(journal.latestFillTime(), now), now).forEach(listener::fill)
-        if (Capability.SETTLEMENTS in venue.capabilities) {
-            venue.settlements(since(journal.latestSettlementTime(), now), now).forEach(listener::settlement)
-        }
-        if (Capability.FUNDING in venue.capabilities) {
-            venue.funding(since(journal.latestFundingTime(), now), now).forEach(listener::funding)
-        }
+        val from = (journal.meta(RECONCILED_THROUGH)?.toLong() ?: (now - lookbackMs)) - overlapMs
+        venue.fills(from, now).forEach(listener::fill)
+        if (Capability.SETTLEMENTS in venue.capabilities) venue.settlements(from, now).forEach(listener::settlement)
+        if (Capability.FUNDING in venue.capabilities) venue.funding(from, now).forEach(listener::funding)
+        journal.transaction { journal.setMeta(RECONCILED_THROUGH, now.toString()) }
     }
 
     override fun close() {
         timer.shutdownNow()
     }
 
-    private fun since(
-        newest: Long,
-        now: Long,
-    ): Long = (if (newest > 0) newest else now - lookbackMs) - overlapMs
+    private companion object {
+        /** Up to when the venue's history was last read in full: the next read starts there, less the overlap. */
+        const val RECONCILED_THROUGH = "reconciled_through"
+    }
 
     private fun quietly() {
         runCatching { reconcile() }.onFailure {

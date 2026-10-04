@@ -136,8 +136,6 @@ internal class JournalRecords(
     fun settlementsOf(symbol: String): List<WireSettlement> =
         query("SELECT settlement_json FROM settlements WHERE symbol = ? ORDER BY time", symbol, read = ::settlement)
 
-    fun latestTime(table: String): Long = long("SELECT COALESCE(MAX(time), 0) FROM $table")
-
     fun isDead(id: String): Boolean =
         query("SELECT 1 FROM dead_ids WHERE client_order_id = ?", id) { true }.isNotEmpty()
 
