@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
+import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -54,6 +55,14 @@ class PaperContractTest : AdapterContractTest() {
                         BigDecimal.ONE,
                     )
                 }
+            }
+
+            override fun fundingRates(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+            ) = ((fromMs + HOUR_MS - 1) / HOUR_MS * HOUR_MS..toMs step HOUR_MS).map {
+                DeribitFundingRate(it, BigDecimal("0.00001"), BigDecimal("84000"))
             }
 
             override fun deliveryPrices(
@@ -147,7 +156,10 @@ class PaperContractTest : AdapterContractTest() {
 
     override val activeCode = perp
 
+    override val perpetualCode = perp
+
     private companion object {
         const val EXPIRY_MS = 2_555_884_800_000L
+        const val HOUR_MS = 3_600_000L
     }
 }
