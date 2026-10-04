@@ -1,17 +1,12 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.AdapterContext
-import com.qkt.venuegateway.adapter.AdapterListener
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
-import com.qkt.venuegateway.adapter.VenueFill
-import com.qkt.venuegateway.adapter.VenueOrder
-import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueRefusedException
-import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -122,28 +117,7 @@ class PaperAdapterTest {
                     override fun close() {}
                 }
             }
-        adapter.connect(
-            object : AdapterListener {
-                override fun order(order: VenueOrder) {
-                    heard += "order ${order.clientOrderId} ${order.status}"
-                }
-
-                override fun fill(fill: VenueFill) {
-                    heard += "fill ${fill.clientOrderId} ${fill.price.toPlainString()}"
-                }
-
-                override fun settlement(settlement: VenueSettlement) {
-                    heard += "settle ${settlement.symbol} ${settlement.price.toPlainString()}"
-                }
-
-                override fun quote(quote: VenueQuote) {}
-
-                override fun connection(
-                    up: Boolean,
-                    reason: String,
-                ) {}
-            },
-        )
+        adapter.connect(HeardListener(heard))
         return adapter
     }
 
