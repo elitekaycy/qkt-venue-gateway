@@ -154,9 +154,16 @@ Response `200` with the `Order` (`cancelled`, or `filled` if the fill won the ra
 the fill). Never gated.
 
 ### `POST /v1/positions/close`
-Body `{"symbol": "<code>", "quantity": "<decimal>"}` (quantity optional: the whole position) or
-`{"ticket": "<ticket>"}`. Response `200` with the closing `Order`. Never gated: flatten is always
-allowed.
+Body `{"symbol": "<code>", "quantity": "<decimal>", "client_order_id": "<id>"}` (quantity optional: the
+whole position; `client_order_id` optional) or `{"ticket": "<ticket>"}`. Response `200` with the closing
+`Order`. Never gated: flatten is always allowed.
+
+With `client_order_id` (the same rules as a submit's: at most 64 characters, never reused) the close is
+**idempotent on it**: the closing order is sent under that id, and a second request with the same id,
+symbol and quantity (or none) returns `200` with that order in its current state, even once the position
+is flat, and never closes again; the same id with another symbol or quantity, or an id an order was sent
+with, is `409 conflict`. A client that saw a timeout resends the same body. Without it the gateway names
+the order itself and every request is a new close, so a retry may close twice.
 
 ### `GET /v1/deals?from=<ms>&to=<ms>` and `GET /v1/deals?client_order_id=<id>`
 `{"deals": [<Fill>]}`, oldest first (§4 `fill`): the executions in the window, or every execution of

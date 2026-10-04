@@ -122,6 +122,9 @@ class Journal private constructor(
     /** The submit of [clientOrderId] while it is only a write-ahead record (no venue answer yet), else null. */
     fun pendingSubmit(clientOrderId: String): WireSubmit? = synchronized(this) { records.pendingBody(clientOrderId) }
 
+    /** The body [clientOrderId] was submitted with, whatever became of it; null when it never was. */
+    fun submitted(clientOrderId: String): WireSubmit? = synchronized(this) { records.body(clientOrderId) }
+
     /** The submits of write-ahead records the venue's answer never reached (a crash in between). */
     fun unresolved(): List<WireSubmit> = synchronized(this) { records.pendingBodies() }
 

@@ -180,13 +180,22 @@ class GatewayServerTest {
                 "POST",
                 "/v1/positions/close",
                 token = "g-token",
-                body = """{"symbol":"BTC_USDC-PERPETUAL"}""",
+                body = """{"symbol":"BTC_USDC-PERPETUAL","client_order_id":"close-1"}""",
+            )
+        venue.net.remove("BTC_USDC-PERPETUAL")
+        val (retried, again) =
+            call(
+                "POST",
+                "/v1/positions/close",
+                body = """{"symbol":"BTC_USDC-PERPETUAL","client_order_id":"close-1"}""",
             )
 
         assertThat(changed).isEqualTo(200)
         assertThat(order).contains("\"limit_price\":\"49000\"")
         assertThat(guardianPatch).isEqualTo(401)
         assertThat(closed).isEqualTo(200)
-        assertThat(closing).contains("\"side\":\"sell\"", "\"reduce_only\":true", "\"quantity\":\"0.2\"")
+        assertThat(closing).contains("\"client_order_id\":\"close-1\"", "\"side\":\"sell\"", "\"reduce_only\":true")
+        assertThat(closing).contains("\"quantity\":\"0.2\"")
+        assertThat(retried to again).isEqualTo(200 to closing)
     }
 }

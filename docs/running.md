@@ -116,7 +116,7 @@ The switch survives restarts.
 | `GET /v1/instruments[/{code}]` | any | Listings, including dated contracts expired within 30 days |
 | `POST /v1/orders`; `PATCH`, `DELETE /v1/orders/{id}` | trader | Place (idempotent), change, cancel |
 | `GET /v1/orders[/{id}]` | any | Open orders; one order by its client id |
-| `POST /v1/positions/close` | trader | Close a position at market |
+| `POST /v1/positions/close` | trader | Close a position at market; idempotent on an optional `client_order_id` |
 | `GET /v1/deals`, `/v1/settlements`, `/v1/bars` | any | Fills, settlements and closed bars, paged |
 | `WS /v1/stream?since=<seq>` | any | The event journal: replayed from `since`, then live |
 | `WS /v1/quotes?symbols=…&roots=…` | any | Live quotes by code or option root |
