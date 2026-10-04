@@ -2,7 +2,9 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueQuote
+import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
@@ -13,6 +15,9 @@ import java.math.BigDecimal
  * listed with contract size (the P&L multiplier) 1, and Deribit's `contract_size` is the volume step.
  */
 object DeribitMarketMapping {
+    /** One hour of Deribit funding: a unit long paid `interest_1h × index` over the hour ending at its time. */
+    fun fundingRate(r: DeribitFundingRate) = VenueFundingRate(r.timestampMs, r.interest1h, r.indexPrice)
+
     fun instrument(i: DeribitInstrument) =
         Instrument(
             code = i.name,

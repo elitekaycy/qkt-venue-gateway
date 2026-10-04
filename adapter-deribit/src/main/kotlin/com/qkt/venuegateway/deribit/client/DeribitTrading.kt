@@ -54,6 +54,13 @@ interface DeribitTrading : AutoCloseable {
         triggerPrice: BigDecimal?,
     ): DeribitOrder
 
+    /** The account's transaction log rows from [fromMs] to [toMs], oldest first, across every page. */
+    fun transactions(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitTransaction>
+
     /** The account's executions from [fromMs] to [toMs], oldest first, across every page. */
     fun trades(
         currency: String,

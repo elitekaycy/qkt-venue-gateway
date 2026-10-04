@@ -122,6 +122,32 @@ class DeribitPrivateClient(
             )
         }
 
+    /** Deribit pages its log newest first by a continuation id; every page is read, then the rows ascend. */
+    override fun transactions(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitTransaction> {
+        val rows = LinkedHashMap<Long, DeribitTransaction>()
+        var continuation: Long? = null
+        do {
+            val (page, next) =
+                DeribitPrivateJson.transactionPage(
+                    call("private/get_transaction_log") {
+                        put("currency", currency)
+                        put("start_timestamp", fromMs)
+                        put("end_timestamp", toMs)
+                        put("count", LOG_PAGE)
+                        continuation?.let { put("continuation", it) }
+                    }.jsonObject,
+                )
+            page.forEach { rows.putIfAbsent(it.id, it) }
+            check(next == null || next != continuation) { "deribit transaction log does not advance past $next" }
+            continuation = next.takeIf { page.isNotEmpty() }
+        } while (continuation != null)
+        return rows.values.sortedWith(compareBy({ it.timestampMs }, { it.id }))
+    }
+
     private fun open(call: (String, JsonObject) -> JsonElement) {
         call(
             "public/auth",
@@ -162,5 +188,6 @@ class DeribitPrivateClient(
         val KINDS = listOf("future", "option")
         const val HEARTBEAT_SECONDS = 30
         const val PAGE = 1000
+        const val LOG_PAGE = 250
     }
 }

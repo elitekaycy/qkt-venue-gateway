@@ -10,6 +10,8 @@ import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
+import com.qkt.venuegateway.adapter.VenueFunding
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -50,7 +52,7 @@ class DeribitAdapter(
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
 
     /** Settlements are not declared until a delivery is recorded from the venue. */
-    override val capabilities = setOf(Capability.BARS, Capability.QUOTES)
+    override val capabilities = setOf(Capability.BARS, Capability.QUOTES, Capability.FUNDING, Capability.FUNDING_RATES)
     private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
@@ -149,6 +151,21 @@ class DeribitAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenueSettlement> = throw VenueUnsupportedException("deribit settlements")
+
+    /** The funding the transaction log shows realized on perpetuals; Deribit pushes none, the host reconciles it. */
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFunding> =
+        venue { account.transactions(currency, fromMs, toMs) }.mapNotNull { row ->
+            DeribitMapping.funding(row) { name -> venue { listing.held(name) }.perpetual }
+        }
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFundingRate> = venue { market.fundingRates(code, fromMs, toMs) }.map(DeribitMarketMapping::fundingRate)
 
     override fun bars(
         code: String,

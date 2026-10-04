@@ -1,29 +1,15 @@
 package com.qkt.venuegateway.deribit
 
-import com.qkt.venuegateway.adapter.AdapterContext
-import com.qkt.venuegateway.adapter.Capability
-import com.qkt.venuegateway.adapter.Credentials
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.TradeMode
-import com.qkt.venuegateway.adapter.VenueUnsupportedException
-import com.qkt.venuegateway.deribit.client.DeribitAccount
-import com.qkt.venuegateway.deribit.client.DeribitMarketData
-import com.qkt.venuegateway.deribit.client.DeribitNewOrder
-import com.qkt.venuegateway.deribit.client.DeribitOrder
-import com.qkt.venuegateway.deribit.client.DeribitPosition
 import com.qkt.venuegateway.deribit.client.DeribitPrivateJson
-import com.qkt.venuegateway.deribit.client.DeribitTickers
-import com.qkt.venuegateway.deribit.client.DeribitTrade
-import com.qkt.venuegateway.deribit.client.DeribitTrading
-import com.qkt.venuegateway.testkit.RecordingListener
 import java.math.BigDecimal
 import java.nio.file.Path
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -41,100 +27,10 @@ class DeribitAdapterTest {
             DeribitPrivateJson.order(it.jsonObject)
         }
 
-    private inner class ScriptedDeribit : DeribitTrading {
-        val byLabel = mutableMapOf<String, List<DeribitOrder>>()
-        val edits = mutableListOf<String>()
-        var cancelled = 0
-        lateinit var onOrder: (DeribitOrder) -> Unit
-        lateinit var onTrade: (DeribitTrade) -> Unit
-        lateinit var onConnection: (Boolean, String) -> Unit
-
-        override fun start() = onConnection(true, "open")
-
-        override fun account(currency: String) =
-            DeribitAccount(
-                currency,
-                BigDecimal("100"),
-                BigDecimal("101"),
-                BigDecimal("5"),
-                BigDecimal("3"),
-                BigDecimal("96"),
-            )
-
-        override fun positions(currency: String) = emptyList<DeribitPosition>()
-
-        override fun openOrders(currency: String) = listOf(open, open.copy(label = null))
-
-        override fun ordersByLabel(
-            currency: String,
-            label: String,
-        ) = byLabel[label].orEmpty()
-
-        override fun place(order: DeribitNewOrder) = open
-
-        override fun cancelByLabel(
-            currency: String,
-            label: String,
-        ) = cancelled
-
-        override fun editByLabel(
-            label: String,
-            instrument: String,
-            amount: BigDecimal,
-            price: BigDecimal?,
-            triggerPrice: BigDecimal?,
-        ): DeribitOrder {
-            edits += "$label $instrument ${amount.toPlainString()} ${price?.toPlainString()}"
-            return open.copy(amount = amount, price = price ?: open.price)
-        }
-
-        override fun trades(
-            currency: String,
-            fromMs: Long,
-            toMs: Long,
-        ) = emptyList<DeribitTrade>()
-
-        override fun close() {}
-    }
-
-    private val deribit = ScriptedDeribit()
+    private val deribit = ScriptedDeribit(open)
     private var tickerConnection: (Boolean, String) -> Unit = { _, _ -> }
 
-    private fun adapter(dir: Path): Pair<DeribitAdapter, RecordingListener> {
-        val adapter =
-            DeribitAdapter(
-                AdapterContext(mapOf("environment" to "testnet"), { 0L }, dir, Credentials("client-7", "s")),
-                unusedMarket(),
-                { onOrder, onTrade, onConnection ->
-                    deribit.also {
-                        it.onOrder = onOrder
-                        it.onTrade = onTrade
-                        it.onConnection = onConnection
-                    }
-                },
-                { _, onConnection ->
-                    tickerConnection = onConnection
-                    object : DeribitTickers {
-                        override fun start() {}
-
-                        override fun subscribe(names: Set<String>) {}
-
-                        override fun close() {}
-                    }
-                },
-            )
-        val listener = RecordingListener()
-        adapter.connect(listener)
-        return adapter to listener
-    }
-
-    private fun unusedMarket(): DeribitMarketData =
-        java.lang.reflect.Proxy.newProxyInstance(
-            javaClass.classLoader,
-            arrayOf(DeribitMarketData::class.java),
-        ) { _, method, _ ->
-            error("market ${method.name} is not used here")
-        } as DeribitMarketData
+    private fun adapter(dir: Path) = deribit.adapter(dir, unusedMarket()) { tickerConnection = it }
 
     @Test
     fun `the account is named by the api key's client id, demo on testnet, and its margin is mapped`(
@@ -204,17 +100,6 @@ class DeribitAdapterTest {
         assertThat(listener.connections).containsExactly(true, false)
         assertThat(listener.orders.map { it.clientOrderId }).containsExactly("kit-probe-1790866831")
         assertThat(adapter.openOrders().map { it.clientOrderId }).containsExactly("kit-probe-1790866831")
-        adapter.close()
-    }
-
-    @Test
-    fun `settlements are undeclared and refused as unsupported until a delivery is recorded from the venue`(
-        @TempDir dir: Path,
-    ) {
-        val (adapter, _) = adapter(dir)
-
-        assertThat(adapter.capabilities).doesNotContain(Capability.SETTLEMENTS)
-        assertThatThrownBy { adapter.settlements(0, 1) }.isInstanceOf(VenueUnsupportedException::class.java)
         adapter.close()
     }
 }

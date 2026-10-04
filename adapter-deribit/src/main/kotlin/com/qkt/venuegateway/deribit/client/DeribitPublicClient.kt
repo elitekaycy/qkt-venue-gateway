@@ -18,7 +18,8 @@ import okhttp3.Request
 
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
- * `https://test.deribit.com` for testnet): listings, tickers, klines and delivery prices, no account.
+ * `https://test.deribit.com` for testnet): listings, tickers, klines, funding rates and delivery prices,
+ * no account.
  * A JSON-RPC error is [DeribitException]; the venue being unreachable is an [IOException].
  */
 class DeribitPublicClient(
@@ -79,6 +80,33 @@ class DeribitPublicClient(
         return byStart.values.toList()
     }
 
+    /**
+     * Deribit answers at most about 740 hours of funding, the newest, without saying it cut the rest, so
+     * the range is asked for in spans of [FUNDING_HOURS_PER_CALL] and joined, each hour once.
+     */
+    override fun fundingRates(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitFundingRate> {
+        val byTime = sortedMapOf<Long, DeribitFundingRate>()
+        var start = fromMs
+        while (start <= toMs) {
+            val end = minOf(toMs, start + FUNDING_HOURS_PER_CALL * HOUR_MS - 1)
+            call(
+                "get_funding_rate_history",
+                "instrument_name" to name,
+                "start_timestamp" to start.toString(),
+                "end_timestamp" to end.toString(),
+            ).jsonArray
+                .map { DeribitJson.fundingRate(it.jsonObject) }
+                .filter { it.timestampMs in start..end }
+                .forEach { byTime.putIfAbsent(it.timestampMs, it) }
+            start = end + 1
+        }
+        return byTime.values.toList()
+    }
+
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */
     override fun deliveryPrices(
         index: String,
@@ -94,6 +122,10 @@ class DeribitPublicClient(
 
     private companion object {
         const val MINUTE_MS = 60_000L
+        const val HOUR_MS = 3_600_000L
+
+        /** Hours of funding asked for per call, safely under Deribit's cap of about 740. */
+        const val FUNDING_HOURS_PER_CALL = 720L
 
         /** Klines asked for per call, safely under Deribit's 5001 cap. */
         const val KLINES_PER_CALL = 4_000L

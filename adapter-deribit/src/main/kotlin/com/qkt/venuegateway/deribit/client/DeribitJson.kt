@@ -97,5 +97,7 @@ internal object DeribitJson {
         }
     }
 
+    fun fundingRate(o: JsonObject) = DeribitFundingRate(o.long("timestamp"), o.req("interest_1h"), o.req("index_price"))
+
     fun JsonElement.obj(): JsonObject = jsonObject
 }

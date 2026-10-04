@@ -74,6 +74,22 @@ internal object DeribitPrivateJson {
             availableFunds = o.req("available_funds"),
         )
 
+    fun transaction(o: JsonObject) =
+        DeribitTransaction(
+            id = o.long("id"),
+            type = o.need("type"),
+            instrument = o.text("instrument_name"),
+            currency = o.need("currency"),
+            interestPl = o.dec("interest_pl"),
+            position = o.dec("position"),
+            timestampMs = o.long("timestamp"),
+        )
+
+    /** One page of the transaction log, and the continuation to the next (null on the last). */
+    fun transactionPage(o: JsonObject): Pair<List<DeribitTransaction>, Long?> =
+        o["logs"]!!.jsonArray.map { transaction(it.jsonObject) } to
+            (o["continuation"] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toLongOrNull()
+
     private fun JsonObject.need(key: String): String = text(key) ?: error("deribit field $key missing")
 
     /** The number at [key], or null when Deribit sent a word or nothing. */
