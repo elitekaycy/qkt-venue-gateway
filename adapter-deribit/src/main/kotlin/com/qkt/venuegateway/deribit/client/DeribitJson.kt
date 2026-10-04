@@ -99,5 +99,12 @@ internal object DeribitJson {
 
     fun fundingRate(o: JsonObject) = DeribitFundingRate(o.long("timestamp"), o.req("interest_1h"), o.req("index_price"))
 
+    /** The trades of a `get_last_trades_by_instrument*` answer, as Deribit ordered them. */
+    fun markTrades(o: JsonObject): List<DeribitMarkTrade> =
+        o["trades"]!!.jsonArray.map {
+            val t = it.jsonObject
+            DeribitMarkTrade(t.long("trade_seq"), t.long("timestamp"), t.dec("mark_price"), t.dec("index_price"))
+        }
+
     fun JsonElement.obj(): JsonObject = jsonObject
 }

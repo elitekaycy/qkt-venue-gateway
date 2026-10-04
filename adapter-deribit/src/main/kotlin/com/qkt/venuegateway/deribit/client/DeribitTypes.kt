@@ -63,3 +63,15 @@ data class DeribitFundingRate(
     val interest1h: BigDecimal,
     val indexPrice: BigDecimal,
 )
+
+/**
+ * One public trade as Deribit's trade history reports it, reduced to what marks need: its per-instrument
+ * sequence number [seq] (later trades have higher numbers), its time, and the [mark] and [index] prices
+ * Deribit stamped on it.
+ */
+data class DeribitMarkTrade(
+    val seq: Long,
+    val timestampMs: Long,
+    val mark: BigDecimal?,
+    val index: BigDecimal?,
+)
