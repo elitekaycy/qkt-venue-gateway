@@ -80,7 +80,17 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
 - **Stops.** A triggered stop becomes a new order under the same label. A stop already past its trigger
   is refused. Market and stop orders accept only GTC or DAY.
 - **Klines.** Responses are silently cut at 5001 rows, so bars are fetched in chunks.
-- **Settlement history** isn't served yet: the adapter does not declare settlements.
+- **Settlements.** Expiries are read from `private/get_settlement_history_by_currency`: a `delivery` row
+  when a future expires, an `exercise` row when an option does (out of the money too), both at 08:00 UTC
+  and carrying the delivery price as `index_price` (the same figure `public/get_delivery_prices` publishes
+  for the day). A future settles at it; an option at its intrinsic value from it, because an `exercise`
+  row's `mark_price` is 0 even deep in the money. `settlement` rows, the daily session settlement every
+  position gets, are not expiries and are left out. The history takes no window, only the newest instant
+  to start from (inclusive), and pages newest first by a continuation (`"none"` on the last page);
+  `type=exercise` is refused (`bad_argument`), so every type is read. The delivery fee is the
+  `commission` of the transaction log's `expiry` (option) or `delivery` (future) row at the same instant,
+  reported as `delivery_fee` when non-zero (0 for the testnet TRX call that expired on 2026-10-02).
+  Expired contracts are looked up one by one (`public/get_instrument` keeps them) for their strike.
 - **Listing.** An order on a code the account's USDC listing does not hold (a coin-margined contract such
   as `BTC-PERPETUAL`, a spot pair) is refused before it reaches Deribit: every read is scoped to the
   currency, so such an order would be traded outside them. The public ticker link is reported as the quote
