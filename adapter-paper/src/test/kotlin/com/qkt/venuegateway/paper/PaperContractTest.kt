@@ -8,7 +8,9 @@ import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
+import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitPage
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.testkit.AdapterContractTest
@@ -65,11 +67,35 @@ class PaperContractTest : AdapterContractTest() {
                 DeribitFundingRate(it, BigDecimal("0.00001"), BigDecimal("84000"))
             }
 
+            /** One trade a minute, half a minute in, numbered by its minute. */
+            override fun edgeTrade(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                newest: Boolean,
+            ): DeribitMarkTrade? {
+                val minutes = ((fromMs - minute / 2 + minute - 1) / minute..(toMs - minute / 2) / minute)
+                return (if (newest) minutes.lastOrNull() else minutes.firstOrNull())?.let(::traded)
+            }
+
+            override fun tradesFrom(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                count: Int,
+            ) = DeribitPage(
+                ((fromMs - minute / 2 + minute - 1) / minute..(toMs - minute / 2) / minute).map(::traded),
+                false,
+            )
+
             override fun deliveryPrices(
                 index: String,
                 count: Int,
             ) = emptyList<Pair<LocalDate, BigDecimal>>()
         }
+
+    private fun traded(minuteNo: Long) =
+        DeribitMarkTrade(minuteNo, minuteNo * minute + minute / 2, BigDecimal("84005"), BigDecimal("84000"))
 
     private fun listed(
         name: String,

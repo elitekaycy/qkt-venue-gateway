@@ -36,6 +36,12 @@ class PaperBook(
     /** The funding charged on held perpetuals ([PaperFunding]). */
     val funding = PaperFundingLedger()
 
+    /** The codes whose prices the book needs: those of working orders and of held positions. */
+    fun quoted(): List<String> =
+        state.orders.values
+            .filter { it.status == OrderStatus.WORKING }
+            .map { it.symbol } + ledger.positions.keys
+
     /**
      * Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. The change
      * always reports the order as it ends up, so an order left working is acknowledged and saved.
