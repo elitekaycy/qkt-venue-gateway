@@ -53,3 +53,13 @@ class DeribitException(
     message: String,
     val reason: String? = null,
 ) : RuntimeException("deribit error $code: $message" + (reason?.let { " ($it)" } ?: ""))
+
+/**
+ * One hour of a perpetual's funding as `public/get_funding_rate_history` reports it: [interest1h], the
+ * rate accrued over the hour ending at [timestampMs], and [indexPrice], the index at its end.
+ */
+data class DeribitFundingRate(
+    val timestampMs: Long,
+    val interest1h: BigDecimal,
+    val indexPrice: BigDecimal,
+)

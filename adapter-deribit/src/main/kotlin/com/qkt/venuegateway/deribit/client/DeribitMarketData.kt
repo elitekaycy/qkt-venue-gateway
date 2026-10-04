@@ -25,6 +25,13 @@ interface DeribitMarketData {
         toMs: Long,
     ): List<DeribitKline>
 
+    /** The hourly funding of perpetual [name] whose hours end from [fromMs] to [toMs], oldest first. */
+    fun fundingRates(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitFundingRate> = error("this market data does not read funding rates")
+
     fun deliveryPrices(
         index: String,
         count: Int,

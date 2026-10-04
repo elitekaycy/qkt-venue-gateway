@@ -61,4 +61,6 @@ class DeribitContractTest : AdapterContractTest() {
         NewOrder(clientOrderId, perp, Side.BUY, OrderType.LIMIT, BigDecimal("0.00015"), farPrice, null, TimeInForce.GTC)
 
     override val activeCode = perp
+
+    override val perpetualCode = perp
 }

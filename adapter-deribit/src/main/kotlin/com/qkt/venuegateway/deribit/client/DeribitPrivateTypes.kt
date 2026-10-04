@@ -73,3 +73,18 @@ data class DeribitPage<T>(
     val items: List<T>,
     val more: Boolean,
 )
+
+/**
+ * One row of the account's transaction log (`private/get_transaction_log`), by Deribit's own [id]: [type]
+ * `trade`, `settlement`, `delivery`, `expiry`, `deposit`…; [interestPl] is the funding the row realized
+ * on a perpetual (positive a gain to the account), [position] the instrument's position after it.
+ */
+data class DeribitTransaction(
+    val id: Long,
+    val type: String,
+    val instrument: String?,
+    val currency: String,
+    val interestPl: BigDecimal?,
+    val position: BigDecimal?,
+    val timestampMs: Long,
+)

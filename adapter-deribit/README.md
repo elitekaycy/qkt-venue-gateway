@@ -80,7 +80,21 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
 - **Stops.** A triggered stop becomes a new order under the same label. A stop already past its trigger
   is refused. Market and stop orders accept only GTC or DAY.
 - **Klines.** Responses are silently cut at 5001 rows, so bars are fetched in chunks.
-- **Settlement history** isn't served yet.
+- **Settlement history** isn't served yet: the adapter does not declare settlements.
+- **Listing.** An order on a code the account's USDC listing does not hold (a coin-margined contract such
+  as `BTC-PERPETUAL`, a spot pair) is refused before it reaches Deribit: every read is scoped to the
+  currency, so such an order would be traded outside them. The public ticker link is reported as the quote
+  feed, so a dropped ticker socket makes quotes stale instead of re-sending the last price.
+- **Funding rates.** `public/get_funding_rate_history` gives one row per hour: `interest_1h`, the rate
+  accrued over the hour ending at `timestamp`, and `index_price` at its end (rates are JSON numbers such
+  as `4.18e-05`, read from their text). A call answers at most about 740 hours, the newest, without
+  saying it cut the rest, so rates are fetched in 720-hour spans. Testnet's history reaches back to at
+  least 2024 for BTC_USDC-PERPETUAL.
+- **Funding.** Deribit accrues funding continuously and realizes it into the transaction log
+  (`private/get_transaction_log`) as `interest_pl` on a perpetual's rows, positive when the account
+  gained. The adapter reports each non-zero row as a funding record (`tx-<id>`, the charge being
+  `-interest_pl`); a `settlement` row's `position` is the one charged on. Deribit pushes no funding, so
+  the gateway reconciles it every minute.
 
 The full list of API calls is in [design.md](../docs/design.md) §10.
 

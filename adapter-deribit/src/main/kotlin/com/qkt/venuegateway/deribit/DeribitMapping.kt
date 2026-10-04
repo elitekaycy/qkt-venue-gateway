@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.deribit
 
+import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Cost
 import com.qkt.venuegateway.adapter.CostKind
 import com.qkt.venuegateway.adapter.NewOrder
@@ -9,11 +10,14 @@ import com.qkt.venuegateway.adapter.PositionRow
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
+import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.deribit.client.DeribitAccount
 import com.qkt.venuegateway.deribit.client.DeribitNewOrder
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitPosition
 import com.qkt.venuegateway.deribit.client.DeribitTrade
+import com.qkt.venuegateway.deribit.client.DeribitTransaction
 
 /**
  * Where Deribit's account words become the gateway's neutral types (the market side is
@@ -46,6 +50,35 @@ object DeribitMapping {
             updatedAtMs = o.updatedMs,
         )
     }
+
+    /**
+     * The funding log row [t] realized on a perpetual, or null when it realized none or is not about one
+     * ([isPerpetual] says). Deribit's `interest_pl` is the account's gain, so the charge is its negation. A
+     * `settlement` row's position is the one it charged on; another row's position is after its trade,
+     * not the one charged on, so it is not reported.
+     */
+    fun funding(
+        t: DeribitTransaction,
+        isPerpetual: (String) -> Boolean,
+    ): VenueFunding? {
+        val instrument = t.instrument ?: return null
+        val gain = t.interestPl?.takeIf { it.signum() != 0 } ?: return null
+        if (!isPerpetual(instrument)) return null
+        val position = t.position.takeIf { t.type == "settlement" }
+        return VenueFunding("tx-${t.id}", instrument, gain.negate(), t.currency, position, t.timestampMs)
+    }
+
+    /** The account's money: margin used is Deribit's initial margin, what is available its available funds. */
+    fun account(a: DeribitAccount) =
+        AccountSnapshot(
+            a.currency,
+            a.balance,
+            a.equity,
+            a.initialMargin,
+            a.availableFunds,
+            a.initialMargin,
+            a.maintenanceMargin,
+        )
 
     /** [t] as a fill, its fee a commission (positive charged, negative rebated); zero fees are omitted. */
     fun fill(t: DeribitTrade): VenueFill? {

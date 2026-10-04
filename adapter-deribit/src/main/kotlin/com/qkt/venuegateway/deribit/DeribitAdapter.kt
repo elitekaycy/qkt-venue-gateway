@@ -10,8 +10,11 @@ import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
+import com.qkt.venuegateway.adapter.VenueFunding
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
@@ -30,7 +33,8 @@ import org.slf4j.LoggerFactory
  * its secret). Orders carry the client's id as Deribit's label, so every lookup is by label and a
  * stop that fires (a new Deribit order) is still found. The account's link ([trading]) is the venue
  * connection the host watches; the public ticker link ([tickers]) only feeds quotes, so its drops are
- * logged, never reported as the venue going down. Root subscriptions re-expand every [refreshMs].
+ * reported as the quote feed going down, not the venue. An order on a code the account's listing does not
+ * hold (another currency's contract, a spot pair) is refused before it reaches Deribit. Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
  * in force.
@@ -50,7 +54,7 @@ class DeribitAdapter(
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
 
     /** Settlements are not declared until a delivery is recorded from the venue. */
-    override val capabilities = setOf(Capability.BARS, Capability.QUOTES)
+    override val capabilities = setOf(Capability.BARS, Capability.QUOTES, Capability.FUNDING, Capability.FUNDING_RATES)
     private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
@@ -64,7 +68,7 @@ class DeribitAdapter(
             listing,
             tickers({
                 listener?.quote(DeribitMarketMapping.quote(it))
-            }) { up, reason -> log.info("deribit tickers up={}: {}", up, reason) },
+            }) { up, reason -> listener?.quoteFeed(up, reason) },
         )
     private val timer =
         Executors.newSingleThreadScheduledExecutor {
@@ -85,18 +89,7 @@ class DeribitAdapter(
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
-    override fun account(): AccountSnapshot {
-        val a = venue { account.account(currency) }
-        return AccountSnapshot(
-            a.currency,
-            a.balance,
-            a.equity,
-            a.initialMargin,
-            a.availableFunds,
-            a.initialMargin,
-            a.maintenanceMargin,
-        )
-    }
+    override fun account(): AccountSnapshot = DeribitMapping.account(venue { account.account(currency) })
 
     override fun positions() =
         Positions(
@@ -108,7 +101,11 @@ class DeribitAdapter(
 
     override fun openOrders() = venue { account.openOrders(currency) }.mapNotNull(DeribitMapping::order)
 
+    /** Only a listed instrument of the account's currency: any other would be traded outside every read. */
     override fun place(order: NewOrder): VenueOrder {
+        if (venue { listing.find(order.symbol) } == null) {
+            throw VenueRefusedException("${order.symbol} is not a listed $currency contract of this account")
+        }
         val placed = venue { account.place(DeribitMapping.newOrder(order, settings.stopTrigger)) }
         return DeribitMapping.order(placed) ?: error("deribit answered order ${order.clientOrderId} without its label")
     }
@@ -149,6 +146,21 @@ class DeribitAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenueSettlement> = throw VenueUnsupportedException("deribit settlements")
+
+    /** The funding the transaction log shows realized on perpetuals; Deribit pushes none, the host reconciles it. */
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFunding> =
+        venue { account.transactions(currency, fromMs, toMs) }.mapNotNull { row ->
+            DeribitMapping.funding(row) { name -> venue { listing.held(name) }.perpetual }
+        }
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFundingRate> = venue { market.fundingRates(code, fromMs, toMs) }.map(DeribitMarketMapping::fundingRate)
 
     override fun bars(
         code: String,
