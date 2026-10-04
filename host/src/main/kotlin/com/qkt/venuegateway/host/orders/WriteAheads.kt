@@ -36,6 +36,22 @@ internal class WriteAheads(
         return WireMapping.order(found.order).also { journal.appendOrder(it) }
     }
 
+    /**
+     * On a journal created this run, a submit with no record may be the resend of one a lost journal held:
+     * what the venue holds of it (by label, else its fills), journaled under [bodyHash] so later resends
+     * match it; null when the venue holds no trace, or the journal is not new (its records are complete).
+     */
+    fun foundUnrecorded(
+        body: WireSubmit,
+        bodyHash: String,
+    ): WireOrder? {
+        if (!journal.createdThisRun) return null
+        val found = recovery.find(body) ?: return null
+        journal.writeAhead(body, bodyHash)
+        found.fills.forEach { journal.appendFill(WireMapping.fill(it)) }
+        return WireMapping.order(found.order).also { journal.appendOrder(it) }
+    }
+
     /** Resolves [body] once settled: what [found] finds, else a journaled rejection. Null while it is not settled. */
     fun resolve(body: WireSubmit): WireOrder? {
         if (!settled(body.clientOrderId)) return null

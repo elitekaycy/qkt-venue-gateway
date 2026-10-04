@@ -33,8 +33,9 @@ sealed interface DeskResult {
  * same body again returns the stored order, another body or an id written off as dead is `409`. A new
  * one is written ahead to the [journal] before the [venue] sees it, so a crash or a lost answer is
  * resolved on the resend by [OrderRecovery] (the venue's label, else the order's fills), never by
- * placing again while the venue holds a trace of it; that recovery comes before the kill switch, which
- * gates only what would be placed. While the venue is down ([venueUp] false) a submit is `503` before
+ * placing again while the venue holds a trace of it (on a journal created this run, a submit with no
+ * record is looked up the same way, since a lost journal file loses its records); that recovery comes
+ * before the kill switch, which gates only what would be placed. While the venue is down ([venueUp] false) a submit is `503` before
  * anything is written. Each id is handled under its own lock ([WriteAheads] keeps an in-flight one from
  * being written off).
  */
@@ -112,6 +113,8 @@ class OrderDesk(
             if (!venueUp()) return@locked unavailable("the venue link is down")
             // A resend of a write-ahead record: what the venue holds of it comes first, ungated (it is placed).
             if (record != null) writeAheads.found(body)?.let { return@locked DeskResult.Ok(it) }
+            // No record: on a journal lost and created anew, the venue may still hold the order.
+            if (record == null) writeAheads.foundUnrecorded(body, hash)?.let { return@locked DeskResult.Ok(it) }
             if (record != null && !writeAheads.settled(body.clientOrderId)) {
                 return@locked unavailable("${body.clientOrderId} may still reach the venue; resend to resolve it")
             }

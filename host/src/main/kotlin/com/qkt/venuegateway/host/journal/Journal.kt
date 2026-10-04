@@ -34,12 +34,17 @@ class Journal private constructor(
         listeners += listener
     }
 
+    private val opened: String? = synchronized(this) { meta("stream") }
+
+    /**
+     * Whether this process created the journal (a first start, or a lost file): orders a client sent before
+     * may then be at the venue with no record here, so a submit with no record is looked up there first.
+     */
+    val createdThisRun: Boolean = opened == null
+
     /** The event log's identity; a new journal file has a new one. */
     val stream: String =
-        synchronized(this) {
-            meta("stream")
-                ?: UUID.randomUUID().toString().also { setMeta("stream", it) }
-        }
+        opened ?: synchronized(this) { UUID.randomUUID().toString().also { setMeta("stream", it) } }
 
     /** The latest event's sequence number; 0 before any. */
     fun latestSeq(): Long = synchronized(this) { records.long("SELECT COALESCE(MAX(seq), 0) FROM events") }
