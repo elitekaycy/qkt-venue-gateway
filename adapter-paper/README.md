@@ -11,6 +11,10 @@ real gateway, with no venue account or API key.
   millisecond, so paper funding is close to Deribit's, not equal. Funding rates are served from Deribit.
 - Mark and index history (`/v1/marks`) is Deribit's own, read from its trade history exactly as the Deribit
   adapter reads it (the last trade of each window; see its README): years of it from mainnet's history host.
+- Open interest is Deribit's (the venue's market, not the paper account's), recorded as the Deribit adapter
+  records it: Deribit publishes no history, so a read reaching the present records the ticker's
+  `open_interest` and serves what was recorded (`open-interest/<code>.csv` in the state volume). A series
+  starts when the gateway first read it; see the [Deribit adapter](../adapter-deribit/README.md).
 - No margin: all equity is available. Trade mode is always `demo`.
 
 ## Start
