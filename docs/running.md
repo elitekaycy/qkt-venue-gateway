@@ -105,7 +105,8 @@ curl -H "$G" -X POST http://127.0.0.1:8443/v1/kill/release -d '{"scope":"all"}'
 ```
 
 While the switch is on, only cancels, position closes and orders that reduce a position go through.
-The switch survives restarts.
+The switch survives restarts. Every change that moves it is a `kill` event on `/v1/stream`, carrying the
+switch as `/v1/health` reports it, so qkt hears it flip in order with fills.
 
 ## API at a glance
 

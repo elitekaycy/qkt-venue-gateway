@@ -145,12 +145,15 @@ class GatewayServerTest {
     @Test
     fun `only the guardian flips the kill switch, which then refuses orders that add risk`() {
         start()
+        val live = stream(0)
         val all = """{"scope":"all"}"""
         assertThat(call("POST", "/v1/kill", body = all).first).isEqualTo(401)
         assertThat(call("POST", "/v1/kill", token = "g-token", body = all).second).contains("\"all\":true")
+        assertThat(live.poll(5, TimeUnit.SECONDS)).contains("\"seq\":1", "\"type\":\"kill\"", "\"all\":true")
 
         assertThat(call("POST", "/v1/orders", body = submit("a-1.x")).second).contains("\"code\":\"kill_switch\"")
         assertThat(call("POST", "/v1/kill/release", token = "g-token", body = all).second).contains("\"all\":false")
+        assertThat(live.poll(5, TimeUnit.SECONDS)).contains("\"seq\":2", "\"type\":\"kill\"", "\"all\":false")
         assertThat(call("POST", "/v1/orders", body = submit("a-2.x")).first).isEqualTo(201)
     }
 
