@@ -28,6 +28,8 @@ class DeribitOpenInterestTest {
     private val asked = mutableListOf<String>()
     private var answer = recorded
 
+    private val day = "open-interest/BTC_USDC-PERPETUAL/2026-10-01.csv"
+
     private fun openInterest(dir: Path) = DeribitOpenInterest({ code -> answer.also { asked += code } }, dir, { now })
 
     @Test
@@ -49,7 +51,7 @@ class DeribitOpenInterestTest {
         assertThat(first.map { it.timeMs to it.openInterest.toPlainString() }).containsExactly(at to "1477.6341")
         assertThat(restarted).isEqualTo(first)
         assertThat(asked).containsExactly("BTC_USDC-PERPETUAL")
-        assertThat(Files.readAllLines(dir.resolve("open-interest/BTC_USDC-PERPETUAL.csv")))
+        assertThat(Files.readAllLines(dir.resolve(day)))
             .containsExactly("time,open_interest", "$at,1477.6341")
     }
 
@@ -91,10 +93,10 @@ class DeribitOpenInterestTest {
     }
 
     @Test
-    fun `a last line an append left without its newline is dropped and cut off, and recording carries on`(
+    fun `a last line an append left without its newline is left out, cut off, and recording carries on`(
         @TempDir dir: Path,
     ) {
-        val file = dir.resolve("open-interest/BTC_USDC-PERPETUAL.csv")
+        val file = dir.resolve(day)
         Files.createDirectories(file.parent)
         Files.writeString(file, "time,open_interest\n${at - 60_000},1470\n${at - 1_000},147")
 
@@ -111,12 +113,13 @@ class DeribitOpenInterestTest {
     fun `a malformed complete line still fails naming the file and line`(
         @TempDir dir: Path,
     ) {
-        val file = dir.resolve("open-interest/BTC_USDC-PERPETUAL.csv")
+        val file = dir.resolve(day)
         Files.createDirectories(file.parent)
         Files.writeString(file, "time,open_interest\n${at - 60_000},14x0\n")
+        now = at + 86_400_000
 
         assertThatThrownBy { openInterest(dir).read("BTC_USDC-PERPETUAL", 0, at) }
-            .hasMessageContaining("BTC_USDC-PERPETUAL.csv line 2")
+            .hasMessageContaining("2026-10-01.csv line 2")
         assertThat(Files.readString(file)).endsWith("14x0\n")
     }
 }
