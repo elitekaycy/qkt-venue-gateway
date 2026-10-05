@@ -79,3 +79,18 @@ data class DeribitMarkTrade(
     val mark: BigDecimal?,
     val index: BigDecimal?,
 )
+
+/**
+ * One print of Deribit's public trade tape: [amount] (coins, on USDC-linear contracts) at [price]. [direction] is
+ * the taker's (`buy`, `sell`); [liquidation] is set only on a print that liquidated a position: `T` the taker
+ * was liquidated, `M` the maker, `MT` both. [tradeId] is unique; [seq] orders an instrument's trades.
+ */
+data class DeribitPublicTrade(
+    val tradeId: String,
+    val seq: Long,
+    val timestampMs: Long,
+    val price: BigDecimal,
+    val amount: BigDecimal,
+    val direction: String,
+    val liquidation: String?,
+)

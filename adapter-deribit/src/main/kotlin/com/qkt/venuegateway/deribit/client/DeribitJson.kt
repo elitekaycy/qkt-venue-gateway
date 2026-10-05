@@ -108,5 +108,20 @@ internal object DeribitJson {
             DeribitMarkTrade(t.long("trade_seq"), t.long("timestamp"), t.dec("mark_price"), t.dec("index_price"))
         }
 
+    /** The prints of a `get_last_trades_by_instrument*` answer, as Deribit ordered them. */
+    fun publicTrades(o: JsonObject): List<DeribitPublicTrade> =
+        o["trades"]!!.jsonArray.map {
+            val t = it.jsonObject
+            DeribitPublicTrade(
+                tradeId = t.text("trade_id") ?: error("deribit field trade_id missing"),
+                seq = t.long("trade_seq"),
+                timestampMs = t.long("timestamp"),
+                price = t.req("price"),
+                amount = t.req("amount"),
+                direction = t.text("direction") ?: error("deribit field direction missing"),
+                liquidation = t.text("liquidation"),
+            )
+        }
+
     fun JsonElement.obj(): JsonObject = jsonObject
 }

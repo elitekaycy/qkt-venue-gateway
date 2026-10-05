@@ -147,6 +147,19 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   volume across restarts. A series starts when the gateway first read it and has one figure per read
   (qkt's live poll reads every minute); time nothing read it is a gap, never filled in.
 
+- **Tape and liquidations.** `/v1/trades` and `/v1/liquidations` read the same
+  `get_last_trades_by_instrument_and_time` pages as marks, on the same hosts (mainnet's history host; testnet's
+  own, about a day deep). A print's `direction` is its taker's, the aggressor side; `amount` is in coins, the
+  order quantity. A print that liquidated a position carries `liquidation`: `T` the taker was liquidated (the
+  liquidation order is on the print's own side), `M` the maker (its resting order on the other side), `MT` both
+  (Deribit's documented value, served as one liquidation of each side; none was seen in about six days of
+  mainnet USDC futures history scanned on 2026-10-05, 2,314 liquidation prints, all `T` or `M`). A page
+  cut at its count may end inside a millisecond (`tape-liquidation-taker.json` holds one of the eleven prints of
+  1791096884055 ms), so each page starts at the millisecond the last one ended in. Liquidations are not
+  indexed: finding them reads the whole tape of the range, a call per 1000 prints. Measured 2026-10-05 over a
+  day: mainnet BTC_USDC-PERPETUAL about 150,000 prints, testnet about 15,000; mainnet USDC futures about 270
+  liquidation prints across all contracts, testnet none.
+
 The full list of API calls is in [design.md](../docs/design.md) §10.
 
 ## Contract suite

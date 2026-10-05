@@ -11,7 +11,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
-/** Deribit's public trade history (fixtures `trades-*.json`, recorded on testnet and mainnet history 2026-10-04), read exactly. */
+/** Deribit's public trade history (fixtures `trades-*.json`, `tape-*.json`, recorded on testnet and mainnet history), read exactly. */
 class DeribitTradesTest {
     private val asked = CopyOnWriteArrayList<HttpUrl>()
 
@@ -116,5 +116,26 @@ class DeribitTradesTest {
         assertThatThrownBy { client.tradesFrom("BTC_USDC-PERPETUAL", 1L, 2L, 1_001) }
             .isInstanceOf(DeribitException::class.java)
             .hasMessageContaining("-32602")
+    }
+
+    @Test
+    fun `a page of the tape carries each print's id, price, amount, taker side and liquidation mark`() {
+        fixture = "tape-liquidation-taker.json"
+
+        val page = client.tape("BTC_USDC-PERPETUAL", 1_791_096_880_272L, 1_791_096_884_272L, 20)
+
+        assertThat(page.more).isTrue
+        assertThat(page.items).hasSize(20)
+        val liquidation = page.items.single { it.liquidation != null }
+        assertThat(liquidation.tradeId).isEqualTo("USDC-65965358")
+        assertThat(liquidation.liquidation).isEqualTo("T")
+        assertThat(liquidation.direction).isEqualTo("buy")
+        assertThat(liquidation.amount.toPlainString()).isEqualTo("0.0011")
+        assertThat(liquidation.price.toPlainString()).isEqualTo("85070.2")
+        val url = asked.single()
+        assertThat(url.encodedPath).endsWith("/public/get_last_trades_by_instrument_and_time")
+        assertThat(url.queryParameter("end_timestamp")).isEqualTo("1791096884272")
+        assertThat(url.queryParameter("count")).isEqualTo("20")
+        assertThat(url.queryParameter("sorting")).isEqualTo("asc")
     }
 }
