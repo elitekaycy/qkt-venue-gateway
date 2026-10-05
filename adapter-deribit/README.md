@@ -124,6 +124,16 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   mainnet adapter reads marks there. Testnet has no history host (`history.test.deribit.com` does not
   answer): a testnet gateway serves marks of the last day only; fetch longer histories through a mainnet
   or paper gateway.
+- **Open interest.** Deribit publishes no open-interest history: `public/get_open_interest_history` and
+  `public/get_open_interest` are `Method not found` (-32601) on testnet and mainnet, and
+  `public/get_tradingview_chart_data` carries prices, volume and cost only (probed 2026-10-04). The present
+  figure is the ticker's `open_interest` (also in `public/get_book_summary_by_*`), at the ticker's
+  `timestamp`, in the contract's amount unit: the base coin on a USDC-linear contract (testnet
+  BTC_USDC-PERPETUAL 23307.7328, SOL_USDC-PERPETUAL 376285.029), USD on an inverse one. So the adapter
+  **records** it: a read of `/v1/open-interest` whose window reaches the present (within a minute) first
+  takes the ticker's figure, then serves what was recorded, kept in `open-interest/<code>.csv` in the state
+  volume across restarts. A series starts when the gateway first read it and has one figure per read
+  (qkt's live poll reads every minute); time nothing read it is a gap, never filled in.
 
 The full list of API calls is in [design.md](../docs/design.md) §10.
 

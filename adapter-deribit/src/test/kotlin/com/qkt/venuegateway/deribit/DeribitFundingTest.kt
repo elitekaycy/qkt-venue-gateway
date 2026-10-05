@@ -25,7 +25,7 @@ class DeribitFundingTest {
     private val deribit = ScriptedDeribit(open)
 
     @Test
-    fun `it declares bars, quotes, settlements, funding, funding rates and mark prices`(
+    fun `it declares bars, quotes, settlements, funding, funding rates, mark prices and open interest`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = deribit.adapter(dir, unusedMarket())
@@ -37,6 +37,7 @@ class DeribitFundingTest {
             Capability.FUNDING,
             Capability.FUNDING_RATES,
             Capability.MARK_PRICES,
+            Capability.OPEN_INTEREST,
         )
         adapter.close()
     }

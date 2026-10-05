@@ -3,6 +3,7 @@ package com.qkt.venuegateway.deribit
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.VenueFundingRate
+import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
@@ -17,6 +18,9 @@ import java.math.BigDecimal
 object DeribitMarketMapping {
     /** One hour of Deribit funding: a unit long paid `interest_1h × index` over the hour ending at its time. */
     fun fundingRate(r: DeribitFundingRate) = VenueFundingRate(r.timestampMs, r.interest1h, r.indexPrice)
+
+    /** [t]'s open interest, known at the ticker's own time; null when the ticker carries none. */
+    fun openInterest(t: DeribitTicker) = t.openInterest?.let { VenueOpenInterest(t.timestampMs, it) }
 
     fun instrument(i: DeribitInstrument) =
         Instrument(

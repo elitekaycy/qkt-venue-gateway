@@ -22,7 +22,8 @@ data class DeribitInstrument(
 
 /**
  * One ticker: the best bid and ask with their amounts (Deribit sends `0.0` for a missing side, read
- * here as null), the mark, and for options the mark IV (vol points) and the underlying price.
+ * here as null), the mark, and for options the mark IV (vol points) and the underlying price. [openInterest] is
+ * the contracts outstanding in the instrument's amount unit (the base coin on a linear contract).
  */
 data class DeribitTicker(
     val name: String,
@@ -35,6 +36,7 @@ data class DeribitTicker(
     val markIv: BigDecimal?,
     val underlyingPrice: BigDecimal?,
     val indexPrice: BigDecimal?,
+    val openInterest: BigDecimal? = null,
 )
 
 /** One kline of `public/get_tradingview_chart_data`. */

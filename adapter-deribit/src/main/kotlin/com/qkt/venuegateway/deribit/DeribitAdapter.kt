@@ -14,6 +14,7 @@ import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueMark
+import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -54,6 +55,7 @@ class DeribitAdapter(
     override val capabilities =
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(Capability.MARK_PRICES)
+            .plus(Capability.OPEN_INTEREST)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
@@ -68,6 +70,7 @@ class DeribitAdapter(
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
         )
+    private val openInterest = DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -82,12 +85,7 @@ class DeribitAdapter(
     override fun account(): AccountSnapshot = DeribitMapping.account(venue { account.account(currency) })
 
     override fun positions() =
-        Positions(
-            Accounting.NETTING,
-            venue {
-                account.positions(currency)
-            }.mapNotNull(DeribitMapping::position),
-        )
+        Positions(Accounting.NETTING, venue { account.positions(currency) }.mapNotNull(DeribitMapping::position))
 
     override fun openOrders() = venue { account.openOrders(currency) }.mapNotNull(DeribitMapping::order)
 
@@ -162,6 +160,12 @@ class DeribitAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenueMark> = venue { DeribitMarks.sampled(history, code, windowMs, fromMs, toMs) }
+
+    override fun openInterest(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueOpenInterest> = openInterest.read(code, fromMs, toMs)
 
     override fun bars(
         code: String,
