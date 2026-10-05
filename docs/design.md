@@ -89,6 +89,8 @@ interface VenueAdapter : AutoCloseable {
     fun fundingRates(code: String, fromMs: Long, toMs: Long): List<VenueFundingRate>  // only with FUNDING_RATES
     fun marks(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueMark>  // only with MARK_PRICES
     fun openInterest(code: String, fromMs: Long, toMs: Long): List<VenueOpenInterest>  // only with OPEN_INTEREST
+    fun trades(code: String, fromMs: Long, toMs: Long, limit: Int): List<VenuePrint>  // only with TRADES
+    fun liquidations(code: String, fromMs: Long, toMs: Long): List<VenuePrint>  // only with LIQUIDATIONS
     fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
     fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
 }
@@ -107,13 +109,16 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   serves: `BARS`, `QUOTES`, `SETTLEMENTS`, `FUNDING` (what the venue charged or credited the account for
   holding a perpetual), `FUNDING_RATES` (a perpetual's public rate history), `MARK_PRICES` (a contract's
   mark and index history, the last report in each window), `OPEN_INTEREST` (a contract's open
-  interest over time, each figure at the instant the venue made it known) and `OPTION_MARKS` (option quotes
-  carry the mark IV and the forward, `VenueQuote.markIv` and `underlying`). The host reports them in
+  interest over time, each figure at the instant the venue made it known), `OPTION_MARKS` (option quotes
+  carry the mark IV and the forward, `VenueQuote.markIv` and `underlying`), `TRADES` (a contract's public
+  tape, each print with its aggressor side) and `LIQUIDATIONS` (the prints that liquidated a position, with
+  the side liquidated). The host reports them in
   `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
   undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
   does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without
   funding; a strategy reading a contract's mark or index starts only on a gateway declaring `MARK_PRICES`,
-  and one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`.
+  one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, and one reading
+  a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`.
 - **Pushes may arrive late, twice or out of order;** the host orders and dedupes them. An adapter never
   drops a push it cannot classify; it reports it as an error.
 - **No threads, clocks, env or HTTP clients of its own:** the host hands them in (`HostServices`, as the
