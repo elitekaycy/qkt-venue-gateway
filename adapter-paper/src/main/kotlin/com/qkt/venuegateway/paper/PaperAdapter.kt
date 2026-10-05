@@ -22,7 +22,6 @@ import com.qkt.venuegateway.deribit.DeribitOpenInterest
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
-import java.math.BigDecimal
 import java.util.concurrent.Executors
 
 /**
@@ -47,12 +46,7 @@ class PaperAdapter(
     override val capabilities = Capability.entries.toSet() - setOf(Capability.TRADES, Capability.LIQUIDATIONS)
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
-    private val book =
-        PaperBook(
-            PaperLedger(BigDecimal(context.settings["starting_balance"] ?: "10000")),
-            currency,
-            BigDecimal(context.settings["fee_rate"] ?: "0"),
-        )
+    private val book = paperBook(context.settings, currency)
     private val store = PaperStore(context.stateDir).also { it.load(book) }
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
     private val funding = PaperFunding(market, listing, currency, context.clock)
@@ -79,11 +73,7 @@ class PaperAdapter(
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
-    override fun account(): AccountSnapshot =
-        synchronized(book) {
-            val equity = book.ledger.equity { feed[it]?.mark }
-            AccountSnapshot(currency, book.ledger.balance, equity, BigDecimal.ZERO, equity)
-        }
+    override fun account(): AccountSnapshot = synchronized(book) { book.account { feed[it]?.mark } }
 
     override fun positions() = synchronized(book) { book.positionRows() }
 

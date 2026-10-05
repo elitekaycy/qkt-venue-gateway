@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.paper
 
+import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
@@ -158,3 +159,19 @@ internal fun PaperBook.working(): List<VenueOrder> = state.orders.values.filter 
 /** The book's positions as a netting venue reports them: one row per symbol held. */
 internal fun PaperBook.positionRows() =
     Positions(Accounting.NETTING, ledger.positions.map { (s, p) -> PositionRow(s, p.quantity, p.avgPrice) })
+
+/** The account the book holds, its positions marked by [markOf]: no margin, so the whole equity is available. */
+internal fun PaperBook.account(markOf: (String) -> BigDecimal?): AccountSnapshot {
+    val equity = ledger.equity(markOf)
+    return AccountSnapshot(currency, ledger.balance, equity, BigDecimal.ZERO, equity)
+}
+
+/** A book as the adapter's settings open it: `starting_balance` (10000) and `fee_rate` (0), in [currency]. */
+internal fun paperBook(
+    settings: Map<String, String>,
+    currency: String,
+) = PaperBook(
+    PaperLedger(BigDecimal(settings["starting_balance"] ?: "10000")),
+    currency,
+    BigDecimal(settings["fee_rate"] ?: "0"),
+)
