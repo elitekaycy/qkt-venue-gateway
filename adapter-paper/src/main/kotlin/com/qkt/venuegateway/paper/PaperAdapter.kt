@@ -14,11 +14,13 @@ import com.qkt.venuegateway.adapter.TradeMode
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.DeribitBars
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.DeribitMarks
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
@@ -33,16 +35,17 @@ import java.util.concurrent.Executors
  * through [PaperSettlement] and held perpetuals pay Deribit's published funding through [PaperFunding], both
  * checked every `settlement_check_ms`. Settings: `currency` (USDC), `starting_balance` (10000), `fee_rate`
  * (0), `login` (paper), `settlement_check_ms` (60000). It holds no margin: margin used is 0 and the whole
- * equity is available.
+ * equity is available. Marks are Deribit's, from the trade history on [history] ([DeribitMarks]).
  */
 class PaperAdapter(
     private val context: AdapterContext,
     private val market: DeribitMarketData,
+    private val history: DeribitMarketData = market,
     private val tickers: (onTicker: (DeribitTicker) -> Unit, onConnection: (Boolean, String) -> Unit) -> DeribitTickers,
 ) : VenueAdapter {
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    override val capabilities = Capability.entries.toSet() - Capability.MARK_PRICES
+    override val capabilities = Capability.entries.toSet()
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
     private val book =
@@ -54,28 +57,16 @@ class PaperAdapter(
     private val store = PaperStore(context.stateDir).also { it.load(book) }
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
     private val funding = PaperFunding(market, listing, currency, context.clock)
+    private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
     private val upkeep =
         PaperUpkeep(
             book,
             store,
-            PaperSettlement(
-                market,
-                listing,
-                context.clock,
-                context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS,
-            ),
+            PaperSettlement(market, listing, context.clock, checkMs),
             funding,
             events::execute,
         ) { listener }
-    private val feed =
-        PaperFeed(listing) {
-            synchronized(book) {
-                book.state.orders.values
-                    .filter { it.status == OrderStatus.WORKING }
-                    .map { it.symbol } +
-                    book.ledger.positions.keys
-            }
-        }
+    private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
     private var listener: AdapterListener? = null
 
     override fun connect(listener: AdapterListener) {
@@ -160,6 +151,13 @@ class PaperAdapter(
         fromMs: Long,
         toMs: Long,
     ) = venue { funding.rates(code, fromMs, toMs) }
+
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueMark> = venue { DeribitMarks.sampled(history, code, windowMs, fromMs, toMs) }
 
     override fun bars(
         code: String,
