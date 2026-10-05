@@ -27,6 +27,12 @@ enum class Capability {
 
     /** The open interest of a listed contract over time ([VenueAdapter.openInterest]). */
     OPEN_INTEREST,
+
+    /**
+     * An option's quotes carry its mark implied volatility and the forward it is valued against
+     * ([VenueQuote.markIv], [VenueQuote.underlying]): what a client prices the option's Greeks from.
+     */
+    OPTION_MARKS,
 }
 
 /**

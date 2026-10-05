@@ -47,6 +47,9 @@ abstract class AdapterContractTest {
     /** A listed perpetual, whose funding rates are checked when the adapter declares funding rates. */
     protected open val perpetualCode: String? = null
 
+    /** A listed option the venue quotes now, whose quotes are checked when the adapter declares option marks. */
+    protected open val optionCode: String? = null
+
     /** The bar length checked; the venue must serve it. */
     protected open val barWindowMs: Long = 60_000L
 
@@ -151,12 +154,12 @@ abstract class AdapterContractTest {
     }
 
     @Test
-    fun `bars and quotes, when declared, are closed and aligned, and quote the bid at or below the ask`(
+    fun `bars, quotes and option marks, when declared, are well formed and quote the bid at or below the ask`(
         @TempDir dir: Path,
     ) {
         val (adapter, listener) = connect(dir)
-
         CapabilityChecks.barsAndQuotes(adapter, listener, activeCode, barWindowMs, pushTimeoutMs)
+        CapabilityChecks.optionMarks(adapter, listener, optionCode, pushTimeoutMs)
     }
 
     @Test

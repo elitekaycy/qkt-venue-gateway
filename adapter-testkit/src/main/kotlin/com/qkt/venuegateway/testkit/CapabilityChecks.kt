@@ -2,14 +2,15 @@ package com.qkt.venuegateway.testkit
 
 import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.VenueAdapter
+import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 
 /**
  * What each optional capability promises: declared, it answers in shape; not declared, settlements, funding,
- * funding rates, mark prices and open interest are refused as [VenueUnsupportedException] (bars and quotes
- * are only checked when declared: a venue without them has nothing to refuse).
+ * funding rates, mark prices and open interest are refused as [VenueUnsupportedException] (bars, quotes and
+ * option marks are only checked when declared: a venue without them has nothing to refuse).
  */
 internal object CapabilityChecks {
     /** When declared, [activeCode]'s recent bars are well formed and a subscription quotes it, bid at or below ask. */
@@ -124,6 +125,24 @@ internal object CapabilityChecks {
             assertThat(it.timeMs).describedAs("open interest time").isBetween(fromMs, toMs)
             assertThat(it.openInterest.signum()).describedAs("open interest at ${it.timeMs}").isNotNegative
         }
+    }
+
+    /** When option marks are declared, [option] is quoted with a positive mark IV and forward; undeclared, nothing to refuse. */
+    fun optionMarks(
+        adapter: VenueAdapter,
+        listener: RecordingListener,
+        option: String?,
+        pushTimeoutMs: Long,
+    ) {
+        if (Capability.OPTION_MARKS !in adapter.capabilities) return
+        assertThat(adapter.capabilities).describedAs("option marks ride on quotes").contains(Capability.QUOTES)
+        assertThat(option).describedAs("optionCode, which an adapter serving option marks names").isNotNull
+        adapter.subscribeQuotes(setOf(option!!), emptySet())
+        val marked = { q: VenueQuote -> q.symbol == option && q.markIv != null && q.underlying != null }
+        listener.await("a quote of $option with its mark IV and forward", pushTimeoutMs) { listener.quotes.any(marked) }
+        val quote = listener.quotes.first(marked)
+        assertThat(quote.markIv).describedAs("mark IV of $option").isPositive
+        assertThat(quote.underlying).describedAs("forward of $option").isPositive
     }
 
     /** Settlements lie in their window, oldest first; an adapter that does not declare them refuses. */
