@@ -118,6 +118,15 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   either each window's last trade or every trade a page at a time by time (each page starting at the
   millisecond the last ended in), whichever costs fewer calls: at most a page's windows plus two, about
   0.2 s a call measured from Europe. A millisecond holding 1000 trades cannot be paged and fails the request.
+- **Option marks.** Every option ticker carries `mark_iv` and `underlying_price` (its expiry's forward), so
+  each option quote carries both and the adapter declares `OPTION_MARKS`. The ticker's `greeks` are Black-76
+  on that mark IV and forward at rate 0 and a 365-day year (vega per volatility point, theta per day) to
+  within 0.05%, published to 5 decimals, which leaves a BTC option's gamma one digit
+  (`ticker-option-greeks.json`: gamma `1e-5` where the inputs give 0.0000059); they are not carried, and qkt
+  prices the Greeks from the mark IV.
+  The book summary has `mark_iv` and `underlying_price` but no Greeks (`book-summary-option.json`). No host
+  keeps a history of either: `public/get_mark_price_history` answers `[]` for a linear option
+  (`mark-price-history-linear-option.json`), and a trade carries its own `iv`, not the mark IV.
 - **Mark history depth.** `test.deribit.com` and `www.deribit.com` answer trades by time for only about
   the last 24 hours (none 26 hours back, measured 2026-10-04). Mainnet's whole history, current to the
   second and including expired futures and options, is on `history.deribit.com` in the same shape, so a

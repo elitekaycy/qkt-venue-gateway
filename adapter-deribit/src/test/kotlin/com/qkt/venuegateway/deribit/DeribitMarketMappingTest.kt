@@ -56,4 +56,24 @@ class DeribitMarketMappingTest {
         assertThat(quote.index).isEqualByComparingTo("83975.68")
         assertThat(quote.underlying).isEqualByComparingTo("83987.8")
     }
+
+    @Test
+    fun `a recorded option ticker's mark iv and forward, what option marks declares, reach its quote exactly`() {
+        val recorded = javaClass.getResource("/fixtures/ticker-option-greeks.json")!!.readText()
+        val ticker =
+            DeribitJson.ticker(
+                Json
+                    .parseToJsonElement(recorded)
+                    .jsonObject
+                    .getValue("result")
+                    .jsonObject,
+            )
+
+        val quote = DeribitMarketMapping.quote(ticker)
+
+        assertThat(quote.symbol).isEqualTo("BTC_USDC-30OCT26-110000-C")
+        assertThat(quote.markIv).isEqualByComparingTo("45.46")
+        assertThat(quote.underlying).isEqualByComparingTo("86575.5")
+        assertThat(quote.mark).isEqualByComparingTo("99.04")
+    }
 }
