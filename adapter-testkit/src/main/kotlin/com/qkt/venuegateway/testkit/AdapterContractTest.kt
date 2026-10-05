@@ -15,15 +15,8 @@ import org.junit.jupiter.api.io.TempDir
  * The behaviour the gateway host relies on from every adapter. An adapter's own test extends this and
  * supplies the adapter and three orders only its venue can name; passing it means the host and qkt
  * treat the adapter exactly as they treat every other. It runs against a venue's test environment:
- * it places real orders, cancels what it leaves working, and flattens what it fills.
- *
- * ```
- * class MyVenueContractTest : AdapterContractTest() {
- *     override fun newAdapter(stateDir: Path) = MyVenueAdapter(...)
- *     override fun restingOrder(clientOrderId: String) = NewOrder(clientOrderId, "BTC-PERP", Side.BUY, ...)
- *     ...
- * }
- * ```
+ * it places real orders, cancels what it leaves working, and flattens what it fills. `DeribitContractTest`
+ * and `PaperContractTest` in this repository are worked examples.
  */
 abstract class AdapterContractTest {
     /** A connected-ready adapter keeping its private state in [stateDir]; a second call on it is a restart. */
@@ -40,6 +33,9 @@ abstract class AdapterContractTest {
 
     /** An order the venue itself refuses, such as a size off its volume step. */
     protected abstract fun refusedOrder(clientOrderId: String): NewOrder
+
+    /** A market order larger than all the venue offers in its price band; null when it fills whole (nothing rests). */
+    protected open fun overrunOrder(clientOrderId: String): NewOrder? = null
 
     /** A listed code with recent trading, for bars, quotes, open interest, depth and its public tape. */
     protected abstract val activeCode: String
@@ -166,15 +162,16 @@ abstract class AdapterContractTest {
         @TempDir dir: Path,
     ) {
         val (adapter, _) = connect(dir)
-        val toMs = System.currentTimeMillis()
-        val fromMs = toMs - HISTORY_CHECKED_MS
-        CapabilityChecks.settlements(adapter, fromMs, toMs)
-        CapabilityChecks.funding(adapter, fromMs, toMs)
-        CapabilityChecks.fundingRates(adapter, perpetualCode, fromMs, toMs)
-        CapabilityChecks.marks(adapter, activeCode, barWindowMs)
-        CapabilityChecks.openInterest(adapter, activeCode, fromMs, toMs + CLOCK_SKEW_MS)
-        TapeChecks.tape(adapter, activeCode, toMs)
-        DepthChecks.depth(adapter, activeCode, fromMs, toMs + CLOCK_SKEW_MS)
+        CapabilityChecks.histories(adapter, activeCode, perpetualCode, barWindowMs, CLOCK_SKEW_MS)
+    }
+
+    @Test
+    fun `a market order larger than the book ends with what filled and leaves no remainder working`(
+        @TempDir dir: Path,
+    ) {
+        val order = overrunOrder(label()) ?: return
+        val (adapter, _) = connect(dir)
+        RemainderChecks.overrun(adapter, orders, order, ::label, pushTimeoutMs)
     }
 
     @Test
@@ -195,6 +192,5 @@ abstract class AdapterContractTest {
 
     private companion object {
         const val CLOCK_SKEW_MS = 60_000L
-        const val HISTORY_CHECKED_MS = 2 * 86_400_000L
     }
 }
