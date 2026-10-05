@@ -6,7 +6,6 @@ import com.qkt.venuegateway.adapter.AdapterListener
 import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
-import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.TradeMode
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
@@ -16,6 +15,7 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.DeribitBars
+import com.qkt.venuegateway.deribit.DeribitDepth
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.DeribitMarks
@@ -35,7 +35,7 @@ import java.util.concurrent.Executors
  * checked every `settlement_check_ms`. Settings: `currency` (USDC), `starting_balance` (10000), `fee_rate`
  * (0), `login` (paper), `settlement_check_ms` (60000). It holds no margin: margin used is 0 and the whole
  * equity is available. Marks are Deribit's, from the trade history on [history] ([DeribitMarks]).
- * Open interest is Deribit's, recorded as it is read ([DeribitOpenInterest]).
+ * Open interest and the order book are Deribit's, recorded as they are read ([DeribitOpenInterest], [DeribitDepth]).
  * The tape and liquidations are Deribit's, from the trade history on [history] ([DeribitTape]).
  */
 class PaperAdapter(
@@ -46,7 +46,7 @@ class PaperAdapter(
 ) : VenueAdapter {
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    override val capabilities = Capability.entries.toSet() - Capability.DEPTH
+    override val capabilities = Capability.entries.toSet()
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
     private val book = paperBook(context.settings, currency)
@@ -55,6 +55,7 @@ class PaperAdapter(
     private val funding = PaperFunding(market, listing, currency, context.clock)
     private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
     private val openInterest = DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock)
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock)
     private val upkeep =
         PaperUpkeep(
             book,
@@ -85,17 +86,7 @@ class PaperAdapter(
     override fun place(order: NewOrder): VenueOrder {
         if (listing.find(order.symbol) == null) throw VenueRefusedException("${order.symbol} is not listed")
         val ticker = feed[order.symbol] ?: venue { market.ticker(order.symbol) }.also { feed.heard(it) }
-        val placed =
-            synchronized(book) {
-                val change = book.place(order, ticker, context.clock())
-                val placed = book.state.orders.getValue(order.clientOrderId)
-                if (placed.status == OrderStatus.REJECTED) {
-                    store.save(book)
-                    throw VenueRefusedException(placed.rejectReason ?: "rejected")
-                }
-                publish(change)
-                placed
-            }
+        val placed = synchronized(book) { book.placeChecked(order, ticker, context.clock(), store, ::publish) }
         feed.resubscribe()
         return placed
     }
@@ -158,6 +149,12 @@ class PaperAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenuePrint> = venue { DeribitTape.liquidations(history, code, fromMs, toMs) }
+
+    override fun depth(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = depth.read(code, fromMs, toMs)
 
     override fun bars(
         code: String,

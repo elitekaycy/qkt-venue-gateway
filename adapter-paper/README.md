@@ -15,6 +15,9 @@ real gateway, with no venue account or API key.
   records it: Deribit publishes no history, so a read reaching the present records the ticker's
   `open_interest` and serves what was recorded (`open-interest/<code>.csv` in the state volume). A series
   starts when the gateway first read it; see the [Deribit adapter](../adapter-deribit/README.md).
+- Order-book depth (`/v1/depth`) is Deribit's book, its ten best levels a side, recorded as the Deribit
+  adapter records it: a read reaching the present takes `public/get_order_book` and serves what was
+  recorded (`depth/<code>/<day>.csv` in the state volume), so a series starts when the gateway first read it.
 - Option quotes are Deribit's tickers, each with its mark IV and forward (`option_marks`; see the Deribit
   README for why its Greeks are not carried).
 - The public tape (`/v1/trades`, each print with its aggressor side) and its liquidations (`/v1/liquidations`)

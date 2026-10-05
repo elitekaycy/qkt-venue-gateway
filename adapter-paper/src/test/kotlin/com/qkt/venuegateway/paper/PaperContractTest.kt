@@ -6,10 +6,10 @@ import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
-import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitOrderBook
 import com.qkt.venuegateway.deribit.client.DeribitPage
 import com.qkt.venuegateway.deribit.client.DeribitPublicTrade
 import com.qkt.venuegateway.deribit.client.DeribitTicker
@@ -30,7 +30,13 @@ class PaperContractTest : AdapterContractTest() {
             override fun instruments(
                 currency: String,
                 kind: String,
-            ) = if (kind == "future") listOf(listed(perp, null, null)) else listOf(listed(put, EXPIRY_MS, "82000"))
+            ) = if (kind ==
+                "future"
+            ) {
+                listOf(contractListed(perp, null, null))
+            } else {
+                listOf(contractListed(put, EXPIRY_MS, "82000"))
+            }
 
             override fun instrument(name: String) =
                 (instruments("USDC", "future") + instruments("USDC", "option")).first {
@@ -39,6 +45,17 @@ class PaperContractTest : AdapterContractTest() {
                 }
 
             override fun ticker(name: String) = quoted(name)
+
+            /** The perpetual's book as it stands: two levels a side around its quote. */
+            override fun orderBook(
+                name: String,
+                depth: Int,
+            ) = DeribitOrderBook(
+                name,
+                System.currentTimeMillis(),
+                levels("84000", "83999.5"),
+                levels("84000.5", "84001"),
+            )
 
             override fun klines(
                 name: String,
@@ -103,6 +120,8 @@ class PaperContractTest : AdapterContractTest() {
             ) = emptyList<Pair<LocalDate, BigDecimal>>()
         }
 
+    private fun levels(vararg prices: String) = prices.map { BigDecimal(it) to BigDecimal("0.5") }
+
     private fun traded(minuteNo: Long) =
         DeribitMarkTrade(minuteNo, minuteNo * minute + minute / 2, BigDecimal("84005"), BigDecimal("84000"))
 
@@ -116,24 +135,6 @@ class PaperContractTest : AdapterContractTest() {
             if (trade.seq % 2 == 0L) "buy" else "sell",
             "T".takeIf { trade.seq % 10 == 0L },
         )
-
-    private fun listed(
-        name: String,
-        expiryMs: Long?,
-        strike: String?,
-    ) = DeribitInstrument(
-        name,
-        if (strike == null) "future" else "option",
-        expiryMs == null,
-        expiryMs,
-        strike?.let(::BigDecimal),
-        strike?.let { "put" },
-        BigDecimal.ONE,
-        BigDecimal("0.5"),
-        BigDecimal("0.01"),
-        "USDC",
-        "btc_usdc",
-    )
 
     /**
      * The perpetual is quoted both sides, with its open interest; the option has no ask, so buying it is refused,
