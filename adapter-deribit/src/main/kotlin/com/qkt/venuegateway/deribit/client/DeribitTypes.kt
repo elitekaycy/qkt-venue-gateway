@@ -41,6 +41,18 @@ data class DeribitTicker(
     val openInterest: BigDecimal? = null,
 )
 
+/**
+ * One `public/get_order_book` answer: [bids] from the highest price down and [asks] from the lowest up, each
+ * level price to amount (the instrument's amount unit, the base coin on a linear contract), as stamped at
+ * [timestampMs]. A side with no orders is empty.
+ */
+data class DeribitOrderBook(
+    val name: String,
+    val timestampMs: Long,
+    val bids: List<Pair<BigDecimal, BigDecimal>>,
+    val asks: List<Pair<BigDecimal, BigDecimal>>,
+)
+
 /** One kline of `public/get_tradingview_chart_data`. */
 data class DeribitKline(
     val startMs: Long,

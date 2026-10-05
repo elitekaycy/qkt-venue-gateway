@@ -82,6 +82,16 @@ internal object DeribitJson {
         )
     }
 
+    fun orderBook(o: JsonObject): DeribitOrderBook {
+        fun levels(key: String) =
+            o[key]!!.jsonArray.map {
+                val (price, amount) = it.jsonArray.map(::decimal)
+                price!! to amount!!
+            }
+        val name = o.text("instrument_name") ?: error("instrument_name missing")
+        return DeribitOrderBook(name, o.long("timestamp"), levels("bids"), levels("asks"))
+    }
+
     fun klines(o: JsonObject): List<DeribitKline> {
         val ticks = o["ticks"]!!.jsonArray
 

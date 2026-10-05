@@ -146,6 +146,19 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   takes the ticker's figure, then serves what was recorded, kept in `open-interest/<code>.csv` in the state
   volume across restarts. A series starts when the gateway first read it and has one figure per read
   (qkt's live poll reads every minute); time nothing read it is a gap, never filled in.
+- **Depth.** Deribit publishes no order-book history (`public/get_order_book_history` is `Method not found`
+  on testnet and mainnet, probed 2026-10-05). `public/get_order_book` with `depth=10` answers the book as it
+  stands: `bids` best first, `asks` best first, each `[price, amount]` in the amount unit (the base coin on
+  a USDC-linear contract), stamped with `timestamp`; prices may come in exponent form (`8.62e4`, read
+  exactly), and a side with no orders is `[]` (`order-book-option-no-bids.json`). So the adapter
+  **records** it, as it does open interest: a read of `/v1/depth` whose window reaches the present (within
+  a minute) first takes the book, then serves what was recorded, kept one file a UTC day in
+  `depth/<code>/<yyyy-MM-dd>.csv` in the state volume across restarts (about 270 bytes a snapshot of
+  BTC_USDC-PERPETUAL: at qkt's 10-second poll, some 2.3 MB a contract a day, never pruned by the gateway). A series has one
+  snapshot per read and starts when the gateway first read it. The read is one REST call, about 0.17 s from
+  Europe. The `book.<code>.none.10.100ms` channel is not used: it pushes up to ten full snapshots a second
+  (2.8 a second, 534 bytes each, on testnet BTC_USDC-PERPETUAL, measured 2026-10-05) to serve one read
+  every 10 seconds, and would need its own staleness guard for a dropped socket.
 
 - **Tape and liquidations.** `/v1/trades` and `/v1/liquidations` read the same
   `get_last_trades_by_instrument_and_time` pages as marks, on the same hosts (mainnet's history host; testnet's
