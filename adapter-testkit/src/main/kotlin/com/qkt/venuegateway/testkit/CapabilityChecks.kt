@@ -7,8 +7,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 
 /**
- * What each optional capability promises: declared, it answers in shape; not declared, settlements, funding
- * and funding rates are refused as [VenueUnsupportedException] (bars and quotes are only checked when
+ * What each optional capability promises: declared, it answers in shape; not declared, settlements, funding,
+ * funding rates and mark prices are refused as [VenueUnsupportedException] (bars and quotes are only checked when
  * declared: a venue without them has nothing to refuse).
  */
 internal object CapabilityChecks {
@@ -73,6 +73,31 @@ internal object CapabilityChecks {
         rates.forEach {
             assertThat(it.timeMs).describedAs("rate time").isBetween(fromMs, toMs)
             it.price?.let { price -> assertThat(price).describedAs("rate price at ${it.timeMs}").isPositive }
+        }
+    }
+
+    /** [activeCode]'s marks over its recent windows: some, at most one a window, inside the range, positive. */
+    fun marks(
+        adapter: VenueAdapter,
+        activeCode: String,
+        windowMs: Long,
+    ) {
+        val toMs = System.currentTimeMillis() / windowMs * windowMs
+        val fromMs = toMs - BARS_CHECKED * windowMs
+        if (Capability.MARK_PRICES !in adapter.capabilities) {
+            assertThatThrownBy { adapter.marks(activeCode, windowMs, fromMs, toMs) }
+                .isInstanceOf(VenueUnsupportedException::class.java)
+            return
+        }
+        val marks = adapter.marks(activeCode, windowMs, fromMs, toMs)
+        assertThat(marks).describedAs("marks of $activeCode over its last $BARS_CHECKED windows").isNotEmpty
+        assertThat(marks.map { it.timeMs / windowMs }).describedAs("one mark per window").doesNotHaveDuplicates()
+        assertThat(marks.zipWithNext().all { (a, b) -> a.timeMs < b.timeMs }).describedAs("marks ascend").isTrue
+        marks.forEach {
+            assertThat(it.timeMs).describedAs("mark time").isBetween(fromMs, toMs - 1)
+            assertThat(it.mark ?: it.index).describedAs("mark or index at ${it.timeMs}").isNotNull
+            it.mark?.let { mark -> assertThat(mark).describedAs("mark at ${it.timeMs}").isPositive }
+            it.index?.let { index -> assertThat(index).describedAs("index at ${it.timeMs}").isPositive }
         }
     }
 

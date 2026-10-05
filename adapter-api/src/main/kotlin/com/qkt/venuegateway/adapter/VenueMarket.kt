@@ -29,3 +29,13 @@ data class VenueBar(
     val close: BigDecimal,
     val volume: BigDecimal,
 )
+
+/**
+ * The mark and index price of a contract as the venue reported them at [timeMs]: the price it values
+ * positions and liquidates at, and the spot index it tracks. Either is null when the venue did not report it.
+ */
+data class VenueMark(
+    val timeMs: Long,
+    val mark: BigDecimal?,
+    val index: BigDecimal?,
+)
