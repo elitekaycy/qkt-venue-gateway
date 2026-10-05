@@ -95,6 +95,9 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   as `BTC-PERPETUAL`, a spot pair) is refused before it reaches Deribit: every read is scoped to the
   currency, so such an order would be traded outside them. The public ticker link is reported as the quote
   feed, so a dropped ticker socket makes quotes stale instead of re-sending the last price.
+- **Inactive contracts.** Deribit lists contracts whose `state` is `inactive` (`is_active: false`; 96 of 3148
+  USDC options on testnet on 2026-10-05, e.g. `AVAX_USDC-6OCT26-12-C`): their ticker never pushes and they take
+  no orders. They are left out of the listing and of a root's options, but still found by name, so one held settles.
 - **Funding rates.** `public/get_funding_rate_history` gives one row per hour: `interest_1h`, the rate
   accrued over the hour ending at `timestamp`, and `index_price` at its end (rates are JSON numbers such
   as `4.18e-05`, read from their text). A call answers at most about 740 hours, the newest, without

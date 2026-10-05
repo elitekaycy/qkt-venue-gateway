@@ -60,6 +60,7 @@ internal object DeribitJson {
             settlementCurrency =
                 o.text("settlement_currency") ?: o.text("counter_currency") ?: error("currency missing"),
             priceIndex = o.text("price_index") ?: error("price_index missing"),
+            active = (o["is_active"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: error("is_active missing"),
         )
     }
 

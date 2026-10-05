@@ -4,7 +4,8 @@ import java.math.BigDecimal
 
 /**
  * One Deribit instrument as `public/get_instruments` lists it. A perpetual is `kind: future` with
- * `settlement_period: perpetual` (and a placeholder expiry); [expiryMs] is null for it.
+ * `settlement_period: perpetual` (and a placeholder expiry); [expiryMs] is null for it. [active] is
+ * `is_active`: Deribit lists contracts that are `inactive` (no ticker is pushed and no order is taken).
  */
 data class DeribitInstrument(
     val name: String,
@@ -18,6 +19,7 @@ data class DeribitInstrument(
     val minTradeAmount: BigDecimal,
     val settlementCurrency: String,
     val priceIndex: String,
+    val active: Boolean = true,
 )
 
 /**
