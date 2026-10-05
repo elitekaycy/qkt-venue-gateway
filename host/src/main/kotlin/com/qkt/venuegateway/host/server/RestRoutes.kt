@@ -130,7 +130,7 @@ private suspend fun ApplicationCall.killSwitch(
     if (scope == "symbols" && symbols == null) throw InvalidRequestException("symbols missing")
     if (scope != "all" && scope != "symbols") throw InvalidRequestException("scope must be all or symbols")
     val switch =
-        gateway.journal.updateKillSwitch { now ->
+        gateway.journal.updateKillSwitch(gateway.clock()) { now ->
             if (scope == "all") {
                 now.copy(all = engage)
             } else {
