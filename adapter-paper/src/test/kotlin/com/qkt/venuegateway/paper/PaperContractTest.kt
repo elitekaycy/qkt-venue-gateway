@@ -11,6 +11,7 @@ import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitPage
+import com.qkt.venuegateway.deribit.client.DeribitPublicTrade
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.testkit.AdapterContractTest
@@ -88,6 +89,14 @@ class PaperContractTest : AdapterContractTest() {
                 false,
             )
 
+            /** The same trades as prints: the aggressor alternating, every tenth minute's liquidating its taker. */
+            override fun tape(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                count: Int,
+            ) = DeribitPage(tradesFrom(name, fromMs, toMs, count).items.map(::printed).take(count), false)
+
             override fun deliveryPrices(
                 index: String,
                 count: Int,
@@ -96,6 +105,17 @@ class PaperContractTest : AdapterContractTest() {
 
     private fun traded(minuteNo: Long) =
         DeribitMarkTrade(minuteNo, minuteNo * minute + minute / 2, BigDecimal("84005"), BigDecimal("84000"))
+
+    private fun printed(trade: DeribitMarkTrade) =
+        DeribitPublicTrade(
+            "paper-${trade.seq}",
+            trade.seq,
+            trade.timestampMs,
+            BigDecimal("84005"),
+            BigDecimal("0.01"),
+            if (trade.seq % 2 == 0L) "buy" else "sell",
+            "T".takeIf { trade.seq % 10 == 0L },
+        )
 
     private fun listed(
         name: String,
