@@ -8,6 +8,7 @@ import java.time.LocalDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -18,8 +19,8 @@ import okhttp3.Request
 
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
- * `https://test.deribit.com` for testnet): listings, tickers, klines, funding rates and delivery prices,
- * no account.
+ * `https://test.deribit.com` for testnet, `https://history.deribit.com` for mainnet's whole trade history):
+ * listings, tickers, klines, funding rates, trades and delivery prices, no account.
  * A JSON-RPC error is [DeribitException]; the venue being unreachable is an [IOException].
  */
 class DeribitPublicClient(
@@ -105,6 +106,42 @@ class DeribitPublicClient(
             start = end + 1
         }
         return byTime.values.toList()
+    }
+
+    override fun edgeTrade(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        newest: Boolean,
+    ): DeribitMarkTrade? =
+        DeribitJson
+            .markTrades(
+                call(
+                    "get_last_trades_by_instrument_and_time",
+                    "instrument_name" to name,
+                    "start_timestamp" to fromMs.toString(),
+                    "end_timestamp" to toMs.toString(),
+                    "count" to "1",
+                    "sorting" to if (newest) "desc" else "asc",
+                ).obj(),
+            ).firstOrNull()
+
+    override fun tradesFrom(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+    ): DeribitPage<DeribitMarkTrade> {
+        val answer =
+            call(
+                "get_last_trades_by_instrument_and_time",
+                "instrument_name" to name,
+                "start_timestamp" to fromMs.toString(),
+                "end_timestamp" to toMs.toString(),
+                "count" to count.toString(),
+                "sorting" to "asc",
+            ).obj()
+        return DeribitPage(DeribitJson.markTrades(answer), answer["has_more"]?.jsonPrimitive?.boolean == true)
     }
 
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */

@@ -13,6 +13,7 @@ import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -23,9 +24,6 @@ import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.deribit.client.DeribitTrade
 import com.qkt.venuegateway.deribit.client.DeribitTrading
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import org.slf4j.LoggerFactory
 
 /**
  * One Deribit account (settings: [DeribitSettings]; credentials: the API key's client id as login and
@@ -36,7 +34,7 @@ import org.slf4j.LoggerFactory
  * hold (another currency's contract, a spot pair) is refused before it reaches Deribit. Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
- * in force.
+ * in force. Marks come from the trade history on [history] ([DeribitMarks]; by default [market]).
  */
 class DeribitAdapter(
     private val context: AdapterContext,
@@ -48,13 +46,14 @@ class DeribitAdapter(
     ) -> DeribitTrading,
     tickers: (onTicker: (DeribitTicker) -> Unit, onConnection: (Boolean, String) -> Unit) -> DeribitTickers,
     private val refreshMs: Long = 600_000,
+    private val history: DeribitMarketData = market,
 ) : VenueAdapter {
     override val id = "deribit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
 
     override val capabilities =
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
-    private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
+            .plus(Capability.MARK_PRICES)
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
@@ -69,19 +68,11 @@ class DeribitAdapter(
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
         )
-    private val timer =
-        Executors.newSingleThreadScheduledExecutor {
-            Thread(it, "deribit-refresh").apply {
-                isDaemon =
-                    true
-            }
-        }
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
         account.start()
-        feed.start()
-        timer.scheduleWithFixedDelay(::refreshQuotes, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
+        feed.start(refreshMs)
     }
 
     override fun identity() = VenueIdentity(login, settings.environment.mode, currency)
@@ -165,6 +156,13 @@ class DeribitAdapter(
         toMs: Long,
     ): List<VenueFundingRate> = venue { market.fundingRates(code, fromMs, toMs) }.map(DeribitMarketMapping::fundingRate)
 
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueMark> = venue { DeribitMarks.sampled(history, code, windowMs, fromMs, toMs) }
+
     override fun bars(
         code: String,
         windowMs: Long,
@@ -178,13 +176,8 @@ class DeribitAdapter(
     ) = venue { feed.want(codes, roots) }
 
     override fun close() {
-        timer.shutdownNow()
         feed.close()
         account.close()
-    }
-
-    private fun refreshQuotes() {
-        runCatching { venue { feed.refresh() } }.onFailure { log.warn("deribit quote refresh failed: {}", it.message) }
     }
 
     private fun onOrder(order: DeribitOrder) {

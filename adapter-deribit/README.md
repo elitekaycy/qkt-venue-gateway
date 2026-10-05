@@ -105,6 +105,25 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   gained. The adapter reports each non-zero row as a funding record (`tx-<id>`, the charge being
   `-interest_pl`); a `settlement` row's `position` is the one charged on. Deribit pushes no funding, so
   the gateway reconciles it every minute.
+- **Mark prices.** Deribit keeps no mark or index history of futures or perpetuals:
+  `public/get_mark_price_history` answers `[]` for them (it serves second-by-second marks of only the options
+  in its volatility index, and never the index). Every public trade, though, carries the `mark_price` and
+  `index_price` of its instant, so `/v1/marks` serves, for each window, the last trade's (a window without a
+  trade has no sample). `get_last_trades_by_instrument_and_time` includes both ends, answers in time
+  order (trades of one millisecond in no particular sequence order) and at most 1000 trades a call (`count`
+  above is refused, `value is too high`), with `has_more` when it cut the rest. `get_last_trades_by_instrument`
+  (by `start_seq`/`end_seq`) is not used: on `history.deribit.com` it answers the trades between the times of
+  its two ends, so a page holds numbers outside the range and, cut at its count, misses some inside it
+  (recorded in `trades-history-mainnet-slice.json`). The adapter reads the range's first and last trade, then
+  either each window's last trade or every trade a page at a time by time (each page starting at the
+  millisecond the last ended in), whichever costs fewer calls: at most a page's windows plus two, about
+  0.2 s a call measured from Europe. A millisecond holding 1000 trades cannot be paged and fails the request.
+- **Mark history depth.** `test.deribit.com` and `www.deribit.com` answer trades by time for only about
+  the last 24 hours (none 26 hours back, measured 2026-10-04). Mainnet's whole history, current to the
+  second and including expired futures and options, is on `history.deribit.com` in the same shape, so a
+  mainnet adapter reads marks there. Testnet has no history host (`history.test.deribit.com` does not
+  answer): a testnet gateway serves marks of the last day only; fetch longer histories through a mainnet
+  or paper gateway.
 
 The full list of API calls is in [design.md](../docs/design.md) §10.
 

@@ -2,14 +2,24 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.TradeMode
 
-/** Where a Deribit account lives: its JSON-RPC WebSocket, its HTTPS host, and whether it is real money. */
+/**
+ * Where a Deribit account lives: its JSON-RPC WebSocket, its HTTPS host, the host of its whole public trade
+ * history (mainnet's `history.deribit.com`; testnet has none, and its own host keeps about a day of trades),
+ * and whether it is real money.
+ */
 enum class DeribitEnvironment(
     val socketUrl: String,
     val httpUrl: String,
+    val historyUrl: String,
     val mode: TradeMode,
 ) {
-    TESTNET("wss://test.deribit.com/ws/api/v2", "https://test.deribit.com", TradeMode.DEMO),
-    MAINNET("wss://www.deribit.com/ws/api/v2", "https://www.deribit.com", TradeMode.REAL),
+    TESTNET("wss://test.deribit.com/ws/api/v2", "https://test.deribit.com", "https://test.deribit.com", TradeMode.DEMO),
+    MAINNET(
+        "wss://www.deribit.com/ws/api/v2",
+        "https://www.deribit.com",
+        "https://history.deribit.com",
+        TradeMode.REAL,
+    ),
 }
 
 /**
