@@ -39,6 +39,15 @@ interface DeribitTrading : AutoCloseable {
 
     fun place(order: DeribitNewOrder): DeribitOrder
 
+    /** Cancels the order [orderId] and returns it as Deribit then reports it; refused when it is not open. */
+    fun cancel(orderId: String): DeribitOrder
+
+    /**
+     * Asks Deribit to cancel the order [orderId] without waiting for the answer, for the push thread, which
+     * may not wait; Deribit pushes the order again once cancelled, and a refusal is only logged.
+     */
+    fun cancelSoon(orderId: String)
+
     /** Cancels the working orders labelled [label]; returns how many were cancelled. */
     fun cancelByLabel(
         currency: String,

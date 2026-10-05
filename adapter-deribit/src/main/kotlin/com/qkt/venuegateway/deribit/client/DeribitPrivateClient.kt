@@ -80,6 +80,12 @@ class DeribitPrivateClient(
         return DeribitPrivateJson.order(answer.jsonObject["order"]!!.jsonObject)
     }
 
+    override fun cancel(orderId: String) =
+        DeribitPrivateJson.order(call("private/cancel") { put("order_id", orderId) }.jsonObject)
+
+    override fun cancelSoon(orderId: String) =
+        socket.send("private/cancel", buildJsonObject { put("order_id", orderId) })
+
     override fun cancelByLabel(
         currency: String,
         label: String,

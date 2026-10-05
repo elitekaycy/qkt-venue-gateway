@@ -81,6 +81,15 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
 - **Future sizes.** A future position's `size` is in dollars; the quantity is `size_currency`.
 - **Stops.** A triggered stop becomes a new order under the same label. A stop already past its trigger
   is refused. Market and stop orders accept only GTC or DAY.
+- **Market remainders.** Deribit fills a market order (or a fired stop-market) only inside its price band
+  and turns the rest into a GTC `limit` at the band edge (`original_order_type: market`), which can fill
+  minutes later far from the market: on 2026-10-05 the 20 left of a 50 SOL buy rested at 133.712, about
+  10% above the mark, and filled seven minutes later. IOC is refused on these orders, so the adapter
+  cancels such a remainder by its order id as soon as it sees it (pushed, answered to a place, or read),
+  logs a warning, and reports the order with its sent type: `cancelled` with what filled, or `filled` if
+  the remainder filled first (wire spec: a market order never rests). A pushed remainder is not reported;
+  its cancel goes out without waiting and Deribit's next push carries the result, and a lost cancel is
+  retried by the next read (the host reconciles every minute).
 - **Klines.** Responses are silently cut at 5001 rows, so bars are fetched in chunks.
 - **Settlements.** Expiries are read from `private/get_settlement_history_by_currency`: a `delivery` row
   when a future expires, an `exercise` row when an option does (out of the money too), both at 08:00 UTC
@@ -195,4 +204,7 @@ Runs against testnet when a testnet key is set, and is skipped without one:
 DERIBIT_CLIENT_ID=… DERIBIT_CLIENT_SECRET=… ./gradlew :adapter-deribit:test --tests '*ContractTest' --rerun
 ```
 
-It places, fills and cancels real testnet orders at the smallest size.
+It places, fills and cancels real testnet orders at the smallest size. Its market-remainder check buys one
+step more than every ask inside the price band of a thin stock perpetual (`AAPL_USDC-PERPETUAL`, then
+`AMZN`, `AMD`; at most $50), checks nothing of it is left working, and sells back what filled; it is
+a pass without trading when none of them is that thin.

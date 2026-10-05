@@ -26,6 +26,10 @@ internal class ScriptedDeribit(
     val settled = mutableListOf<DeribitSettlement>()
     var logReads = 0
     var cancelled = 0
+    var placed: DeribitOrder? = null
+    val cancels = mutableMapOf<String, () -> DeribitOrder>()
+    val cancelsSent = mutableListOf<String>()
+    var listed: List<DeribitOrder>? = null
     lateinit var onOrder: (DeribitOrder) -> Unit
     lateinit var onTrade: (DeribitTrade) -> Unit
     lateinit var onConnection: (Boolean, String) -> Unit
@@ -44,14 +48,20 @@ internal class ScriptedDeribit(
 
     override fun positions(currency: String) = emptyList<DeribitPosition>()
 
-    override fun openOrders(currency: String) = listOf(open, open.copy(label = null))
+    override fun openOrders(currency: String) = listed ?: listOf(open, open.copy(label = null))
 
     override fun ordersByLabel(
         currency: String,
         label: String,
     ) = byLabel[label].orEmpty()
 
-    override fun place(order: DeribitNewOrder) = open
+    override fun place(order: DeribitNewOrder) = placed ?: open
+
+    override fun cancel(orderId: String) = cancels.getValue(orderId)()
+
+    override fun cancelSoon(orderId: String) {
+        cancelsSent += orderId
+    }
 
     override fun cancelByLabel(
         currency: String,
