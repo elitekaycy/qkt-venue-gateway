@@ -8,7 +8,8 @@ import java.util.concurrent.ConcurrentHashMap
  * The instruments a Deribit account trades: the live [currency] perpetuals, futures and options,
  * re-read at most every [refreshMs], listed to clients through [DeribitMarketMapping.instrument]. A contract
  * that expired leaves the live listing but is still looked up one by one ([held]), so a held position
- * settles.
+ * settles. A contract Deribit lists as inactive is never listed nor offered as a root's option (its ticker
+ * never quotes), but is still found by name, so one held settles.
  */
 class DeribitListing(
     private val market: DeribitMarketData,
@@ -21,8 +22,8 @@ class DeribitListing(
     @Volatile private var readAt: Long? = null
     private val archived = ConcurrentHashMap<String, DeribitInstrument>()
 
-    /** Every listed instrument, refreshed when due. */
-    fun all(): Collection<DeribitInstrument> = current().values
+    /** Every active listed instrument, refreshed when due. */
+    fun all(): Collection<DeribitInstrument> = current().values.filter { it.active }
 
     /** [name]'s listing, re-reading when it is not known (a contract listed since), at most once a minute. */
     fun find(name: String): DeribitInstrument? {
