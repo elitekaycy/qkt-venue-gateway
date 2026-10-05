@@ -44,7 +44,7 @@ class PaperAdapter(
 ) : VenueAdapter {
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    override val capabilities = Capability.entries.toSet()
+    override val capabilities = Capability.entries.toSet() - setOf(Capability.TRADES, Capability.LIQUIDATIONS)
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
     private val book =

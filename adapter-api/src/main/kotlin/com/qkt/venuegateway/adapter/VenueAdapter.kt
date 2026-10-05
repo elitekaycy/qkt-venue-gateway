@@ -96,6 +96,24 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueOpenInterest> = throw VenueUnsupportedException("open interest")
 
+    /**
+     * The first [limit] prints of [code]'s public tape in `[fromMs, toMs)`, oldest first, each with its aggressor
+     * side; fewer only when the range holds fewer. Only with [Capability.TRADES].
+     */
+    fun trades(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+    ): List<VenuePrint> = throw VenueUnsupportedException("trades")
+
+    /** Every print of [code] in `[fromMs, toMs)` that liquidated a position, oldest first; only with [Capability.LIQUIDATIONS]. */
+    fun liquidations(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenuePrint> = throw VenueUnsupportedException("liquidations")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,
