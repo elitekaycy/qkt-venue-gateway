@@ -226,7 +226,8 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    answer recorded as a fixture (`adapter-deribit/src/test/resources/fixtures/private`): `public/auth`
    (client credentials, per connection), `public/set_heartbeat` (each `test_request` answered),
    `private/subscribe` to `user.orders|trades.{future,option}.USDC.raw` (every channel must be
-   confirmed), `private/buy|sell` with `label`, `private/edit_by_label`, `private/cancel_by_label`,
+   confirmed), `private/buy|sell` with `label`, `private/edit_by_label`, `private/cancel_by_label`, `private/cancel`
+   (a market remainder, by order id),
    `private/get_order_state_by_label`, `private/get_open_orders_by_currency`, `private/get_positions`,
    `private/get_account_summary`, `private/get_user_trades_by_currency_and_time` (paged), and the public
    listing, ticker and kline calls. Venue rules the adapter keeps (declared to qkt as parity rows
