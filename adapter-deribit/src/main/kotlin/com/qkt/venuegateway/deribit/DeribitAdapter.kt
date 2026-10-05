@@ -16,6 +16,7 @@ import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
@@ -35,7 +36,8 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * hold (another currency's contract, a spot pair) is refused before it reaches Deribit. Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
- * in force. Marks come from the trade history on [history] ([DeribitMarks]; by default [market]).
+ * in force. Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
+ * [DeribitTape]; by default [market]).
  */
 class DeribitAdapter(
     private val context: AdapterContext,
@@ -55,6 +57,7 @@ class DeribitAdapter(
     override val capabilities =
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
+            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS))
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
@@ -165,6 +168,19 @@ class DeribitAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenueOpenInterest> = openInterest.read(code, fromMs, toMs)
+
+    override fun trades(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+    ): List<VenuePrint> = venue { DeribitTape.prints(history, code, fromMs, toMs, limit) }
+
+    override fun liquidations(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenuePrint> = venue { DeribitTape.liquidations(history, code, fromMs, toMs) }
 
     override fun bars(
         code: String,

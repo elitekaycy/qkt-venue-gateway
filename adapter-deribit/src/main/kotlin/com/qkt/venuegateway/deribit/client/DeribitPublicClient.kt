@@ -20,7 +20,7 @@ import okhttp3.Request
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
  * `https://test.deribit.com` for testnet, `https://history.deribit.com` for mainnet's whole trade history):
- * listings, tickers, klines, funding rates, trades and delivery prices, no account.
+ * listings, tickers, klines, funding rates, the trade tape and delivery prices, no account.
  * A JSON-RPC error is [DeribitException]; the venue being unreachable is an [IOException].
  */
 class DeribitPublicClient(
@@ -61,7 +61,7 @@ class DeribitPublicClient(
         fromMs: Long,
         toMs: Long,
     ): List<DeribitKline> {
-        val resolution = resolution(minutes)
+        val resolution = klineResolution(minutes)
         val span = minutes * MINUTE_MS * KLINES_PER_CALL
         val byStart = sortedMapOf<Long, DeribitKline>()
         var start = fromMs
@@ -114,35 +114,41 @@ class DeribitPublicClient(
         toMs: Long,
         newest: Boolean,
     ): DeribitMarkTrade? =
-        DeribitJson
-            .markTrades(
-                call(
-                    "get_last_trades_by_instrument_and_time",
-                    "instrument_name" to name,
-                    "start_timestamp" to fromMs.toString(),
-                    "end_timestamp" to toMs.toString(),
-                    "count" to "1",
-                    "sorting" to if (newest) "desc" else "asc",
-                ).obj(),
-            ).firstOrNull()
+        DeribitJson.markTrades(trades(name, fromMs, toMs, 1, if (newest) "desc" else "asc")).firstOrNull()
 
     override fun tradesFrom(
         name: String,
         fromMs: Long,
         toMs: Long,
         count: Int,
-    ): DeribitPage<DeribitMarkTrade> {
-        val answer =
-            call(
-                "get_last_trades_by_instrument_and_time",
-                "instrument_name" to name,
-                "start_timestamp" to fromMs.toString(),
-                "end_timestamp" to toMs.toString(),
-                "count" to count.toString(),
-                "sorting" to "asc",
-            ).obj()
-        return DeribitPage(DeribitJson.markTrades(answer), answer["has_more"]?.jsonPrimitive?.boolean == true)
-    }
+    ): DeribitPage<DeribitMarkTrade> =
+        trades(name, fromMs, toMs, count, "asc").let { DeribitPage(DeribitJson.markTrades(it), it.hasMore()) }
+
+    override fun tape(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+    ): DeribitPage<DeribitPublicTrade> =
+        trades(name, fromMs, toMs, count, "asc").let { DeribitPage(DeribitJson.publicTrades(it), it.hasMore()) }
+
+    private fun trades(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+        sorting: String,
+    ): JsonObject =
+        call(
+            "get_last_trades_by_instrument_and_time",
+            "instrument_name" to name,
+            "start_timestamp" to fromMs.toString(),
+            "end_timestamp" to toMs.toString(),
+            "count" to count.toString(),
+            "sorting" to sorting,
+        ).obj()
+
+    private fun JsonObject.hasMore() = this["has_more"]?.jsonPrimitive?.boolean == true
 
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */
     override fun deliveryPrices(
@@ -167,13 +173,6 @@ class DeribitPublicClient(
         /** Klines asked for per call, safely under Deribit's 5001 cap. */
         const val KLINES_PER_CALL = 4_000L
     }
-
-    private fun resolution(minutes: Long): String =
-        when (minutes) {
-            !in DERIBIT_KLINE_MINUTES -> throw IllegalArgumentException("Deribit has no $minutes-minute klines")
-            1_440L -> "1D"
-            else -> minutes.toString()
-        }
 
     private fun call(
         method: String,
