@@ -164,5 +164,25 @@ internal object CapabilityChecks {
         settled.forEach { assertThat(it.timeMs).describedAs("settlement of ${it.symbol}").isBetween(fromMs, toMs) }
     }
 
+    /** Every optional history of the last two days answers in shape when declared and is refused when not. */
+    fun histories(
+        adapter: VenueAdapter,
+        activeCode: String,
+        perpetualCode: String?,
+        barWindowMs: Long,
+        skewMs: Long,
+    ) {
+        val toMs = System.currentTimeMillis()
+        val fromMs = toMs - HISTORY_CHECKED_MS
+        settlements(adapter, fromMs, toMs)
+        funding(adapter, fromMs, toMs)
+        fundingRates(adapter, perpetualCode, fromMs, toMs)
+        marks(adapter, activeCode, barWindowMs)
+        openInterest(adapter, activeCode, fromMs, toMs + skewMs)
+        TapeChecks.tape(adapter, activeCode, toMs)
+        DepthChecks.depth(adapter, activeCode, fromMs, toMs + skewMs)
+    }
+
     private const val BARS_CHECKED = 30L
+    private const val HISTORY_CHECKED_MS = 2 * 86_400_000L
 }
