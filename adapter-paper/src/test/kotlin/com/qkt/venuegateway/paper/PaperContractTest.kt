@@ -115,7 +115,10 @@ class PaperContractTest : AdapterContractTest() {
         "btc_usdc",
     )
 
-    /** The perpetual is quoted both sides, with its open interest; the option has no ask, so buying it is refused. */
+    /**
+     * The perpetual is quoted both sides, with its open interest; the option has no ask, so buying it is refused,
+     * and a mark IV and forward.
+     */
     private fun quoted(name: String): DeribitTicker {
         val bid = if (name == perp) BigDecimal("84000") else BigDecimal("100")
         val ask = if (name == perp) BigDecimal("84000.5") else null
@@ -129,8 +132,8 @@ class PaperContractTest : AdapterContractTest() {
                 BigDecimal.TEN
             },
             null,
-            null,
-            null,
+            BigDecimal("52.3").takeIf { name == put },
+            BigDecimal("84010").takeIf { name == put },
             null,
             openInterest = if (name == perp) BigDecimal("1477.6341") else null,
         )
@@ -184,6 +187,8 @@ class PaperContractTest : AdapterContractTest() {
     override val activeCode = perp
 
     override val perpetualCode = perp
+
+    override val optionCode = put
 
     private companion object {
         const val EXPIRY_MS = 2_555_884_800_000L
