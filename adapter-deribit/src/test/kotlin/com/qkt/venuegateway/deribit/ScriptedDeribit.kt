@@ -92,16 +92,17 @@ internal class ScriptedDeribit(
 
     override fun close() {}
 
-    /** A testnet adapter on this account and [market], connected to a [RecordingListener]. */
+    /** A testnet adapter on this account and [market], with more [settings], connected to a [RecordingListener]. */
     fun adapter(
         dir: Path,
         market: DeribitMarketData,
         history: DeribitMarketData = market,
+        settings: Map<String, String> = emptyMap(),
         onTickerConnection: ((Boolean, String) -> Unit) -> Unit = {},
     ): Pair<DeribitAdapter, RecordingListener> {
         val adapter =
             DeribitAdapter(
-                AdapterContext(mapOf("environment" to "testnet"), { 0L }, dir, Credentials("client-7", "s")),
+                AdapterContext(mapOf("environment" to "testnet") + settings, { 0L }, dir, Credentials("client-7", "s")),
                 market,
                 { onOrder, onTrade, onConnection ->
                     also {

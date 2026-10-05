@@ -37,7 +37,8 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
  * in force. Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
- * [DeribitTape]; by default [market]).
+ * [DeribitTape]; by default [market]). Depth and open interest are recorded ([DeribitDepth],
+ * [DeribitOpenInterest]) and pruned to their retention on the refresh timer, from [connect] on.
  */
 class DeribitAdapter(
     private val context: AdapterContext,
@@ -77,9 +78,17 @@ class DeribitAdapter(
             tickers({
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
+            ::prune,
         )
-    private val openInterest = DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock)
-    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock)
+    private val retention = settings.retention
+    private val openInterest =
+        DeribitOpenInterest(
+            { venue { market.ticker(it) } },
+            context.stateDir,
+            context.clock,
+            retention.openInterestDays,
+        )
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retention.depthDays)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -173,6 +182,12 @@ class DeribitAdapter(
         codes: Set<String>,
         roots: Set<String>,
     ) = venue { feed.want(codes, roots) }
+
+    /** Prunes the recordings past their retention, at most once a UTC day. */
+    private fun prune() {
+        depth.prune()
+        openInterest.prune()
+    }
 
     override fun close() {
         feed.close()

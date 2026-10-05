@@ -66,6 +66,8 @@ qkt writes `-` in venue codes as `_`.
 | `GATEWAY_SETTING_ENVIRONMENT` | required | `testnet`, or `mainnet` for real money. Never defaulted |
 | `GATEWAY_SETTING_CURRENCY` | `USDC` | The only supported currency |
 | `GATEWAY_SETTING_STOP_TRIGGER` | `last_price` | Price a stop fires on: `last_price`, `mark_price` or `index_price` |
+| `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` | `0` | UTC days of recorded depth kept besides today (see Depth); `0` keeps everything |
+| `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` | `0` | The same for recorded open interest (see Open interest) |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key's client id and secret |
 
 ## Venue behaviour
@@ -143,9 +145,11 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   `timestamp`, in the contract's amount unit: the base coin on a USDC-linear contract (testnet
   BTC_USDC-PERPETUAL 23307.7328, SOL_USDC-PERPETUAL 376285.029), USD on an inverse one. So the adapter
   **records** it: a read of `/v1/open-interest` whose window reaches the present (within a minute) first
-  takes the ticker's figure, then serves what was recorded, kept in `open-interest/<code>.csv` in the state
-  volume across restarts. A series starts when the gateway first read it and has one figure per read
-  (qkt's live poll reads every minute); time nothing read it is a gap, never filled in.
+  takes the ticker's figure, then serves what was recorded, kept one file a UTC day in
+  `open-interest/<code>/<yyyy-MM-dd>.csv` in the state volume across restarts. A series starts when the
+  gateway first read it and has one figure per read (qkt's live poll reads every minute); time nothing read
+  it is a gap, never filled in. A gateway before the day files kept one `open-interest/<code>.csv`; the
+  first read of the code splits it into day files and deletes it, every figure kept.
 - **Depth.** Deribit publishes no order-book history (`public/get_order_book_history` is `Method not found`
   on testnet and mainnet, probed 2026-10-05). `public/get_order_book` with `depth=10` answers the book as it
   stands: `bids` best first, `asks` best first, each `[price, amount]` in the amount unit (the base coin on
@@ -154,11 +158,19 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   **records** it, as it does open interest: a read of `/v1/depth` whose window reaches the present (within
   a minute) first takes the book, then serves what was recorded, kept one file a UTC day in
   `depth/<code>/<yyyy-MM-dd>.csv` in the state volume across restarts (about 270 bytes a snapshot of
-  BTC_USDC-PERPETUAL: at qkt's 10-second poll, some 2.3 MB a contract a day, never pruned by the gateway). A series has one
+  BTC_USDC-PERPETUAL: at qkt's 10-second poll, some 2.3 MB a contract a day). A series has one
   snapshot per read and starts when the gateway first read it. The read is one REST call, about 0.17 s from
   Europe. The `book.<code>.none.10.100ms` channel is not used: it pushes up to ten full snapshots a second
   (2.8 a second, 534 bytes each, on testnet BTC_USDC-PERPETUAL, measured 2026-10-05) to serve one read
   every 10 seconds, and would need its own staleness guard for a dropped socket.
+- **Retention of the recordings.** Depth and open interest are recorded only by this gateway, so what it
+  deletes is lost for good unless `qkt fetch --depth` / `qkt fetch --open-interest` copied it first. By
+  default (`0`) nothing is deleted. With `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` or
+  `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` set to N, the gateway keeps today's file and the N days
+  before it, and deletes every older day file, of every contract, when it connects and then once a UTC day
+  (on the 10-minute refresh timer; each deletion is logged). A read of a range that reaches before the
+  window answers what remains. Fetch into qkt more often than every N days. A value that is not a whole
+  number of days fails the start, naming the setting.
 
 - **Tape and liquidations.** `/v1/trades` and `/v1/liquidations` read the same
   `get_last_trades_by_instrument_and_time` pages as marks, on the same hosts (mainnet's history host; testnet's
