@@ -122,6 +122,10 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, one reading
   a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`, and one
   reading a contract's book depth only on one declaring `DEPTH`.
+- **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
+  triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
+  turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order
+  with the type the client sent.
 - **Pushes may arrive late, twice or out of order;** the host orders and dedupes them. An adapter never
   drops a push it cannot classify; it reports it as an error.
 - **No threads, clocks, env or HTTP clients of its own:** the host hands them in (`HostServices`, as the
@@ -222,7 +226,8 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    answer recorded as a fixture (`adapter-deribit/src/test/resources/fixtures/private`): `public/auth`
    (client credentials, per connection), `public/set_heartbeat` (each `test_request` answered),
    `private/subscribe` to `user.orders|trades.{future,option}.USDC.raw` (every channel must be
-   confirmed), `private/buy|sell` with `label`, `private/edit_by_label`, `private/cancel_by_label`,
+   confirmed), `private/buy|sell` with `label`, `private/edit_by_label`, `private/cancel_by_label`, `private/cancel`
+   (a market remainder, by order id),
    `private/get_order_state_by_label`, `private/get_open_orders_by_currency`, `private/get_positions`,
    `private/get_account_summary`, `private/get_user_trades_by_currency_and_time` (paged), and the public
    listing, ticker and kline calls. Venue rules the adapter keeps (declared to qkt as parity rows
