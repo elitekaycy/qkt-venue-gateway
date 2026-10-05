@@ -15,11 +15,9 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.DeribitBars
-import com.qkt.venuegateway.deribit.DeribitDepth
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.DeribitMarks
-import com.qkt.venuegateway.deribit.DeribitOpenInterest
 import com.qkt.venuegateway.deribit.DeribitTape
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
@@ -35,7 +33,7 @@ import java.util.concurrent.Executors
  * checked every `settlement_check_ms`. Settings: `currency` (USDC), `starting_balance` (10000), `fee_rate`
  * (0), `login` (paper), `settlement_check_ms` (60000). It holds no margin: margin used is 0 and the whole
  * equity is available. Marks are Deribit's, from the trade history on [history] ([DeribitMarks]).
- * Open interest and the order book are Deribit's, recorded as they are read ([DeribitOpenInterest], [DeribitDepth]).
+ * Open interest and the order book are Deribit's, recorded as they are read and kept as long as set ([PaperRecordings]).
  * The tape and liquidations are Deribit's, from the trade history on [history] ([DeribitTape]).
  */
 class PaperAdapter(
@@ -54,14 +52,14 @@ class PaperAdapter(
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
     private val funding = PaperFunding(market, listing, currency, context.clock)
     private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
-    private val openInterest = DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock)
-    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock)
+    private val recordings = PaperRecordings(market, context)
     private val upkeep =
         PaperUpkeep(
             book,
             store,
             PaperSettlement(market, listing, context.clock, checkMs),
             funding,
+            recordings::prune,
             events::execute,
         ) { listener }
     private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
@@ -135,7 +133,7 @@ class PaperAdapter(
         code: String,
         fromMs: Long,
         toMs: Long,
-    ) = openInterest.read(code, fromMs, toMs)
+    ) = recordings.openInterest.read(code, fromMs, toMs)
 
     override fun trades(
         code: String,
@@ -154,7 +152,7 @@ class PaperAdapter(
         code: String,
         fromMs: Long,
         toMs: Long,
-    ) = depth.read(code, fromMs, toMs)
+    ) = recordings.depth.read(code, fromMs, toMs)
 
     override fun bars(
         code: String,
