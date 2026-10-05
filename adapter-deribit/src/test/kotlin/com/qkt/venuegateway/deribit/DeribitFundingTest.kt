@@ -2,6 +2,8 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
+import com.qkt.venuegateway.deribit.client.DeribitJson
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitPrivateJson
 import java.math.BigDecimal
 import java.nio.file.Path
@@ -59,6 +61,27 @@ class DeribitFundingTest {
     }
 
     @Test
+    fun `funding realized at a fill and at the settlement is reported, settlement rows with position`(
+        @TempDir dir: Path,
+    ) {
+        // Recorded 2026-10-05: a 20 SOL long opened, held through the 08:00 UTC settlement and closed.
+        deribit.transactions += DeribitPrivateJson.transactionPage(recorded("transaction-log-funding.json")).first
+        val (adapter, _) = deribit.adapter(dir, solPerpetualMarket())
+
+        val funding = adapter.funding(0, Long.MAX_VALUE).associateBy { it.fundingId }
+
+        assertThat(funding.keys).containsExactlyInAnyOrder("tx-149592450", "tx-149603303", "tx-149687084")
+        val settlement = funding.getValue("tx-149603303")
+        assertThat(settlement.amount).isEqualByComparingTo("-0.02127416")
+        assertThat(settlement.position).isEqualByComparingTo("20")
+        assertThat(settlement.symbol).isEqualTo("SOL_USDC-PERPETUAL")
+        assertThat(funding.getValue("tx-149687084").amount).isEqualByComparingTo("-0.10591043")
+        assertThat(funding.getValue("tx-149687084").position).isNull()
+        assertThat(funding.getValue("tx-149592450").amount).isEqualByComparingTo("0.11082282")
+        adapter.close()
+    }
+
+    @Test
     fun `the transaction log reads back each row's id, type, instrument, funding and position`() {
         val (rows, next) = DeribitPrivateJson.transactionPage(recorded("transaction-log-trades.json"))
 
@@ -81,5 +104,21 @@ class DeribitFundingTest {
         assertThat(rate.timeMs).isEqualTo(1_791_126_000_000L)
         assertThat(rate.rate.toPlainString()).isEqualTo("0.00004182650335544141")
         assertThat(rate.price).isEqualByComparingTo("121.8285")
+    }
+
+    /** Lists nothing; answers SOL_USDC-PERPETUAL's recorded instrument when looked up by name. */
+    private fun solPerpetualMarket(): DeribitMarketData {
+        val text = javaClass.getResource("/fixtures/instrument-SOL_USDC-PERPETUAL.json")!!.readText()
+        val sol = DeribitJson.instrument(Json.parseToJsonElement(text).jsonObject["result"]!!.jsonObject)
+        return java.lang.reflect.Proxy.newProxyInstance(
+            javaClass.classLoader,
+            arrayOf(DeribitMarketData::class.java),
+        ) { _, method, args ->
+            when (method.name) {
+                "instruments" -> emptyList<Any>()
+                "instrument" -> sol.also { check(args[0] == sol.name) }
+                else -> error("market ${method.name} is not used here")
+            }
+        } as DeribitMarketData
     }
 }

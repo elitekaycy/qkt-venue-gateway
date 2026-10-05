@@ -116,7 +116,8 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   least 2024 for BTC_USDC-PERPETUAL.
 - **Funding.** Deribit accrues funding continuously and realizes it into the transaction log
   (`private/get_transaction_log`) as `interest_pl` on a perpetual's rows, positive when the account
-  gained. The adapter reports each non-zero row as a funding record (`tx-<id>`, the charge being
+  gained: at every fill that changes the position (the close included) and at the 08:00 UTC `settlement`
+  (recorded on testnet 2026-10-05, `transaction-log-funding.json`). The adapter reports each non-zero row as a funding record (`tx-<id>`, the charge being
   `-interest_pl`); a `settlement` row's `position` is the one charged on. Deribit pushes no funding, so
   the gateway reconciles it every minute.
 - **Mark prices.** Deribit keeps no mark or index history of futures or perpetuals:
