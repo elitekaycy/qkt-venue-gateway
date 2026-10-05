@@ -2,11 +2,14 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
+import com.qkt.venuegateway.adapter.VenueDepth
 import com.qkt.venuegateway.adapter.VenueFundingRate
+import com.qkt.venuegateway.adapter.VenueLevel
 import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitOrderBook
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
 
@@ -21,6 +24,13 @@ object DeribitMarketMapping {
 
     /** [t]'s open interest, known at the ticker's own time; null when the ticker carries none. */
     fun openInterest(t: DeribitTicker) = t.openInterest?.let { VenueOpenInterest(t.timestampMs, it) }
+
+    /** [b] as stamped, its best [VenueDepth.MAX_LEVELS] levels a side, amounts in the contract's order quantity. */
+    fun depth(b: DeribitOrderBook): VenueDepth {
+        fun side(levels: List<Pair<BigDecimal, BigDecimal>>) =
+            levels.take(VenueDepth.MAX_LEVELS).map { (price, amount) -> VenueLevel(price, amount) }
+        return VenueDepth(b.timestampMs, side(b.bids), side(b.asks))
+    }
 
     fun instrument(i: DeribitInstrument) =
         Instrument(

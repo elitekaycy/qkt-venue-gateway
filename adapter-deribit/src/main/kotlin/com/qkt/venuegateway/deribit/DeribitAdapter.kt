@@ -10,6 +10,7 @@ import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
+import com.qkt.venuegateway.adapter.VenueDepth
 import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
@@ -17,7 +18,6 @@ import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenuePrint
-import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
@@ -33,7 +33,7 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * stop that fires (a new Deribit order) is still found. The account's link ([trading]) is the venue
  * connection the host watches; the public ticker link ([tickers]) only feeds quotes, so its drops are
  * reported as the quote feed going down, not the venue. An order on a code the account's listing does not
- * hold (another currency's contract, a spot pair) is refused before it reaches Deribit. Root subscriptions re-expand every [refreshMs].
+ * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
  * in force. Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
@@ -57,7 +57,7 @@ class DeribitAdapter(
     override val capabilities =
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
-            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS))
+            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH))
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
@@ -70,6 +70,7 @@ class DeribitAdapter(
             { trade -> DeribitMapping.fill(trade)?.let { listener?.fill(it) } },
         ) { up, reason -> listener?.connection(up, reason) }
     private val accountHistory = DeribitAccountHistory(account, currency, listing)
+    private val orders = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
     private val feed =
         DeribitQuoteFeed(
             listing,
@@ -78,6 +79,7 @@ class DeribitAdapter(
             }) { up, reason -> listener?.quoteFeed(up, reason) },
         )
     private val openInterest = DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock)
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -96,40 +98,16 @@ class DeribitAdapter(
 
     override fun openOrders() = venue { account.openOrders(currency) }.mapNotNull(DeribitMapping::order)
 
-    /** Only a listed instrument of the account's currency: any other would be traded outside every read. */
-    override fun place(order: NewOrder): VenueOrder {
-        if (venue { listing.find(order.symbol) } == null) {
-            throw VenueRefusedException("${order.symbol} is not a listed $currency contract of this account")
-        }
-        val placed = venue { account.place(DeribitMapping.newOrder(order, settings.stopTrigger)) }
-        return DeribitMapping.order(placed) ?: error("deribit answered order ${order.clientOrderId} without its label")
-    }
+    override fun place(order: NewOrder): VenueOrder = orders.place(order)
 
-    /** Cancels the order labelled [clientOrderId] and returns it as it now stands (filled, if it filled first). */
-    override fun cancel(clientOrderId: String): VenueOrder? {
-        venue { account.cancelByLabel(currency, clientOrderId) }
-        return orderByLabel(clientOrderId)
-    }
+    override fun cancel(clientOrderId: String) = orders.cancel(clientOrderId)
 
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? {
-        val current = orderByLabel(clientOrderId) ?: return null
-        val quantity = change.quantity ?: current.quantity
-        val edited =
-            venue { account.editByLabel(clientOrderId, current.symbol, quantity, change.limitPrice, change.stopPrice) }
-        return DeribitMapping.order(edited)
-    }
+    ) = orders.modify(clientOrderId, change)
 
-    /** The newest Deribit order labelled [clientOrderId] (a fired stop is a newer order than the stop). */
-    override fun orderByLabel(clientOrderId: String) =
-        venue {
-            account.ordersByLabel(
-                currency,
-                clientOrderId,
-            )
-        }.maxByOrNull { it.updatedMs }?.let(DeribitMapping::order)
+    override fun orderByLabel(clientOrderId: String) = orders.byLabel(clientOrderId)
 
     override fun fills(
         fromMs: Long,
@@ -177,6 +155,12 @@ class DeribitAdapter(
         fromMs: Long,
         toMs: Long,
     ): List<VenuePrint> = venue { DeribitTape.liquidations(history, code, fromMs, toMs) }
+
+    override fun depth(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueDepth> = depth.read(code, fromMs, toMs)
 
     override fun bars(
         code: String,

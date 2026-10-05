@@ -20,7 +20,7 @@ import okhttp3.Request
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
  * `https://test.deribit.com` for testnet, `https://history.deribit.com` for mainnet's whole trade history):
- * listings, tickers, klines, funding rates, the trade tape and delivery prices, no account.
+ * listings, tickers, order books, klines, funding rates, the trade tape and delivery prices, no account.
  * A JSON-RPC error is [DeribitException]; the venue being unreachable is an [IOException].
  */
 class DeribitPublicClient(
@@ -40,15 +40,15 @@ class DeribitPublicClient(
             .map { DeribitJson.instrument(it.jsonObject) }
 
     override fun instrument(name: String): DeribitInstrument =
-        DeribitJson.instrument(
-            call(
-                "get_instrument",
-                "instrument_name" to name,
-            ).obj(),
-        )
+        DeribitJson.instrument(call("get_instrument", "instrument_name" to name).obj())
 
     override fun ticker(name: String): DeribitTicker =
         DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
+
+    override fun orderBook(
+        name: String,
+        depth: Int,
+    ) = DeribitJson.orderBook(call("get_order_book", "instrument_name" to name, "depth" to "$depth").obj())
 
     /**
      * The klines of [name], [minutes] long, from the one holding [fromMs] to [toMs], oldest first; the

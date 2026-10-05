@@ -29,6 +29,12 @@ interface DeribitMarketData {
 
     fun ticker(name: String): DeribitTicker
 
+    /** [name]'s order book as it stands, at most [depth] levels a side. */
+    fun orderBook(
+        name: String,
+        depth: Int,
+    ): DeribitOrderBook = error("this market data does not read order books")
+
     fun klines(
         name: String,
         minutes: Long,
