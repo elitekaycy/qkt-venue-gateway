@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** An in-memory venue for host tests: places orders as working, and can refuse, be unreachable or lose an answer. */
-internal class FakeAdapter : VenueAdapter {
+internal open class FakeAdapter : VenueAdapter {
     override val id = "fake"
     override val version = "1"
     val orders = ConcurrentHashMap<String, VenueOrder>()

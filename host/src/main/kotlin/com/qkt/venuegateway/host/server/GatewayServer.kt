@@ -54,6 +54,7 @@ fun Application.gatewayModule(
         restRoutes(gateway)
         fundingRoutes(gateway)
         markRoutes(gateway)
+        openInterestRoutes(gateway)
         streamRoute(gateway)
         marketRoutes(gateway, hub)
     }

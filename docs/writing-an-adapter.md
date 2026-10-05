@@ -158,15 +158,16 @@ class AcmeContractTest : AdapterContractTest() {
     override fun fillingOrder(clientOrderId: String) = …
     override fun closingOrder(clientOrderId: String) = …   // reduceOnly = true
     override fun refusedOrder(clientOrderId: String) = …   // a size off the venue's step
-    override val activeCode = "BTC-PERP"
+    override val activeCode = "BTC-PERP"       // also the code whose open interest is checked
     override val perpetualCode = "BTC-PERP"   // only when the adapter declares FUNDING_RATES
 }
 ```
 
 Declare `capabilities` honestly. The suite checks each declared one in shape (funding records unique,
 in their window and never zero; funding rates ascending at positive prices; settlements in their window;
-`activeCode`'s marks over its last 30 bar windows, at most one a window, positive) and requires every other
-one of settlements, funding, funding rates and mark prices to throw `VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
+`activeCode`'s marks over its last 30 bar windows, at most one a window, positive; its open interest
+ascending, never negative, and holding at least the present figure) and requires every other one of
+settlements, funding, funding rates, mark prices and open interest to throw `VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
 it, qkt will not trade them.
 
 Run it against testnet until it passes:

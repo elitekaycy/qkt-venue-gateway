@@ -24,6 +24,9 @@ enum class Capability {
 
     /** The history of a contract's mark and index prices, sampled per window ([VenueAdapter.marks]). */
     MARK_PRICES,
+
+    /** The open interest of a listed contract over time ([VenueAdapter.openInterest]). */
+    OPEN_INTEREST,
 }
 
 /**
