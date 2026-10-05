@@ -56,6 +56,7 @@ fun Application.gatewayModule(
         markRoutes(gateway)
         openInterestRoutes(gateway)
         tapeRoutes(gateway)
+        depthRoutes(gateway)
         streamRoute(gateway)
         marketRoutes(gateway, hub)
     }

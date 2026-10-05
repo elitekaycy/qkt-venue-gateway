@@ -41,7 +41,7 @@ abstract class AdapterContractTest {
     /** An order the venue itself refuses, such as a size off its volume step. */
     protected abstract fun refusedOrder(clientOrderId: String): NewOrder
 
-    /** A listed code with recent trading, for bars, quotes, open interest and its public tape. */
+    /** A listed code with recent trading, for bars, quotes, open interest, depth and its public tape. */
     protected abstract val activeCode: String
 
     /** A listed perpetual, whose funding rates are checked when the adapter declares funding rates. */
@@ -148,7 +148,6 @@ abstract class AdapterContractTest {
     ) {
         val (adapter, _) = connect(dir)
         val order = refusedOrder(label())
-
         assertThatThrownBy { adapter.placeTracked(order) }.isInstanceOf(VenueRefusedException::class.java)
         assertThat(adapter.openOrders().map { it.clientOrderId }).doesNotContain(order.clientOrderId)
     }
@@ -175,6 +174,7 @@ abstract class AdapterContractTest {
         CapabilityChecks.marks(adapter, activeCode, barWindowMs)
         CapabilityChecks.openInterest(adapter, activeCode, fromMs, toMs + CLOCK_SKEW_MS)
         TapeChecks.tape(adapter, activeCode, toMs)
+        DepthChecks.depth(adapter, activeCode, fromMs, toMs + CLOCK_SKEW_MS)
     }
 
     @Test

@@ -114,6 +114,13 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenuePrint> = throw VenueUnsupportedException("liquidations")
 
+    /** [code]'s order-book snapshots taken from [fromMs] to [toMs], oldest first; only with [Capability.DEPTH]. */
+    fun depth(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueDepth> = throw VenueUnsupportedException("depth")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,

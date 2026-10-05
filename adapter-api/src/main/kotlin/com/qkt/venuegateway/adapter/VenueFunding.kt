@@ -39,6 +39,9 @@ enum class Capability {
 
     /** The prints of a contract that liquidated a position, with the liquidated side ([VenueAdapter.liquidations]). */
     LIQUIDATIONS,
+
+    /** The order book of a listed contract, its best levels each side, as recorded over time ([VenueAdapter.depth]). */
+    DEPTH,
 }
 
 /**

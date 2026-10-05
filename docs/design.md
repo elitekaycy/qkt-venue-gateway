@@ -91,6 +91,7 @@ interface VenueAdapter : AutoCloseable {
     fun openInterest(code: String, fromMs: Long, toMs: Long): List<VenueOpenInterest>  // only with OPEN_INTEREST
     fun trades(code: String, fromMs: Long, toMs: Long, limit: Int): List<VenuePrint>  // only with TRADES
     fun liquidations(code: String, fromMs: Long, toMs: Long): List<VenuePrint>  // only with LIQUIDATIONS
+    fun depth(code: String, fromMs: Long, toMs: Long): List<VenueDepth>  // only with DEPTH
     fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
     fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
 }
@@ -111,14 +112,16 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   mark and index history, the last report in each window), `OPEN_INTEREST` (a contract's open
   interest over time, each figure at the instant the venue made it known), `OPTION_MARKS` (option quotes
   carry the mark IV and the forward, `VenueQuote.markIv` and `underlying`), `TRADES` (a contract's public
-  tape, each print with its aggressor side) and `LIQUIDATIONS` (the prints that liquidated a position, with
-  the side liquidated). The host reports them in
+  tape, each print with its aggressor side), `LIQUIDATIONS` (the prints that liquidated a position, with
+  the side liquidated) and `DEPTH` (a contract's order book, its best ten levels a side, as the adapter
+  recorded it). The host reports them in
   `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
   undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
   does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without
   funding; a strategy reading a contract's mark or index starts only on a gateway declaring `MARK_PRICES`,
-  one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, and one reading
-  a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`.
+  one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, one reading
+  a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`, and one
+  reading a contract's book depth only on one declaring `DEPTH`.
 - **Pushes may arrive late, twice or out of order;** the host orders and dedupes them. An adapter never
   drops a push it cannot classify; it reports it as an error.
 - **No threads, clocks, env or HTTP clients of its own:** the host hands them in (`HostServices`, as the
