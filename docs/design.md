@@ -122,6 +122,10 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, one reading
   a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`, and one
   reading a contract's book depth only on one declaring `DEPTH`.
+- **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
+  triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
+  turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order
+  with the type the client sent.
 - **Pushes may arrive late, twice or out of order;** the host orders and dedupes them. An adapter never
   drops a push it cannot classify; it reports it as an error.
 - **No threads, clocks, env or HTTP clients of its own:** the host hands them in (`HostServices`, as the
