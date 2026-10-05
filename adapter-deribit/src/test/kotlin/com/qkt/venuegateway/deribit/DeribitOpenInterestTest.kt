@@ -89,4 +89,34 @@ class DeribitOpenInterestTest {
         assertThat(asked).isEmpty()
         assertThat(Files.exists(dir.resolve("open-interest"))).isFalse
     }
+
+    @Test
+    fun `a last line an append left without its newline is dropped and cut off, and recording carries on`(
+        @TempDir dir: Path,
+    ) {
+        val file = dir.resolve("open-interest/BTC_USDC-PERPETUAL.csv")
+        Files.createDirectories(file.parent)
+        Files.writeString(file, "time,open_interest\n${at - 60_000},1470\n${at - 1_000},147")
+
+        val served = openInterest(dir).read("BTC_USDC-PERPETUAL", 0, at)
+
+        assertThat(served.map { it.timeMs to it.openInterest.toPlainString() })
+            .containsExactly(at - 60_000 to "1470", at to "1477.6341")
+        assertThat(
+            Files.readAllLines(file),
+        ).containsExactly("time,open_interest", "${at - 60_000},1470", "$at,1477.6341")
+    }
+
+    @Test
+    fun `a malformed complete line still fails naming the file and line`(
+        @TempDir dir: Path,
+    ) {
+        val file = dir.resolve("open-interest/BTC_USDC-PERPETUAL.csv")
+        Files.createDirectories(file.parent)
+        Files.writeString(file, "time,open_interest\n${at - 60_000},14x0\n")
+
+        assertThatThrownBy { openInterest(dir).read("BTC_USDC-PERPETUAL", 0, at) }
+            .hasMessageContaining("BTC_USDC-PERPETUAL.csv line 2")
+        assertThat(Files.readString(file)).endsWith("14x0\n")
+    }
 }
