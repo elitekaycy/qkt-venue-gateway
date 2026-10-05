@@ -64,7 +64,12 @@ class DeribitAdapter(
     private val listing = DeribitListing(market, currency, context.clock, refreshMs)
 
     @Volatile private var listener: AdapterListener? = null
-    private val account = trading(::onOrder, ::onTrade) { up, reason -> listener?.connection(up, reason) }
+    private val account =
+        trading(
+            { order -> DeribitMapping.order(order)?.let { listener?.order(it) } },
+            { trade -> DeribitMapping.fill(trade)?.let { listener?.fill(it) } },
+        ) { up, reason -> listener?.connection(up, reason) }
+    private val accountHistory = DeribitAccountHistory(account, currency, listing)
     private val feed =
         DeribitQuoteFeed(
             listing,
@@ -131,24 +136,15 @@ class DeribitAdapter(
         toMs: Long,
     ) = venue { account.trades(currency, fromMs, toMs) }.mapNotNull(DeribitMapping::fill)
 
-    /** Deliveries and exercises at the price each unit settled at ([DeribitSettlementMapping]); expired codes looked up one by one. */
     override fun settlements(
         fromMs: Long,
         toMs: Long,
-    ): List<VenueSettlement> =
-        venue {
-            val rows = account.settlements(currency, fromMs, toMs)
-            DeribitSettlementMapping.settlements(rows, listing::held) { account.transactions(currency, fromMs, toMs) }
-        }
+    ): List<VenueSettlement> = accountHistory.settlements(fromMs, toMs)
 
-    /** The funding the transaction log shows realized on perpetuals; Deribit pushes none, the host reconciles it. */
     override fun funding(
         fromMs: Long,
         toMs: Long,
-    ): List<VenueFunding> =
-        venue { account.transactions(currency, fromMs, toMs) }.mapNotNull { row ->
-            DeribitMapping.funding(row) { name -> venue { listing.held(name) }.perpetual }
-        }
+    ): List<VenueFunding> = accountHistory.funding(fromMs, toMs)
 
     override fun fundingRates(
         code: String,
@@ -197,13 +193,5 @@ class DeribitAdapter(
     override fun close() {
         feed.close()
         account.close()
-    }
-
-    private fun onOrder(order: DeribitOrder) {
-        DeribitMapping.order(order)?.let { listener?.order(it) }
-    }
-
-    private fun onTrade(trade: DeribitTrade) {
-        DeribitMapping.fill(trade)?.let { listener?.fill(it) }
     }
 }
