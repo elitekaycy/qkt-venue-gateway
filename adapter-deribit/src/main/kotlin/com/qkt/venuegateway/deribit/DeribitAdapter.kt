@@ -36,7 +36,7 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
- * in force. Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
+ * in force; a remainder Deribit leaves working is cancelled instead ([DeribitOrderDesk]). Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
  * [DeribitTape]; by default [market]). Depth and open interest are recorded ([DeribitDepth],
  * [DeribitOpenInterest]) and pruned to their retention on the refresh timer, from [connect] on.
  */
@@ -67,11 +67,11 @@ class DeribitAdapter(
     @Volatile private var listener: AdapterListener? = null
     private val account =
         trading(
-            { order -> DeribitMapping.order(order)?.let { listener?.order(it) } },
+            { order -> if (orders.reportable(order)) DeribitMapping.order(order)?.let { listener?.order(it) } },
             { trade -> DeribitMapping.fill(trade)?.let { listener?.fill(it) } },
         ) { up, reason -> listener?.connection(up, reason) }
     private val accountHistory = DeribitAccountHistory(account, currency, listing)
-    private val orders = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
+    private val orders: DeribitOrderDesk = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
     private val feed =
         DeribitQuoteFeed(
             listing,
@@ -105,7 +105,7 @@ class DeribitAdapter(
     override fun positions() =
         Positions(Accounting.NETTING, venue { account.positions(currency) }.mapNotNull(DeribitMapping::position))
 
-    override fun openOrders() = venue { account.openOrders(currency) }.mapNotNull(DeribitMapping::order)
+    override fun openOrders() = orders.open()
 
     override fun place(order: NewOrder): VenueOrder = orders.place(order)
 

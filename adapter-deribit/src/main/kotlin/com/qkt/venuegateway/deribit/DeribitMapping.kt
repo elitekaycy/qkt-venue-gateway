@@ -140,8 +140,9 @@ object DeribitMapping {
         )
     }
 
+    /** The type the order was sent as: a market order Deribit turned into a limit is still a market order. */
     private fun type(o: DeribitOrder): OrderType =
-        when (o.orderType) {
+        when (o.originalOrderType ?: o.orderType) {
             "limit" -> if (o.triggered == true) OrderType.STOP_LIMIT else OrderType.LIMIT
             "market" -> if (o.triggered == true) OrderType.STOP else OrderType.MARKET
             "stop_market" -> OrderType.STOP

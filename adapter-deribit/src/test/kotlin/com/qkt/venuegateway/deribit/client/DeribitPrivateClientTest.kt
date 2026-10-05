@@ -44,6 +44,10 @@ class DeribitPrivateClientTest {
                     )
                 }
                 "private/buy" -> recorded("buy-limit-open.json")["response"]!!.jsonObject["result"].toString()
+                "private/cancel" ->
+                    recorded(
+                        "cancel-market-remainder.json",
+                    )["response"]!!.jsonObject["result"].toString()
                 "private/get_account_summary" ->
                     recorded(
                         "account-summary.json",
@@ -177,6 +181,23 @@ class DeribitPrivateClientTest {
         val asked = sent.poll(5, TimeUnit.SECONDS)!!
         assertThat(asked["params"]).isEqualTo(recorded("account-summary.json")["params"])
         assertThat(account.currency).isEqualTo("USDC")
+        client.close()
+    }
+
+    @Test
+    fun `a remainder is cancelled by its order id as recorded, waited for or not`() {
+        server.enqueue(venue())
+        val connections = CopyOnWriteArrayList<Boolean>()
+        val client = client(connections = connections).also { it.start() }
+        awaitTrue { connections.contains(true) }
+        generateSequence { sent.poll() }.toList()
+        val params = recorded("cancel-market-remainder.json")["params"]!!.jsonObject
+        val id = params["order_id"]!!.jsonPrimitive.content
+
+        assertThat(client.cancel(id).state).isEqualTo("cancelled")
+        assertThat(sent.poll(5, TimeUnit.SECONDS)!!["params"]).isEqualTo(params)
+        client.cancelSoon(id)
+        assertThat(sent.poll(5, TimeUnit.SECONDS)!!["method"]!!.jsonPrimitive.content).isEqualTo("private/cancel")
         client.close()
     }
 

@@ -1,0 +1,19 @@
+{
+ "method": "private/cancel",
+ "params": {
+  "order_id": "USDC-210049235332295099"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 8,
+  "error": {
+   "code": 11044,
+   "message": "not_open_order"
+  },
+  "usIn": 1791189912432343,
+  "usOut": 1791189912432620,
+  "usDiff": 277,
+  "testnet": true
+ },
+ "recorded": "2026-10-05 Deribit testnet"
+}

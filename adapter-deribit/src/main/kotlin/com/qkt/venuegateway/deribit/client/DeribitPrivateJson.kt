@@ -32,6 +32,7 @@ internal object DeribitPrivateJson {
             createdMs = o.long("creation_timestamp"),
             updatedMs = o.long("last_update_timestamp"),
             cancelReason = o.text("cancel_reason"),
+            originalOrderType = o.text("original_order_type"),
         )
 
     fun trade(o: JsonObject) =

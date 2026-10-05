@@ -11,7 +11,12 @@ import com.qkt.venuegateway.deribit.client.DeribitPublicClient
 import com.qkt.venuegateway.testkit.AdapterContractTest
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.net.URI
 import java.nio.file.Path
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 
@@ -60,6 +65,27 @@ class DeribitContractTest : AdapterContractTest() {
     override fun refusedOrder(clientOrderId: String) =
         NewOrder(clientOrderId, perp, Side.BUY, OrderType.LIMIT, BigDecimal("0.00015"), farPrice, null, TimeInForce.GTC)
 
+    /**
+     * A market buy one step larger than every ask inside Deribit's price band on the first thin stock
+     * perpetual (testnet quotes them a hundredth a level), worth at most [OVERRUN_LIMIT] dollars; null when
+     * none is that thin now. Deribit refuses IOC on market orders, so only the adapter keeps it from resting.
+     */
+    override fun overrunOrder(clientOrderId: String): NewOrder? {
+        val market = DeribitPublicClient(DeribitEnvironment.TESTNET.httpUrl)
+        return THIN.firstNotNullOfOrNull { code ->
+            val book = Json.parseToJsonElement(URI("$BOOK$code").toURL().readText()).jsonObject["result"]!!.jsonObject
+            val band = BigDecimal(book["max_price"]!!.jsonPrimitive.content)
+            val asks =
+                book["asks"]!!
+                    .jsonArray
+                    .map { it.jsonArray.map { n -> BigDecimal(n.jsonPrimitive.content) } }
+                    .filter { (price) -> price <= band }
+            val amount = asks.sumOf { it[1] } + market.instrument(code).minTradeAmount
+            NewOrder(clientOrderId, code, Side.BUY, OrderType.MARKET, amount, null, null, TimeInForce.GTC)
+                .takeIf { asks.isNotEmpty() && amount * band <= OVERRUN_LIMIT }
+        }
+    }
+
     override val activeCode = perp
 
     override val perpetualCode = perp
@@ -78,5 +104,8 @@ class DeribitContractTest : AdapterContractTest() {
 
     private companion object {
         const val DAY_MS = 86_400_000L
+        const val BOOK = "https://test.deribit.com/api/v2/public/get_order_book?depth=50&instrument_name="
+        val THIN = listOf("AAPL_USDC-PERPETUAL", "AMZN_USDC-PERPETUAL", "AMD_USDC-PERPETUAL")
+        val OVERRUN_LIMIT = BigDecimal("50")
     }
 }
