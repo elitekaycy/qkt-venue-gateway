@@ -33,6 +33,12 @@ enum class Capability {
      * ([VenueQuote.markIv], [VenueQuote.underlying]): what a client prices the option's Greeks from.
      */
     OPTION_MARKS,
+
+    /** A contract's public trade tape, each print with its aggressor side ([VenueAdapter.trades]). */
+    TRADES,
+
+    /** The prints of a contract that liquidated a position, with the liquidated side ([VenueAdapter.liquidations]). */
+    LIQUIDATIONS,
 }
 
 /**

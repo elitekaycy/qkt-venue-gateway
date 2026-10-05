@@ -1,7 +1,5 @@
 package com.qkt.venuegateway.adapter
 
-import java.nio.file.Path
-
 /**
  * One venue account, as the gateway host sees it. The host owns everything the client sees (HTTP,
  * WebSocket, the journal, the kill switch); an adapter only translates between its venue's API and
@@ -98,6 +96,24 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueOpenInterest> = throw VenueUnsupportedException("open interest")
 
+    /**
+     * The first [limit] prints of [code]'s public tape in `[fromMs, toMs)`, oldest first, each with its aggressor
+     * side; fewer only when the range holds fewer. Only with [Capability.TRADES].
+     */
+    fun trades(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+    ): List<VenuePrint> = throw VenueUnsupportedException("trades")
+
+    /** Every print of [code] in `[fromMs, toMs)` that liquidated a position, oldest first; only with [Capability.LIQUIDATIONS]. */
+    fun liquidations(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenuePrint> = throw VenueUnsupportedException("liquidations")
+
     /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
     fun bars(
         code: String,
@@ -141,42 +157,6 @@ interface AdapterListener {
         up: Boolean,
         reason: String,
     )
-}
-
-/**
- * The venue login every adapter receives in one shape, whatever its venue calls the two halves: an
- * API key's client id and secret, or a username and password. [login] is not secret and is what the
- * adapter reports as its identity's login; [secret] never leaves the adapter and never prints.
- */
-data class Credentials(
-    val login: String,
-    val secret: String,
-) {
-    override fun toString() = "Credentials(login=$login, secret=***)"
-}
-
-/**
- * What the host hands an adapter: its config [settings], its venue [credentials] (null when the
- * gateway was given none, as for the paper venue), a [clock] and a private [stateDir].
- */
-class AdapterContext(
-    val settings: Map<String, String>,
-    val clock: () -> Long,
-    val stateDir: Path,
-    val credentials: Credentials? = null,
-) {
-    /** Setting [key], or a failure naming it. */
-    fun required(key: String): String = settings[key]?.takeIf { it.isNotBlank() } ?: error("setting $key is required")
-
-    /** The venue credentials, or a failure naming the missing config. */
-    fun requiredCredentials(): Credentials = credentials ?: error("credentials are required")
-}
-
-/** Builds the adapter of one adapter type (`GATEWAY_ADAPTER`); found with `java.util.ServiceLoader`. */
-interface VenueAdapterFactory {
-    val type: String
-
-    fun create(context: AdapterContext): VenueAdapter
 }
 
 /** The venue refused a request; [reason] is its own. Served as `422 venue_rejected`. */

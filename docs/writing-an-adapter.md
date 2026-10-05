@@ -168,8 +168,10 @@ Declare `capabilities` honestly. The suite checks each declared one in shape (fu
 in their window and never zero; funding rates ascending at positive prices; settlements in their window;
 `activeCode`'s marks over its last 30 bar windows, at most one a window, positive; its open interest
 ascending, never negative, and holding at least the present figure; with `OPTION_MARKS`, a quote of
-`optionCode` carrying a positive mark IV and forward) and requires every other one of settlements, funding,
-funding rates, mark prices and open interest to throw `VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
+`optionCode` carrying a positive mark IV and forward; its trades and liquidations over the last hour in range,
+oldest first, at positive prices and sizes, trades not empty) and requires every other one of settlements,
+funding, funding rates, mark prices, open interest, trades and liquidations to throw
+`VenueUnsupportedException`. A venue that charges funding on perpetuals should declare `FUNDING`: without
 it, qkt will not trade them.
 
 Run it against testnet until it passes:

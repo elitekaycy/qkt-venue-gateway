@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueMark
+import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.host.wire.WireMapping.wire
 import com.qkt.vgp.WireAccount
@@ -13,6 +14,7 @@ import com.qkt.vgp.WireInstrument
 import com.qkt.vgp.WireMark
 import com.qkt.vgp.WirePosition
 import com.qkt.vgp.WirePositions
+import com.qkt.vgp.WirePrint
 import com.qkt.vgp.WireQuote
 
 /** The read endpoints' translation of the adapters' account, listing and positions onto the wire. */
@@ -82,4 +84,7 @@ object WireReads {
         )
 
     fun mark(m: VenueMark): WireMark = WireMark(m.timeMs, m.mark?.toPlainString(), m.index?.toPlainString())
+
+    fun print(p: VenuePrint): WirePrint =
+        WirePrint(p.id, p.timeMs, p.price.toPlainString(), p.size.toPlainString(), p.side.wire())
 }
