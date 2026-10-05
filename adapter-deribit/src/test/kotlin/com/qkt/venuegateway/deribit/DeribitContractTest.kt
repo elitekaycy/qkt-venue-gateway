@@ -63,4 +63,20 @@ class DeribitContractTest : AdapterContractTest() {
     override val activeCode = perp
 
     override val perpetualCode = perp
+
+    /** The BTC option expiring soonest at least a day out, struck nearest the perpetual's bid: BTC is active on testnet. */
+    override val optionCode by lazy {
+        val market = DeribitPublicClient(DeribitEnvironment.TESTNET.httpUrl)
+        val bid = market.ticker(perp).bid ?: error("testnet $perp has no bid")
+        val after = System.currentTimeMillis() + DAY_MS
+        market
+            .instruments("USDC", "option")
+            .filter { it.name.startsWith("BTC_USDC-") && (it.expiryMs ?: 0) > after }
+            .minWith(compareBy({ it.expiryMs }, { (it.strike ?: bid).subtract(bid).abs() }))
+            .name
+    }
+
+    private companion object {
+        const val DAY_MS = 86_400_000L
+    }
 }
