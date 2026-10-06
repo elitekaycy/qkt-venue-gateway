@@ -138,6 +138,20 @@ class BybitMappingTest {
     }
 
     @Test
+    fun `funding a held long paid is a positive charge on the long, the same pushed and read back`() {
+        val read = BybitMapping.funding(executions("executions-funding.json").single(), "USDT")!!
+        val pushed = BybitMapping.funding(executions("ws-execution-funding.json").single(), "USDT")!!
+
+        assertThat(read).isEqualTo(pushed)
+        assertThat(read.symbol).isEqualTo("BTCUSDT")
+        assertThat(read.amount).isEqualTo(BigDecimal("0.0085907"))
+        assertThat(read.position).isEqualTo(BigDecimal("0.001"))
+        assertThat(read.currency).isEqualTo("USDT")
+        assertThat(read.timeMs).isEqualTo(1_791_273_600_000L)
+        assertThat(BybitMapping.fill(executions("ws-execution-funding.json").single(), "USDT")).isNull()
+    }
+
+    @Test
     fun `a held long is a positive position at bybit's average, and a flat slot is no position`() {
         val long = BybitMapping.position(BybitPrivateJson.position(items("position-long.json").single()))!!
         val flat = items("position-slots-one-way.json").map(BybitPrivateJson::position)
