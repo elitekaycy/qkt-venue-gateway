@@ -96,8 +96,11 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   `AdlTrade`, `Delivery`, `Settle` are Bybit moving the position itself: not fills; the host's position watch
   sees them.
 - **Funding** is a `Funding` execution: `execFee` is the charge, positive when the account paid (Bybit's
-  transaction log documents its `funding` as the opposite sign), `execQty` the position on `side`. Read back by
-  the host's reconcile with `execType=Funding`; the private socket may push it too.
+  transaction log documents its `funding` as the opposite sign), `execQty` the position on `side`, `orderLinkId`
+  empty, stamped at the funding time. Recorded 2026-10-06 08:00 UTC: a 0.001 BTCUSDT long paid 0.0085907 USDT at
+  rate 0.0001 (`executions-funding.json`); `execution.linear` pushed the same record 0.2 s later
+  (`ws-execution-funding.json`), and the host's reconcile reads it back with `execType=Funding`. The all-in-one
+  `execution` topic cannot be subscribed beside `execution.linear` (Bybit: subscription conflict).
 - **Position mode.** Read, never assumed: a contract in one-way mode has one slot (`positionIdx` 0), one in hedge
   mode two (1 long, 2 short) (`position-slots-*.json`; switched on ETHUSDT and back, 2026-10-05). An order with
   the wrong index is refused `position idx not match position mode`. Orders go with the index their contract's
