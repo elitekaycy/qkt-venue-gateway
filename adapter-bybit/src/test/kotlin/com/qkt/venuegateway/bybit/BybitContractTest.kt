@@ -60,6 +60,30 @@ class BybitContractTest : AdapterContractTest() {
     override fun refusedOrder(clientOrderId: String) =
         NewOrder(clientOrderId, perp, Side.BUY, OrderType.LIMIT, BigDecimal("0.0015"), farPrice, null, TimeInForce.GTC)
 
+    /**
+     * A market buy 0.1 BTC larger than every ask within 5% of the best: Bybit fills a market order only inside its
+     * price protection (about 1% from the mark, measured) and cancels the rest, immediate-or-cancel.
+     */
+    override fun overrunOrder(clientOrderId: String): NewOrder {
+        val asks = market.orderBook("linear", perp, 200).asks
+        val best = asks.first().first
+        val inBand =
+            asks.filter { it.first <= best * BigDecimal("1.05") }.fold(BigDecimal.ZERO) { sum, level ->
+                sum +
+                    level.second
+            }
+        return NewOrder(
+            clientOrderId,
+            perp,
+            Side.BUY,
+            OrderType.MARKET,
+            inBand + BigDecimal("0.1"),
+            null,
+            null,
+            TimeInForce.GTC,
+        )
+    }
+
     override val activeCode = perp
 
     override val perpetualCode = perp
