@@ -146,6 +146,7 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
 BYBIT_CLIENT_ID=<testnet api key> BYBIT_CLIENT_SECRET=<secret> ./gradlew :adapter-bybit:test --tests '*ContractTest'
 ```
 
-It trades BTCUSDT (category `linear`) at 0.001 and skips without the key. `BybitSpotContractTest` runs the same
-suite on spot BTCUSDT at 0.0001 BTC; its fill check fails by design of the venue: a spot buy's fee is taken in the
-coin bought, so buying 0.0001 BTC adds 0.00009991 to the holding (2026-10-06).
+It trades BTCUSDT (category `linear`) at 0.001 and skips without the key. Spot is not in the suite: the kit
+checks that a fill moves the position by its quantity, and Bybit takes a spot buy's fee in the coin bought (buying
+0.0001 BTC added 0.00009991 to the holding, 2026-10-06), so that check cannot hold on spot. A one-off spot run
+passed the suite's seven other tests (pull request #58).
