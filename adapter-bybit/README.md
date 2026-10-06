@@ -75,10 +75,18 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   `orderLinkId` from `/v5/order/realtime`, then `/v5/order/history`; an unknown id answers an empty list.
   Bybit answers a placement with its ids only, so the adapter reads the order back before answering.
 - **Time in force.** `GTC`, `IOC`, `FOK` (and `PostOnly`, read as GTC). Bybit has no day orders: `day` is
-  refused. Market orders are filled immediate-or-cancel within Bybit's price protection.
+  refused. An `orderLinkId` is never taken twice, even after its order ended (`110072 OrderLinkedID is duplicate`).
+- **Market orders never rest.** Bybit fills a market order immediate-or-cancel within its price protection
+  (about 1% from the mark) and cancels the rest itself: a 0.4 BTC buy on testnet BTCUSDT on 2026-10-06 filled
+  0.158 in 32 executions and ended `Cancelled` (`rejectReason` `EC_NoImmediateQtyToFill`, `timeInForce` `IOC`,
+  `price` the protection price; `market-overrun` fixtures). So the adapter needs no remainder handling; the order
+  is reported `cancelled` with what filled. A fired stop-market is the same order type and behaves alike.
 - **Stops** are conditional orders: on linear `triggerPrice`, `triggerDirection` (1 a buy stop fires as the
   price rises, 2 a sell stop as it falls) and `triggerBy`; on spot `orderFilter=StopOrder`. Their status runs
-  `Untriggered`, `Triggered`, then the order's own; `Deactivated` is a stop cancelled before firing.
+  `Untriggered`, `Triggered`, then the order's own; `Deactivated` is a stop cancelled before firing. A fired stop
+  keeps its `orderLinkId`, `orderType` `Market`, `stopOrderType` `Stop` and `triggerPrice` (`stop-fired` fixtures,
+  ETHUSDT 2026-10-06), and its execution says `createType` `CreateByStopOrder`. A stop already past its trigger is
+  refused (`110092 expect Rising, but trigger_price ... <= current`).
 - **Statuses.** `New`, `PartiallyFilled`, `Untriggered`, `Triggered` work; `Filled` fills; `Cancelled`,
   `PartiallyFilledCanceled` (spot) and `Deactivated` cancel, with what filled (`cumExecQty`); `Rejected` rejects.
   An unknown status fails by name.
@@ -98,6 +106,7 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   flattened by `/v1/positions/close`.
 - **Account.** `currency` is the coin's own wallet balance and equity; margin used and available are the
   unified account's pooled figures, which Bybit values in USD.
+- **Fees.** Testnet charged 0.04% taker on linear (`feeRate` 0.0004, `feeCurrency` USDT).
 - **Spot positions.** A spot account holds coins: each coin with a listed pair against the quote coin is a
   netted position of that pair. Bybit keeps no entry price of a coin, so a holding's `avg_price` is the pair's
   last price when read. A buy's fee is taken in the coin bought, so a holding grows by less than the fill.
@@ -137,4 +146,6 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
 BYBIT_CLIENT_ID=<testnet api key> BYBIT_CLIENT_SECRET=<secret> ./gradlew :adapter-bybit:test --tests '*ContractTest'
 ```
 
-It trades BTCUSDT (category `linear`) at 0.001 and skips without the key.
+It trades BTCUSDT (category `linear`) at 0.001 and skips without the key. `BybitSpotContractTest` runs the same
+suite on spot BTCUSDT at 0.0001 BTC; its fill check fails by design of the venue: a spot buy's fee is taken in the
+coin bought, so buying 0.0001 BTC adds 0.00009991 to the holding (2026-10-06).
