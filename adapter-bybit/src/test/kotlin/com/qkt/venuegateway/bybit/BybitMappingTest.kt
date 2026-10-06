@@ -160,6 +160,7 @@ class BybitMappingTest {
         assertThat(long.quantity).isEqualTo(BigDecimal("0.158"))
         assertThat(long.avgPrice).isEqualTo(BigDecimal("86516.68797468"))
         assertThat(long.ticket).isNull()
+        assertThat(long.openedAtMs).describedAs("bybit's createdTime is the slot's, not the position's").isNull()
         assertThat(flat.mapNotNull(BybitMapping::position)).isEmpty()
     }
 

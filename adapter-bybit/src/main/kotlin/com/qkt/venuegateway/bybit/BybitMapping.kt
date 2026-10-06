@@ -106,7 +106,11 @@ internal object BybitMapping {
             w.maintenanceMargin,
         )
 
-    /** [p] as a signed position, or null when flat; in hedge mode each side is its own ticket (`long`, `short`). */
+    /**
+     * [p] as a signed position, or null when flat; in hedge mode each side is its own ticket (`long`, `short`). Its
+     * open time is not reported: Bybit's `createdTime` is the slot's, kept when a later position reopens it
+     * (measured on testnet 2026-10-06), not when the position held now was opened.
+     */
     fun position(p: BybitPosition): PositionRow? {
         if (p.size.signum() == 0) return null
         val side = side(p.side ?: error("bybit position ${p.symbol} of size ${p.size} has no side"))
@@ -119,7 +123,7 @@ internal object BybitMapping {
                 else -> error("bybit position index ${p.positionIdx} is not supported")
             }
         val average = p.avgPrice ?: error("bybit position ${p.symbol} has no average price")
-        return PositionRow(p.symbol, signed, average, ticket, p.createdMs)
+        return PositionRow(p.symbol, signed, average, ticket)
     }
 
     private fun type(o: BybitOrder): OrderType {

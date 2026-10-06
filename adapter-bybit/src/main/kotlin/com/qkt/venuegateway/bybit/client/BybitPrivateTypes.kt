@@ -54,7 +54,8 @@ data class BybitExecution(
 
 /**
  * One position slot (`/v5/position/list`): [size] unsigned with its [side] (`Buy` long, `Sell` short, empty
- * when flat). [positionIdx] is 0 in one-way mode, 1 (long) or 2 (short) in hedge mode.
+ * when flat). [positionIdx] is 0 in one-way mode, 1 (long) or 2 (short) in hedge mode. [createdMs] is when the
+ * slot was created, which a position reopening it keeps.
  */
 data class BybitPosition(
     val symbol: String,
