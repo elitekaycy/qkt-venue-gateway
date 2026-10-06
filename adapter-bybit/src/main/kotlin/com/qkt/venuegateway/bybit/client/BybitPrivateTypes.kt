@@ -82,7 +82,8 @@ data class BybitWallet(
 /**
  * An order to send (`/v5/order/create`), in Bybit's words; null fields are not sent. A spot conditional order
  * names its [orderFilter] (`StopOrder`); a contract's names its [triggerDirection] (1 fires as the price rises
- * to the trigger, 2 as it falls) and the price it watches ([triggerBy]).
+ * to the trigger, 2 as it falls) and the price it watches ([triggerBy]). A spot market order names the unit
+ * of its [qty] ([marketUnit] `baseCoin`; Bybit reads a spot market buy's qty in the quote coin otherwise).
  */
 data class BybitNewOrder(
     val category: String,
@@ -99,4 +100,5 @@ data class BybitNewOrder(
     val reduceOnly: Boolean,
     val positionIdx: Int?,
     val orderFilter: String? = null,
+    val marketUnit: String? = null,
 )

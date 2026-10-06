@@ -98,5 +98,6 @@ internal object BybitPrivateJson {
             if (o.reduceOnly) put("reduceOnly", true)
             o.positionIdx?.let { put("positionIdx", it) }
             o.orderFilter?.let { put("orderFilter", it) }
+            o.marketUnit?.let { put("marketUnit", it) }
         }
 }

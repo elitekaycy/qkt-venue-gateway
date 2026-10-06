@@ -11,7 +11,8 @@ import com.qkt.venuegateway.bybit.client.BybitNewOrder
  * An order the client sent, in Bybit's words. The client's id travels as `orderLinkId`, which Bybit caps at
  * [MAX_LABEL] characters; a longer one, and a day order (Bybit has no day time in force), are refused here
  * rather than sent. A stop is a conditional order: on a contract it fires on [trigger] as the price rises to it
- * (a buy) or falls to it (a sell); on spot it is a `StopOrder` firing on the last price.
+ * (a buy) or falls to it (a sell); on spot it is a `StopOrder` firing on the last price. A spot market order's
+ * quantity is in the coin bought or sold (`marketUnit` `baseCoin`), as every quantity of the gateway is.
  */
 internal object BybitOrderMapping {
     /** The longest `orderLinkId` Bybit takes (measured on testnet: "order link id is longer than 45"). */
@@ -56,6 +57,7 @@ internal object BybitOrderMapping {
             reduceOnly = o.reduceOnly && contracts,
             positionIdx = positionIdx,
             orderFilter = "StopOrder".takeIf { stop && !contracts },
+            marketUnit = "baseCoin".takeIf { !limited && !contracts },
         )
     }
 
