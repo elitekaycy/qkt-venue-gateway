@@ -68,6 +68,8 @@ jobs:
           VENUE: ${{ matrix.venue }}
           DERIBIT_CLIENT_ID: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_ID || '' }}
           DERIBIT_CLIENT_SECRET: ${{ matrix.venue == 'deribit' && secrets.DERIBIT_CLIENT_SECRET || '' }}
+          BYBIT_CLIENT_ID: ${{ matrix.venue == 'bybit' && secrets.BYBIT_CLIENT_ID || '' }}
+          BYBIT_CLIENT_SECRET: ${{ matrix.venue == 'bybit' && secrets.BYBIT_CLIENT_SECRET || '' }}
       # A venue whose test-environment secrets are not configured cannot run its contract suite here:
       # that is a warning, and the PR notes a local run instead (docs/adapters.md, "CI").
       - run: |
@@ -78,7 +80,7 @@ jobs:
           fi
         env:
           VENUE: ${{ matrix.venue }}
-          HAS_KEY: ${{ matrix.venue != 'deribit' || secrets.DERIBIT_CLIENT_ID != '' }}
+          HAS_KEY: ${{ (matrix.venue != 'deribit' || secrets.DERIBIT_CLIENT_ID != '') && (matrix.venue != 'bybit' || secrets.BYBIT_CLIENT_ID != '') }}
 
   adapter:
     needs: [detect, test]
