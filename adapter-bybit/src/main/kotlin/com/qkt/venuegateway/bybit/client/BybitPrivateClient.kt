@@ -117,6 +117,18 @@ class BybitPrivateClient(
         return BybitPrivateJson.wallet(result.items().firstOrNull() ?: error("bybit answered no unified wallet"), coin)
     }
 
+    /** Every coin the unified account holds, by coin, its wallet balance (what it owns, locked in orders included). */
+    fun coins(): Map<String, BigDecimal> {
+        val result = rest.get("/v5/account/wallet-balance", listOf("accountType" to "UNIFIED"), signed = true).result
+        val account = result.items().firstOrNull() ?: error("bybit answered no unified wallet")
+        return account.items("coin").associate {
+            BybitJson.run {
+                it.need("coin") to
+                    (it.dec("walletBalance") ?: BigDecimal.ZERO)
+            }
+        }
+    }
+
     private fun kotlinx.serialization.json.JsonObjectBuilder.base(
         symbol: String,
         orderLinkId: String,

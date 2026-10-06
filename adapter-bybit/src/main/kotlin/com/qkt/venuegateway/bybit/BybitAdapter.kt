@@ -9,7 +9,6 @@ import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
-import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.bybit.BybitErrors.venue
@@ -48,6 +47,7 @@ class BybitAdapter(
     private val modes =
         BybitPositionModes(private::positionSlots, ::reference, settings.contracts, context.clock, refreshMs)
     private val orders = BybitOrderDesk(private, settings, listing, modes)
+    private val spot = BybitSpotHoldings(private, public, listing)
 
     @Volatile private var listener: AdapterListener? = null
     private val accountStream =
@@ -80,12 +80,14 @@ class BybitAdapter(
     override fun account(): AccountSnapshot = BybitMapping.account(venue { private.wallet(currency) })
 
     override fun positions(): Positions {
-        if (!settings.contracts) {
-            throw VenueRefusedException(
-                "a bybit spot account holds coins, not positions: see the account",
-            )
-        }
-        val rows = venue { private.positions() }.mapNotNull(BybitMapping::position)
+        val rows =
+            if (settings.contracts) {
+                venue { private.positions() }.mapNotNull(
+                    BybitMapping::position,
+                )
+            } else {
+                spot.rows()
+            }
         return Positions(modes.accounting(rows), rows)
     }
 
