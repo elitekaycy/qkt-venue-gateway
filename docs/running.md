@@ -37,6 +37,8 @@ Requires JDK 21.
 GATEWAY_TRADER_TOKEN=… GATEWAY_GUARDIAN_TOKEN=… app/build/install/qkt-venue-gateway/bin/qkt-venue-gateway
 ```
 
+To run from source while developing, use `./gradlew :app:run` with the same two variables set.
+
 ## Configuration
 
 Everything is an environment variable. Defaults live in one place,
@@ -92,6 +94,10 @@ brokers:
   attach both projects to it as `external: true`.
 
 qkt refuses to start if the gateway's adapter, account or trade mode don't match the entry.
+
+To send a first order, deploy a one-rule strategy such as `WHEN POSITION.btc = 0 AND TRADES.today = 0 THEN
+BUY btc SIZING 0.001` on `btc = PAPER:BTC_USDC_PERPETUAL EVERY 1s`, then read `GET /v1/positions` and
+`GET /v1/deals?from=0&to=<now in ms>` (both bounds are required). The README's quick start has the full file.
 
 ## Kill switch
 
