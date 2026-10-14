@@ -8,6 +8,7 @@ import java.time.LocalDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -18,7 +19,8 @@ import okhttp3.Request
 
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
- * `https://test.deribit.com` for testnet): listings, tickers, klines and delivery prices, no account.
+ * `https://test.deribit.com` for testnet, `https://history.deribit.com` for mainnet's whole trade history):
+ * listings, tickers, order books, klines, funding rates, the trade tape and delivery prices, no account.
  * A JSON-RPC error is [DeribitException]; the venue being unreachable is an [IOException].
  */
 class DeribitPublicClient(
@@ -38,15 +40,15 @@ class DeribitPublicClient(
             .map { DeribitJson.instrument(it.jsonObject) }
 
     override fun instrument(name: String): DeribitInstrument =
-        DeribitJson.instrument(
-            call(
-                "get_instrument",
-                "instrument_name" to name,
-            ).obj(),
-        )
+        DeribitJson.instrument(call("get_instrument", "instrument_name" to name).obj())
 
     override fun ticker(name: String): DeribitTicker =
         DeribitJson.ticker(call("ticker", "instrument_name" to name).obj())
+
+    override fun orderBook(
+        name: String,
+        depth: Int,
+    ) = DeribitJson.orderBook(call("get_order_book", "instrument_name" to name, "depth" to "$depth").obj())
 
     /**
      * The klines of [name], [minutes] long, from the one holding [fromMs] to [toMs], oldest first; the
@@ -59,7 +61,7 @@ class DeribitPublicClient(
         fromMs: Long,
         toMs: Long,
     ): List<DeribitKline> {
-        val resolution = resolution(minutes)
+        val resolution = klineResolution(minutes)
         val span = minutes * MINUTE_MS * KLINES_PER_CALL
         val byStart = sortedMapOf<Long, DeribitKline>()
         var start = fromMs
@@ -79,6 +81,75 @@ class DeribitPublicClient(
         return byStart.values.toList()
     }
 
+    /**
+     * Deribit answers at most about 740 hours of funding, the newest, without saying it cut the rest, so
+     * the range is asked for in spans of [FUNDING_HOURS_PER_CALL] and joined, each hour once.
+     */
+    override fun fundingRates(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<DeribitFundingRate> {
+        val byTime = sortedMapOf<Long, DeribitFundingRate>()
+        var start = fromMs
+        while (start <= toMs) {
+            val end = minOf(toMs, start + FUNDING_HOURS_PER_CALL * HOUR_MS - 1)
+            call(
+                "get_funding_rate_history",
+                "instrument_name" to name,
+                "start_timestamp" to start.toString(),
+                "end_timestamp" to end.toString(),
+            ).jsonArray
+                .map { DeribitJson.fundingRate(it.jsonObject) }
+                .filter { it.timestampMs in start..end }
+                .forEach { byTime.putIfAbsent(it.timestampMs, it) }
+            start = end + 1
+        }
+        return byTime.values.toList()
+    }
+
+    override fun edgeTrade(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        newest: Boolean,
+    ): DeribitMarkTrade? =
+        DeribitJson.markTrades(trades(name, fromMs, toMs, 1, if (newest) "desc" else "asc")).firstOrNull()
+
+    override fun tradesFrom(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+    ): DeribitPage<DeribitMarkTrade> =
+        trades(name, fromMs, toMs, count, "asc").let { DeribitPage(DeribitJson.markTrades(it), it.hasMore()) }
+
+    override fun tape(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+    ): DeribitPage<DeribitPublicTrade> =
+        trades(name, fromMs, toMs, count, "asc").let { DeribitPage(DeribitJson.publicTrades(it), it.hasMore()) }
+
+    private fun trades(
+        name: String,
+        fromMs: Long,
+        toMs: Long,
+        count: Int,
+        sorting: String,
+    ): JsonObject =
+        call(
+            "get_last_trades_by_instrument_and_time",
+            "instrument_name" to name,
+            "start_timestamp" to fromMs.toString(),
+            "end_timestamp" to toMs.toString(),
+            "count" to count.toString(),
+            "sorting" to sorting,
+        ).obj()
+
+    private fun JsonObject.hasMore() = this["has_more"]?.jsonPrimitive?.boolean == true
+
     /** The most recent [count] daily delivery prices of [index] (`btc_usdc`), newest first. */
     override fun deliveryPrices(
         index: String,
@@ -94,17 +165,14 @@ class DeribitPublicClient(
 
     private companion object {
         const val MINUTE_MS = 60_000L
+        const val HOUR_MS = 3_600_000L
+
+        /** Hours of funding asked for per call, safely under Deribit's cap of about 740. */
+        const val FUNDING_HOURS_PER_CALL = 720L
 
         /** Klines asked for per call, safely under Deribit's 5001 cap. */
         const val KLINES_PER_CALL = 4_000L
     }
-
-    private fun resolution(minutes: Long): String =
-        when (minutes) {
-            !in DERIBIT_KLINE_MINUTES -> throw IllegalArgumentException("Deribit has no $minutes-minute klines")
-            1_440L -> "1D"
-            else -> minutes.toString()
-        }
 
     private fun call(
         method: String,

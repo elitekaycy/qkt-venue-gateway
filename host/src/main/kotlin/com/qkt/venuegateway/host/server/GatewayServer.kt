@@ -52,6 +52,11 @@ fun Application.gatewayModule(
     }
     routing {
         restRoutes(gateway)
+        fundingRoutes(gateway)
+        markRoutes(gateway)
+        openInterestRoutes(gateway)
+        tapeRoutes(gateway)
+        depthRoutes(gateway)
         streamRoute(gateway)
         marketRoutes(gateway, hub)
     }

@@ -3,6 +3,7 @@ package com.qkt.venuegateway.host
 import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterListener
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.NewOrder
@@ -14,7 +15,10 @@ import com.qkt.venuegateway.adapter.TradeMode
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueFill
+import com.qkt.venuegateway.adapter.VenueFunding
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -24,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** An in-memory venue for host tests: places orders as working, and can refuse, be unreachable or lose an answer. */
-internal class FakeAdapter : VenueAdapter {
+internal open class FakeAdapter : VenueAdapter {
     override val id = "fake"
     override val version = "1"
     val orders = ConcurrentHashMap<String, VenueOrder>()
@@ -35,11 +39,20 @@ internal class FakeAdapter : VenueAdapter {
     val positionReads = CopyOnWriteArrayList<String>()
     val fills = CopyOnWriteArrayList<VenueFill>()
     val settlements = CopyOnWriteArrayList<VenueSettlement>()
+    val funding = CopyOnWriteArrayList<VenueFunding>()
+    val rates = CopyOnWriteArrayList<VenueFundingRate>()
+    val rateCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
     var listener: AdapterListener? = null
+
+    /** What the fake declares; every capability unless a test narrows it. */
+    @Volatile override var capabilities: Set<Capability> = Capability.entries.toSet()
 
     @Volatile var refuseNext: String? = null
 
     @Volatile var unreachable = false
+
+    /** Positions cannot be read. */
+    @Volatile var positionsUnavailable = false
 
     /** Settlement history cannot be read (an adapter that does not map it yet). */
     @Volatile var settlementsUnavailable = false
@@ -83,6 +96,7 @@ internal class FakeAdapter : VenueAdapter {
         AccountSnapshot("USDC", BigDecimal("10000"), BigDecimal("10000"), BigDecimal.ZERO, BigDecimal("10000"))
 
     override fun positions(): Positions {
+        if (positionsUnavailable) throw VenueUnavailableException("positions down")
         positionReads += Thread.currentThread().name
         return Positions(Accounting.NETTING, net.map { (s, q) -> PositionRow(s, q, BigDecimal("84000")) })
     }
@@ -153,6 +167,27 @@ internal class FakeAdapter : VenueAdapter {
         if (settlementsUnavailable) throw VenueUnavailableException("settlements not mapped")
         return settlements.filter { it.timeMs in fromMs..toMs }
     }
+
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ) = funding.filter { it.timeMs in fromMs..toMs }
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = rates.toList().also { rateCalls += fromMs to toMs }
+
+    val marks = CopyOnWriteArrayList<VenueMark>()
+    val markCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
+
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ) = marks.toList().also { markCalls += fromMs to toMs }
 
     val bars = CopyOnWriteArrayList<VenueBar>()
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()

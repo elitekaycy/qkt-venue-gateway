@@ -87,15 +87,33 @@ class MarketRoutesTest {
         }
         val option = "BTC_USDC-9OCT26-82000-P"
 
-        venue.listener!!.quote(VenueQuote(option, BigDecimal("640"), BigDecimal("655"), timeMs = now))
+        venue.listener!!.quote(
+            VenueQuote(option, BigDecimal("640"), BigDecimal("655"), timeMs = now, index = BigDecimal("84301.2")),
+        )
         venue.listener!!.quote(
             VenueQuote("BTC_USDC-PERPETUAL", BigDecimal("84000"), BigDecimal("84000.5"), timeMs = now),
         )
-        assertThat(awaitMessage(received) { it.contains("\"time\":$now") }).contains(option)
+        assertThat(awaitMessage(received) { it.contains("\"time\":$now") }).contains(option, "\"index\":\"84301.2\"")
         now += 5_000
 
         assertThat(awaitMessage(received) { it.contains("\"time\":$now") }).contains(option)
         assertThat(seen.none { it.contains("PERPETUAL") }).isTrue()
+    }
+
+    @Test
+    fun `a quote is not refreshed while the adapter's quote feed is down, so a stopped feed reads stale`() {
+        start()
+        val received = quotes("symbols=BTC_USDC-PERPETUAL")
+        venue.listener!!.quote(
+            VenueQuote("BTC_USDC-PERPETUAL", BigDecimal("84000"), BigDecimal("84000.5"), timeMs = now),
+        )
+        awaitMessage(received) { it.contains("\"time\":$now") }
+
+        venue.listener!!.quoteFeed(false, "ticker socket dropped")
+        now += 5_000
+        Thread.sleep(500)
+
+        assertThat(generateSequence { received.poll() }.toList()).noneMatch { it.contains("\"time\":$now") }
     }
 
     @Test

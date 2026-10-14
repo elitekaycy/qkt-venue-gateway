@@ -76,7 +76,8 @@ class QuoteHub(
     }
 
     private fun refresh() {
-        if (!gateway.venueConnected) return
+        // A quote is only refreshed while it can still change: a stopped feed must read as stale.
+        if (!gateway.quotesLive) return
         val now = gateway.clock()
         for (subscriber in subscribers) {
             latest.values.filter { wants(subscriber, it.symbol) }.forEach { subscriber.send(it.copy(timeMs = now)) }

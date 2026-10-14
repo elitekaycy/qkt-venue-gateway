@@ -4,15 +4,21 @@ import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.AdapterListener
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
+import com.qkt.venuegateway.adapter.VenueDepth
+import com.qkt.venuegateway.adapter.VenueFunding
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
+import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueSettlement
-import com.qkt.venuegateway.adapter.VenueUnavailableException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitOrder
@@ -20,19 +26,19 @@ import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.deribit.client.DeribitTrade
 import com.qkt.venuegateway.deribit.client.DeribitTrading
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import org.slf4j.LoggerFactory
 
 /**
  * One Deribit account (settings: [DeribitSettings]; credentials: the API key's client id as login and
  * its secret). Orders carry the client's id as Deribit's label, so every lookup is by label and a
  * stop that fires (a new Deribit order) is still found. The account's link ([trading]) is the venue
  * connection the host watches; the public ticker link ([tickers]) only feeds quotes, so its drops are
- * logged, never reported as the venue going down. Root subscriptions re-expand every [refreshMs].
+ * reported as the quote feed going down, not the venue. An order on a code the account's listing does not
+ * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). Root subscriptions re-expand every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
- * in force.
+ * in force; a remainder Deribit leaves working is cancelled instead ([DeribitOrderDesk]). Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
+ * [DeribitTape]; by default [market]). Depth and open interest are recorded ([DeribitDepth],
+ * [DeribitOpenInterest]) and pruned to their retention on the refresh timer, from [connect] on.
  */
 class DeribitAdapter(
     private val context: AdapterContext,
@@ -44,107 +50,126 @@ class DeribitAdapter(
     ) -> DeribitTrading,
     tickers: (onTicker: (DeribitTicker) -> Unit, onConnection: (Boolean, String) -> Unit) -> DeribitTickers,
     private val refreshMs: Long = 600_000,
+    private val history: DeribitMarketData = market,
 ) : VenueAdapter {
     override val id = "deribit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    private val log = LoggerFactory.getLogger(DeribitAdapter::class.java)
+
+    override val capabilities =
+        setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
+            .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
+            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH))
     private val settings = DeribitSettings.of(context.settings)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
     private val listing = DeribitListing(market, currency, context.clock, refreshMs)
 
     @Volatile private var listener: AdapterListener? = null
-    private val account = trading(::onOrder, ::onTrade) { up, reason -> listener?.connection(up, reason) }
+    private val account =
+        trading(
+            { order -> if (orders.reportable(order)) DeribitMapping.order(order)?.let { listener?.order(it) } },
+            { trade -> DeribitMapping.fill(trade)?.let { listener?.fill(it) } },
+        ) { up, reason -> listener?.connection(up, reason) }
+    private val accountHistory = DeribitAccountHistory(account, currency, listing)
+    private val orders: DeribitOrderDesk = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
     private val feed =
         DeribitQuoteFeed(
             listing,
             tickers({
                 listener?.quote(DeribitMarketMapping.quote(it))
-            }) { up, reason -> log.info("deribit tickers up={}: {}", up, reason) },
+            }) { up, reason -> listener?.quoteFeed(up, reason) },
+            ::prune,
         )
-    private val timer =
-        Executors.newSingleThreadScheduledExecutor {
-            Thread(it, "deribit-refresh").apply {
-                isDaemon =
-                    true
-            }
-        }
+    private val retention = settings.retention
+    private val openInterest =
+        DeribitOpenInterest(
+            { venue { market.ticker(it) } },
+            context.stateDir,
+            context.clock,
+            retention.openInterestDays,
+        )
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retention.depthDays)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
         account.start()
-        feed.start()
-        timer.scheduleWithFixedDelay(::refreshQuotes, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
+        feed.start(refreshMs)
     }
 
     override fun identity() = VenueIdentity(login, settings.environment.mode, currency)
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
-    override fun account(): AccountSnapshot {
-        val a = venue { account.account(currency) }
-        return AccountSnapshot(
-            a.currency,
-            a.balance,
-            a.equity,
-            a.initialMargin,
-            a.availableFunds,
-            a.initialMargin,
-            a.maintenanceMargin,
-        )
-    }
+    override fun account(): AccountSnapshot = DeribitMapping.account(venue { account.account(currency) })
 
     override fun positions() =
-        Positions(
-            Accounting.NETTING,
-            venue {
-                account.positions(currency)
-            }.mapNotNull(DeribitMapping::position),
-        )
+        Positions(Accounting.NETTING, venue { account.positions(currency) }.mapNotNull(DeribitMapping::position))
 
-    override fun openOrders() = venue { account.openOrders(currency) }.mapNotNull(DeribitMapping::order)
+    override fun openOrders() = orders.open()
 
-    override fun place(order: NewOrder): VenueOrder {
-        val placed = venue { account.place(DeribitMapping.newOrder(order, settings.stopTrigger)) }
-        return DeribitMapping.order(placed) ?: error("deribit answered order ${order.clientOrderId} without its label")
-    }
+    override fun place(order: NewOrder): VenueOrder = orders.place(order)
 
-    /** Cancels the order labelled [clientOrderId] and returns it as it now stands (filled, if it filled first). */
-    override fun cancel(clientOrderId: String): VenueOrder? {
-        venue { account.cancelByLabel(currency, clientOrderId) }
-        return orderByLabel(clientOrderId)
-    }
+    override fun cancel(clientOrderId: String) = orders.cancel(clientOrderId)
 
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? {
-        val current = orderByLabel(clientOrderId) ?: return null
-        val quantity = change.quantity ?: current.quantity
-        val edited =
-            venue { account.editByLabel(clientOrderId, current.symbol, quantity, change.limitPrice, change.stopPrice) }
-        return DeribitMapping.order(edited)
-    }
+    ) = orders.modify(clientOrderId, change)
 
-    /** The newest Deribit order labelled [clientOrderId] (a fired stop is a newer order than the stop). */
-    override fun orderByLabel(clientOrderId: String) =
-        venue {
-            account.ordersByLabel(
-                currency,
-                clientOrderId,
-            )
-        }.maxByOrNull { it.updatedMs }?.let(DeribitMapping::order)
+    override fun orderByLabel(clientOrderId: String) = orders.byLabel(clientOrderId)
 
     override fun fills(
         fromMs: Long,
         toMs: Long,
     ) = venue { account.trades(currency, fromMs, toMs) }.mapNotNull(DeribitMapping::fill)
 
-    /** Not mapped until a delivery is recorded from the venue; refused as unavailable rather than invented. */
     override fun settlements(
         fromMs: Long,
         toMs: Long,
-    ): List<VenueSettlement> = throw VenueUnavailableException("deribit settlements are not mapped yet")
+    ): List<VenueSettlement> = accountHistory.settlements(fromMs, toMs)
+
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFunding> = accountHistory.funding(fromMs, toMs)
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueFundingRate> = venue { market.fundingRates(code, fromMs, toMs) }.map(DeribitMarketMapping::fundingRate)
+
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueMark> = venue { DeribitMarks.sampled(history, code, windowMs, fromMs, toMs) }
+
+    override fun openInterest(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueOpenInterest> = openInterest.read(code, fromMs, toMs)
+
+    override fun trades(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+    ): List<VenuePrint> = venue { DeribitTape.prints(history, code, fromMs, toMs, limit) }
+
+    override fun liquidations(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenuePrint> = venue { DeribitTape.liquidations(history, code, fromMs, toMs) }
+
+    override fun depth(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueDepth> = depth.read(code, fromMs, toMs)
 
     override fun bars(
         code: String,
@@ -158,21 +183,14 @@ class DeribitAdapter(
         roots: Set<String>,
     ) = venue { feed.want(codes, roots) }
 
+    /** Prunes the recordings past their retention, at most once a UTC day. */
+    private fun prune() {
+        depth.prune()
+        openInterest.prune()
+    }
+
     override fun close() {
-        timer.shutdownNow()
         feed.close()
         account.close()
-    }
-
-    private fun refreshQuotes() {
-        runCatching { venue { feed.refresh() } }.onFailure { log.warn("deribit quote refresh failed: {}", it.message) }
-    }
-
-    private fun onOrder(order: DeribitOrder) {
-        DeribitMapping.order(order)?.let { listener?.order(it) }
-    }
-
-    private fun onTrade(trade: DeribitTrade) {
-        DeribitMapping.fill(trade)?.let { listener?.fill(it) }
     }
 }

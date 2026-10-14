@@ -2,6 +2,7 @@ package com.qkt.venuegateway.testkit
 
 import com.qkt.venuegateway.adapter.AdapterListener
 import com.qkt.venuegateway.adapter.VenueFill
+import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueSettlement
@@ -12,8 +13,10 @@ class RecordingListener : AdapterListener {
     val orders = CopyOnWriteArrayList<VenueOrder>()
     val fills = CopyOnWriteArrayList<VenueFill>()
     val settlements = CopyOnWriteArrayList<VenueSettlement>()
+    val funding = CopyOnWriteArrayList<VenueFunding>()
     val quotes = CopyOnWriteArrayList<VenueQuote>()
     val connections = CopyOnWriteArrayList<Boolean>()
+    val quoteFeed = CopyOnWriteArrayList<Boolean>()
 
     override fun order(order: VenueOrder) {
         orders += order
@@ -27,8 +30,19 @@ class RecordingListener : AdapterListener {
         settlements += settlement
     }
 
+    override fun funding(funding: VenueFunding) {
+        this.funding += funding
+    }
+
     override fun quote(quote: VenueQuote) {
         quotes += quote
+    }
+
+    override fun quoteFeed(
+        up: Boolean,
+        reason: String,
+    ) {
+        quoteFeed += up
     }
 
     override fun connection(

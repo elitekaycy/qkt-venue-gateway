@@ -1,0 +1,38 @@
+{
+ "method": "private/get_order_state",
+ "params": {
+  "order_id": "USDC-210049235313525012"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "result": {
+   "label": "ORD-funding_soak_deribit-0.muuxagaz",
+   "price": 133.712,
+   "user_id": 1,
+   "direction": "buy",
+   "time_in_force": "good_til_cancelled",
+   "instrument_name": "SOL_USDC-PERPETUAL",
+   "web": false,
+   "api": true,
+   "amount": 50.0,
+   "order_id": "USDC-210049235313525012",
+   "creation_timestamp": 1791184980879,
+   "mmp": false,
+   "filled_amount": 50.0,
+   "average_price": 126.4454,
+   "post_only": false,
+   "replaced": false,
+   "reduce_only": false,
+   "starbase_order_id": 232764498002313270,
+   "last_update_timestamp": 1791185407682,
+   "contracts": 50000.0,
+   "original_order_type": "market",
+   "order_state": "filled",
+   "order_type": "limit",
+   "starbase_last_update_timestamp": 1791185407682945068,
+   "is_liquidation": false,
+   "risk_reducing": false
+  }
+ },
+ "recorded": "2026-10-05 Deribit testnet"
+}

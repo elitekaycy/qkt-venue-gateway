@@ -15,15 +15,8 @@ import org.junit.jupiter.api.io.TempDir
  * The behaviour the gateway host relies on from every adapter. An adapter's own test extends this and
  * supplies the adapter and three orders only its venue can name; passing it means the host and qkt
  * treat the adapter exactly as they treat every other. It runs against a venue's test environment:
- * it places real orders, cancels what it leaves working, and flattens what it fills.
- *
- * ```
- * class MyVenueContractTest : AdapterContractTest() {
- *     override fun newAdapter(stateDir: Path) = MyVenueAdapter(...)
- *     override fun restingOrder(clientOrderId: String) = NewOrder(clientOrderId, "BTC-PERP", Side.BUY, ...)
- *     ...
- * }
- * ```
+ * it places real orders, cancels what it leaves working, and flattens what it fills. `DeribitContractTest`
+ * and `PaperContractTest` in this repository are worked examples.
  */
 abstract class AdapterContractTest {
     /** A connected-ready adapter keeping its private state in [stateDir]; a second call on it is a restart. */
@@ -41,8 +34,17 @@ abstract class AdapterContractTest {
     /** An order the venue itself refuses, such as a size off its volume step. */
     protected abstract fun refusedOrder(clientOrderId: String): NewOrder
 
-    /** A listed code with recent trading, for bars and quotes. */
+    /** A market order larger than all the venue offers in its price band; null when it fills whole (nothing rests). */
+    protected open fun overrunOrder(clientOrderId: String): NewOrder? = null
+
+    /** A listed code with recent trading, for bars, quotes, open interest, depth and its public tape. */
     protected abstract val activeCode: String
+
+    /** A listed perpetual, whose funding rates are checked when the adapter declares funding rates. */
+    protected open val perpetualCode: String? = null
+
+    /** A listed option the venue quotes now, whose quotes are checked when the adapter declares option marks. */
+    protected open val optionCode: String? = null
 
     /** The bar length checked; the venue must serve it. */
     protected open val barWindowMs: Long = 60_000L
@@ -142,34 +144,34 @@ abstract class AdapterContractTest {
     ) {
         val (adapter, _) = connect(dir)
         val order = refusedOrder(label())
-
         assertThatThrownBy { adapter.placeTracked(order) }.isInstanceOf(VenueRefusedException::class.java)
         assertThat(adapter.openOrders().map { it.clientOrderId }).doesNotContain(order.clientOrderId)
     }
 
     @Test
-    fun `bars are closed, ordered, aligned to their window and consistent`(
-        @TempDir dir: Path,
-    ) {
-        val (adapter, _) = connect(dir)
-        val nowMs = System.currentTimeMillis()
-        val fromMs = nowMs - BARS_CHECKED * barWindowMs
-
-        ContractChecks.bars(adapter.bars(activeCode, barWindowMs, fromMs, nowMs), barWindowMs, fromMs, nowMs, nowMs)
-    }
-
-    @Test
-    fun `a subscribed code is quoted, with the bid never above the ask`(
+    fun `bars, quotes and option marks, when declared, are well formed and quote the bid at or below the ask`(
         @TempDir dir: Path,
     ) {
         val (adapter, listener) = connect(dir)
+        CapabilityChecks.barsAndQuotes(adapter, listener, activeCode, barWindowMs, pushTimeoutMs)
+        CapabilityChecks.optionMarks(adapter, listener, optionCode, pushTimeoutMs)
+    }
 
-        adapter.subscribeQuotes(setOf(activeCode), emptySet())
+    @Test
+    fun `optional histories answer in shape when declared and are refused as unsupported when not`(
+        @TempDir dir: Path,
+    ) {
+        val (adapter, _) = connect(dir)
+        CapabilityChecks.histories(adapter, activeCode, perpetualCode, barWindowMs, CLOCK_SKEW_MS)
+    }
 
-        listener.await("a quote of $activeCode", pushTimeoutMs) { listener.quotes.any { it.symbol == activeCode } }
-        val quote = listener.quotes.first { it.symbol == activeCode }
-        assertThat(quote.timeMs).isPositive
-        if (quote.bid != null && quote.ask != null) assertThat(quote.bid).isLessThanOrEqualTo(quote.ask)
+    @Test
+    fun `a market order larger than the book ends with what filled and leaves no remainder working`(
+        @TempDir dir: Path,
+    ) {
+        val order = overrunOrder(label()) ?: return
+        val (adapter, _) = connect(dir)
+        RemainderChecks.overrun(adapter, orders, order, ::label, pushTimeoutMs)
     }
 
     @Test
@@ -190,6 +192,5 @@ abstract class AdapterContractTest {
 
     private companion object {
         const val CLOCK_SKEW_MS = 60_000L
-        const val BARS_CHECKED = 30L
     }
 }

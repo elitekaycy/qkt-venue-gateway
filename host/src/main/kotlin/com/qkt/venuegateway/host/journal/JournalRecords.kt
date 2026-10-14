@@ -86,6 +86,16 @@ internal class JournalRecords(
             json.decodeFromString(WireSubmit.serializer(), it.getString(1))
         }
 
+    fun pendingBody(id: String): WireSubmit? =
+        query("SELECT body_json FROM orders WHERE client_order_id = ? AND status = 'pending'", id) {
+            json.decodeFromString(WireSubmit.serializer(), it.getString(1))
+        }.firstOrNull()
+
+    fun body(id: String): WireSubmit? =
+        query("SELECT body_json FROM orders WHERE client_order_id = ? AND body_json IS NOT NULL", id) {
+            json.decodeFromString(WireSubmit.serializer(), it.getString(1))
+        }.firstOrNull()
+
     fun insertFill(fill: WireFill): Boolean =
         update(
             "INSERT OR IGNORE INTO fills(fill_id, client_order_id, time, fill_json) VALUES(?, ?, ?, ?)",
@@ -130,8 +140,6 @@ internal class JournalRecords(
 
     fun settlementsOf(symbol: String): List<WireSettlement> =
         query("SELECT settlement_json FROM settlements WHERE symbol = ? ORDER BY time", symbol, read = ::settlement)
-
-    fun latestTime(table: String): Long = long("SELECT COALESCE(MAX(time), 0) FROM $table")
 
     fun isDead(id: String): Boolean =
         query("SELECT 1 FROM dead_ids WHERE client_order_id = ?", id) { true }.isNotEmpty()

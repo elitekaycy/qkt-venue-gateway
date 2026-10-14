@@ -1,0 +1,22 @@
+{
+ "method": "private/get_settlement_history_by_currency",
+ "params": {
+  "currency": "USDC",
+  "count": 2,
+  "search_start_timestamp": 1791014400571,
+  "continuation": "7rkt1pgmPLU6m4ykFbMqGdHhTTSXCvWyYscA2X79vXsBDTvxaRuU5CXF4tbR2NLUxQyxtXV2we"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "result": {
+   "continuation": "none",
+   "settlements": []
+  },
+  "usIn": 1791153925618053,
+  "usOut": 1791153925618992,
+  "usDiff": 939,
+  "testnet": true,
+  "id": 1
+ },
+ "recorded": "2026-10-04 Deribit testnet"
+}

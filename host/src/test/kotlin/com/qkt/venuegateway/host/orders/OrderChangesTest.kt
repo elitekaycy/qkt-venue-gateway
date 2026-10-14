@@ -2,6 +2,7 @@ package com.qkt.venuegateway.host.orders
 
 import com.qkt.venuegateway.host.FakeAdapter
 import com.qkt.venuegateway.host.journal.Journal
+import com.qkt.venuegateway.host.journal.setKillSwitch
 import com.qkt.vgp.WireChange
 import com.qkt.vgp.WireClose
 import com.qkt.vgp.WireKillSwitch

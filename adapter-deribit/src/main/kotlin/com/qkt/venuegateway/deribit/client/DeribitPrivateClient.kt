@@ -37,6 +37,7 @@ class DeribitPrivateClient(
         }
     private val socket =
         DeribitSocket(url, "private", HEARTBEAT_SECONDS, requestTimeoutMs, ::onNotification, onConnection, ::open)
+    private val histories = DeribitHistories(socket::request)
 
     override fun start() = socket.start()
 
@@ -78,6 +79,12 @@ class DeribitPrivateClient(
             }
         return DeribitPrivateJson.order(answer.jsonObject["order"]!!.jsonObject)
     }
+
+    override fun cancel(orderId: String) =
+        DeribitPrivateJson.order(call("private/cancel") { put("order_id", orderId) }.jsonObject)
+
+    override fun cancelSoon(orderId: String) =
+        socket.send("private/cancel", buildJsonObject { put("order_id", orderId) })
 
     override fun cancelByLabel(
         currency: String,
@@ -121,6 +128,20 @@ class DeribitPrivateClient(
                 }.jsonObject,
             )
         }
+
+    /** The transaction log, newest-first pages read in full ([DeribitHistories]). */
+    override fun transactions(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = histories.transactions(currency, fromMs, toMs)
+
+    /** The settlement history, newest-first pages read back past [fromMs] ([DeribitHistories]). */
+    override fun settlements(
+        currency: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = histories.settlements(currency, fromMs, toMs)
 
     private fun open(call: (String, JsonObject) -> JsonElement) {
         call(

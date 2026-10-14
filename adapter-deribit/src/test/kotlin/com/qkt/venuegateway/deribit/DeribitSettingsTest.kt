@@ -22,6 +22,8 @@ class DeribitSettingsTest {
         assertThat(testnet.stopTrigger).isEqualTo("last_price")
         assertThat(mainnet.environment.socketUrl).isEqualTo("wss://www.deribit.com/ws/api/v2")
         assertThat(mainnet.environment.mode).isEqualTo(TradeMode.REAL)
+        assertThat(testnet.environment.historyUrl).isEqualTo("https://test.deribit.com")
+        assertThat(mainnet.environment.historyUrl).isEqualTo("https://history.deribit.com")
         assertThat(mainnet.stopTrigger).isEqualTo("mark_price")
         assertThatThrownBy { DeribitSettings.of(emptyMap()) }.hasMessageContaining("setting environment is required")
     }

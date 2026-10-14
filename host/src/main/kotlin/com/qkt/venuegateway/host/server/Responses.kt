@@ -2,6 +2,7 @@ package com.qkt.venuegateway.host.server
 
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueUnavailableException
+import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.orders.DeskResult
 import com.qkt.venuegateway.host.wire.InvalidRequestException
@@ -48,7 +49,8 @@ internal suspend fun ApplicationCall.desk(
 
 /**
  * Runs [handler] for a caller holding one of [roles]; a missing or wrong token is `401`, and the
- * expected failures map to the wire's codes (`400` bad request, `422` venue refusal, `503` venue down).
+ * expected failures map to the wire's codes (`400` bad request, `422` venue refusal, `501` a capability the
+ * adapter does not declare, `503` venue down).
  */
 internal suspend fun ApplicationCall.serve(
     gateway: Gateway,
@@ -65,6 +67,8 @@ internal suspend fun ApplicationCall.serve(
         error(400, "invalid_request", e.message ?: "malformed body")
     } catch (e: VenueRefusedException) {
         error(422, "venue_rejected", e.reason)
+    } catch (e: VenueUnsupportedException) {
+        error(501, "unsupported", e.message ?: "the adapter does not serve this")
     } catch (e: VenueUnavailableException) {
         error(503, "venue_unavailable", e.message ?: "the venue cannot be reached")
     }

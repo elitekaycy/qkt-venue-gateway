@@ -1,6 +1,11 @@
 # VGP v1 wire format — design
 
-**Status:** design for phase 44 (amends `2026-09-30-futures-options-design.md` §7). The endpoint list
+**Status:** design for phase 44 (amends `2026-09-30-futures-options-design.md` §7); capabilities and
+perpetual funding added by `2026-10-04-perpetual-funding-and-venue-capabilities.md`, mark prices by
+`2026-10-04-mark-and-index-stream-fields.md`, open interest by `2026-10-04-open-interest.md`, option marks by
+`2026-10-05-option-marks-as-rule-inputs.md`, the public tape and liquidations by
+`2026-10-05-trade-flow-and-liquidations.md`, order-book depth by `2026-10-05-order-book-depth.md`. The
+endpoint list
 and semantics come from `docs/research/2026-09-18-venue-plugin-architecture.md` §6; this document
 fixes what that list left to implementations: the JSON, the event stream, errors, resume and the
 kill switch. The qkt client (`connector/gateway`) and any gateway (`qkt-venue-gateway`) implement exactly
@@ -11,7 +16,8 @@ this; the client's fake gateway in tests is built from it.
 - **Transport:** HTTPS (HTTP in tests) under a base URL; every path starts `/v1/`. JSON bodies,
   UTF-8, `Content-Type: application/json`.
 - **Auth:** `Authorization: Bearer <token>` on every request, the stream included. A missing or
-  wrong token is `401 unauthorized`.
+  wrong token is `401 unauthorized`; on a WebSocket route (`/v1/stream`, `/v1/quotes`) the `401` answers
+  the upgrade request, so no socket opens.
 - **Money and quantities are decimal strings** (`"0.10"`, `"84042.83"`), never JSON numbers: qkt
   books exact `BigDecimal`, and a float on the wire would round. Integers (sequence numbers, times)
   are JSON numbers.
@@ -34,6 +40,7 @@ Every non-2xx response has the body `{"error": {"code": "<code>", "message": "<t
 | 409 | `conflict` | `client_order_id` reused with a different body |
 | 422 | `venue_rejected` | the venue refused the request; `message` is its reason |
 | 423 | `kill_switch` | the request adds or changes risk while a kill scope covers its symbol |
+| 501 | `unsupported` | the gateway's adapter does not serve what was asked (a capability it does not declare) |
 | 503 | `venue_unavailable` | the gateway cannot reach the venue; safe to retry reads, and submits (idempotent on `client_order_id`) |
 
 ## 3. Endpoints
@@ -43,13 +50,29 @@ Every non-2xx response has the body `{"error": {"code": "<code>", "message": "<t
 {"protocol": "vgp1", "adapter": "deribit", "adapter_version": "0.1.0",
  "account_login": "12345", "trade_mode": "demo", "venue_connected": true,
  "kill_switch": {"all": false, "symbols": []}, "server_time": 1790835316271,
- "stream": "4f1c...", "seq": 1041}
+ "stream": "4f1c...", "seq": 1041, "capabilities": ["bars", "funding", "funding_rates", "quotes"]}
 ```
 `stream` and `seq` are the event log's identity and its latest sequence number: a client that reads
 them before reconciling from REST, then opens the stream with `since=<seq>`, loses nothing that
 happened in between.
 `trade_mode` is `demo` or `real`. The client checks `protocol`, `adapter`, `account_login` and
 `trade_mode` against the account's `expected_*` settings before trading.
+
+`capabilities` names the optional services the gateway's adapter serves: `bars` (`/v1/bars`), `quotes`
+(`/v1/quotes`), `settlements` (the venue's settlements reach `/v1/settlements` and the stream), `funding`
+(what the venue charged or credited the account for holding perpetuals: `/v1/funding` and the `funding`
+event), `funding_rates` (`/v1/funding-rates`), `mark_prices` (`/v1/marks`, and quotes that carry `mark`
+and `index` where the venue reports them), `open_interest` (`/v1/open-interest`), `option_marks` (option
+quotes that carry `mark_iv` and `underlying`, §4a), `trades` (`/v1/trades`), `liquidations`
+(`/v1/liquidations`) and `depth` (`/v1/depth`). An endpoint whose capability is not declared answers
+`501 unsupported` (`/v1/settlements` is still served, from what the journal holds). A gateway that
+predates the field omits it; a client treats that as none declared. A client ignores a name it does not
+know. Funding is the cash a venue moves between longs and shorts of a perpetual; a client books it, so it
+does not trade perpetuals on a gateway that does not declare `funding`. A client reads a contract's mark
+and index (as strategy inputs) only from a gateway that declares `mark_prices`, an option's implied
+volatility and Greeks only from one that declares `option_marks`, a contract's traded or liquidated
+volume only from one that declares `trades` or `liquidations`, and a contract's order-book depth only from
+one that declares `depth`.
 
 ### `GET /v1/account`
 ```json
@@ -102,7 +125,8 @@ together with how a future names its root.
 ticket).
 
 ### `GET /v1/orders`
-`{"orders": [<Order>]}`, the working orders. An `Order` is:
+`{"orders": [<Order>]}`, the working orders placed through this gateway. Orders another tool placed on
+the same account are not listed, as the stream carries none of their events. An `Order` is:
 ```json
 {"client_order_id": "dsl-s-1", "venue_order_id": "8812", "symbol": "BTC_USDC-25DEC26-92000-C",
  "side": "sell", "type": "limit", "quantity": "0.1", "limit_price": "650", "stop_price": null,
@@ -128,6 +152,13 @@ Body: the `Order` fields a client sets (`client_order_id`, `symbol`, `side`, `ty
 with the existing `Order` in its current state and never places a second order; the same id with a
 different body is `409 conflict`. A client that saw a timeout resubmits the same body.
 
+**A market order never rests.** An order of type `market`, or a `stop` once triggered, fills what the
+venue offers at that moment; any remainder is cancelled, never left working, whatever its
+`time_in_force`. The order then ends `cancelled` with its `filled_quantity`, and the fills already booked
+stand. A gateway whose venue leaves such a remainder working (Deribit turns it into a limit at its
+price-band edge) cancels it as soon as it sees it, and reports the order with the `type` the client sent.
+The client never sends the remainder again on its own: whether to trade it is the strategy's decision.
+
 A `client_order_id` is at most 64 characters (it travels in the venue's order label) and the gateway
 remembers it for ever, so a client never sends one twice for different orders. The qkt client sends
 its engine order id with the order's submit time appended (`dsl-s--4.mg8q2kv1`): an engine may hand
@@ -143,9 +174,16 @@ Response `200` with the `Order` (`cancelled`, or `filled` if the fill won the ra
 the fill). Never gated.
 
 ### `POST /v1/positions/close`
-Body `{"symbol": "<code>", "quantity": "<decimal>"}` (quantity optional: the whole position) or
-`{"ticket": "<ticket>"}`. Response `200` with the closing `Order`. Never gated: flatten is always
-allowed.
+Body `{"symbol": "<code>", "quantity": "<decimal>", "client_order_id": "<id>"}` (quantity optional: the
+whole position; `client_order_id` optional) or `{"ticket": "<ticket>"}`. Response `200` with the closing
+`Order`. Never gated: flatten is always allowed.
+
+With `client_order_id` (the same rules as a submit's: at most 64 characters, never reused) the close is
+**idempotent on it**: the closing order is sent under that id, and a second request with the same id,
+symbol and quantity (or none) returns `200` with that order in its current state, even once the position
+is flat, and never closes again; the same id with another symbol or quantity, or an id an order was sent
+with, is `409 conflict`. A client that saw a timeout resends the same body. Without it the gateway names
+the order itself and every request is a new close, so a retry may close twice.
 
 ### `GET /v1/deals?from=<ms>&to=<ms>` and `GET /v1/deals?client_order_id=<id>`
 `{"deals": [<Fill>]}`, oldest first (§4 `fill`): the executions in the window, or every execution of
@@ -156,6 +194,98 @@ one order (complete for as long as the gateway keeps the order).
 the settlement of one contract (empty until it expires). A client reconciling after an outage reads
 the ones it missed here; for contracts its strategies still hold, it asks by symbol.
 
+### `GET /v1/funding?from=<ms>&to=<ms>`
+`{"funding": [<Funding>]}`, oldest first (§4 `funding`): what the venue charged or credited the account
+for holding perpetuals in the window. A client reconciling after an outage reads the records it missed
+here. `501 unsupported` unless `funding` is declared.
+
+### `GET /v1/funding-rates?symbol=<code>&from=<ms>&to=<ms>`
+A perpetual's published funding rates, oldest first, each `time` in `[from, min(to, now)]`:
+```json
+{"rates": [{"time": 1791126000000, "rate": "0.0000418", "price": "121.69"}], "next": 1794726000000}
+```
+A unit long held through `time` pays `rate × price` per unit of the underlying (times the instrument's
+`contract_size`); a negative `rate` pays the short. `price` is the price the venue applied (its mark or
+index), absent when it publishes none, and the client then uses its own last price. A response covers at
+most 1000 hours and holds at most 1000 rates; `next` is the `from` of the following page and is absent
+on the last one. The client stores these for backtests (`qkt fetch --funding`). `501 unsupported` unless
+`funding_rates` is declared.
+
+### `GET /v1/marks?symbol=<code>&window_ms=<ms>&from=<ms>&to=<ms>`
+One contract's mark and index price history, sampled once per window: for each closed window starting in
+`[from, to)` in which the venue reported them, the last report in it, at its own `time`, oldest first:
+```json
+{"marks": [{"time": 1791154649967, "mark": "86432.49", "index": "86403.5"}], "next": 1791160640000}
+```
+`window_ms` follows `/v1/bars`. `mark` is the price the venue values positions and liquidates at, `index`
+the spot index it tracks (the same fields as a quote's, §4a); either is absent when the venue did not
+report it. A window in which the venue reported nothing has no entry: the value known is still the
+previous one. A response covers at most 100 windows; `next` is the `from` of the following page and is
+absent on the last one. The client stores these for backtests (`qkt fetch --marks`), which see each value
+from its `time` on. `501 unsupported` unless `mark_prices` is declared.
+
+### `GET /v1/open-interest?symbol=<code>&from=<ms>&to=<ms>`
+A contract's published open interest, oldest first, each `time` in `[from, min(to, now)]`:
+```json
+{"open_interest": [{"time": 1790864291655, "open_interest": "1477.6341"}], "next": 1790924291655}
+```
+`open_interest` is the contracts outstanding, in the contract's order quantity (the unit an order's
+`quantity` is written in). `time` is the instant the venue made the figure known, never earlier: a figure
+the venue stamps with the start of the period it summarizes is served at that period's end. A response
+covers at most 1000 minutes and holds at most 1000 figures; `next` is the `from` of the following page
+and is absent on the last one. A venue that publishes no history serves the figures its adapter recorded
+(the adapter's README says so); such a series starts when the gateway first recorded it. A gateway may
+keep a recorded series for a bounded window only (a retention its adapter's README names, off by default):
+what falls out of the window is gone for good, and a read reaching before it answers what remains, never
+an error. The client stores these for backtests (`qkt fetch --open-interest`), fetching within the
+gateway's window, and reads the newest live. `501 unsupported` unless `open_interest` is declared.
+
+### `GET /v1/trades?symbol=<code>&from=<ms>&to=<ms>`
+One contract's public trade tape: every print whose `time` is in `[from, min(to, now))`, oldest first:
+```json
+{"trades": [{"id": "USDC-55597050", "time": 1791154801271, "price": "86457.1", "size": "0.005",
+  "side": "buy"}], "next": 1791154873114}
+```
+`side` is the aggressor's, the side that took liquidity (`buy` lifted an offer). `size` is in the contract's
+order quantity (the unit an order's `quantity` is written in). `id` is the venue's trade id, unique per
+contract. A response holds at most 1000 prints; a full one ends before its last millisecond, whose prints all
+open the next page, so `next` (absent on the last page) is that millisecond and no print is served twice. The
+client stores these for backtests (`qkt fetch --tape`). `501 unsupported` unless `trades` is declared.
+
+### `GET /v1/liquidations?symbol=<code>&from=<ms>&to=<ms>`
+The prints of one contract that liquidated a position, `time` in `[from, min(to, now))`, oldest first, in the
+shape of `/v1/trades`:
+```json
+{"liquidations": [{"id": "USDC-65965358", "time": 1791096882272, "price": "85070.2", "size": "0.0011",
+  "side": "buy"}], "next": 1791100482272}
+```
+`side` is the liquidation order's: `sell` closed a liquidated long, `buy` a liquidated short. A print that
+liquidated both its buyer and its seller is two entries, one of each side, under the same `id`. Where the venue
+marks liquidations on its tape, each is also one of `/v1/trades`' prints. A response covers at most one hour
+(finding liquidations may cost a read of the whole tape); `next` is the `from` of the following page and is
+absent on the last one. The client stores these for backtests (`qkt fetch --liquidations`). `501 unsupported`
+unless `liquidations` is declared. The account's own liquidations are fills on the stream, not these.
+
+### `GET /v1/depth?symbol=<code>&from=<ms>&to=<ms>`
+A contract's order book as the gateway recorded it, snapshots oldest first, each `time` in
+`[from, min(to, now)]`:
+```json
+{"depth": [{"time": 1791170721647, "bids": [["86490.6", "10"], ["86487", "0.005"]],
+  "asks": [["86490.7", "10"]]}], "next": 1791230721647}
+```
+A snapshot holds at most the best 10 price levels of each side: `bids` from the highest price down, `asks`
+from the lowest up, each level `[price, amount]`, `amount` the quantity resting at that price in the
+contract's order quantity. A side the book does not hold is `[]`. `time` is the instant the venue stamped
+the book, never earlier. Venues publish no book history, so a gateway serves the snapshots its adapter
+recorded: a read whose window reaches the present (within a minute) first records the venue's book as it
+stands, then serves what was recorded. A series therefore has one snapshot per such read (qkt's live feed
+reads every 10 seconds), starts when the gateway first recorded it, and has a gap wherever nothing read
+it. Paging is as for open interest: at most 1000 minutes and 1000 snapshots a response, `next` the `from`
+of the following page, absent on the last. As there, a gateway may keep the record for a bounded window
+only, and a read reaching before it answers what remains. The client stores these for backtests
+(`qkt fetch --depth`), fetching within the gateway's window, and reads the newest live. `501 unsupported`
+unless `depth` is declared.
+
 ### `POST /v1/kill`, `POST /v1/kill/release`
 Body `{"scope": "all"}` or `{"scope": "symbols", "symbols": ["<code>", ...]}`. Response `200` with the
 `kill_switch` object of `/v1/health`. While a scope covers a symbol, `POST /v1/orders` is
@@ -163,7 +293,7 @@ Body `{"scope": "all"}` or `{"scope": "symbols", "symbols": ["<code>", ...]}`. R
 opposite side (checked by the gateway, whatever the venue enforces), and a `PATCH` that is not a pure
 reduction is `423` too. Cancels and `positions/close` always pass.
 
-## 4. Event stream: `GET /v1/stream?since=<seq>` (WebSocket)
+## 4. Event stream: `GET /v1/stream?since=<seq>&stream=<stream>` (WebSocket)
 
 Each message is one event:
 ```json
@@ -174,9 +304,13 @@ Each message is one event:
 - `seq` increases by exactly 1 per event within a `stream`.
 - `since` is **exclusive**: the gateway first replays every retained event with `seq > since`, in
   order, then streams live. With no `since`, it streams live only.
+- `stream`, optional, is the `stream` the client's `since` belongs to (of the last event it processed, or
+  of the health anchor). Without it a `since` from a previous stream is recognized only when it is beyond
+  the current log's latest `seq`; a client resuming sends it.
 - If `since` is older than the oldest retained event, or the client's `stream` is not the current
-  one, the gateway sends a single `{"type": "reset", "stream": "<current>", "seq": <latest>}` and
-  then streams live from there. The client must then resynchronize from REST (§5).
+  one (`stream` names another, or `since` is beyond the latest `seq`), the gateway sends a single
+  `{"type": "reset", "stream": "<current>", "seq": <latest>}` and then streams live from there. The client
+  must then resynchronize from REST (§5).
 
 Event `type` and `data`:
 
@@ -185,6 +319,7 @@ Event `type` and `data`:
 | `order` | an `Order` (§3): every status change |
 | `fill` | `{"client_order_id", "venue_order_id", "fill_id", "symbol", "side", "quantity", "price", "time", "costs": [{"kind", "amount", "currency"}]}` |
 | `settlement` | `{"symbol", "price", "time", "costs": [{"kind", "amount", "currency"}]}` |
+| `funding` | `{"funding_id", "symbol", "amount", "currency", "position", "time"}` |
 | `position` | a `Position` (§3) after a change, `quantity` `"0"` when flat |
 | `account` | the `/v1/account` object |
 | `kill` | the `kill_switch` object |
@@ -199,7 +334,16 @@ Event `type` and `data`:
   holder settles at (an option's intrinsic value, a future's delivery price) and the costs the venue
   charged the account. It is sent even when the account's net position is zero, so a client that
   runs several strategies on one account settles each one's own holding.
+- A `funding` is the venue charging (`amount` positive) or crediting (`amount` negative) the account for
+  holding perpetual `symbol`, at `time`, in `currency`. `position` is the account's signed quantity the
+  venue charged on (absent when the venue does not say), so a client running several strategies, or
+  sharing the account with another tool, books only its own part. `funding_id` is unique per venue
+  record, so a record seen twice is one record. A venue that funds continuously reports funding when it
+  realizes it (Deribit: at its daily settlement and when a position is reduced).
 - v1 defines no liquidation event (qkt has no liquidation semantics yet).
+- A client ignores, logging it, an event `type` it does not know, so events can be added without a new
+  protocol. (qkt 0.55 and earlier predate this rule and stop on a `funding` event: upgrade the client
+  with the gateway.)
 
 ## 4a. Quotes: `GET /v1/quotes?symbols=<code>,<code>&roots=<root>,<root>` (WebSocket)
 
@@ -209,9 +353,14 @@ option of a root (an instrument's `underlying`), including options listed after 
 code subscribed both ways is sent once. Each message is one quote:
 ```json
 {"symbol": "BTC_USDC-25DEC26-92000-C", "bid": "640", "ask": "655", "bid_size": "1.2", "ask_size": "0.8",
- "mark": "648.5", "mark_iv": "52.3", "underlying": "84437.55", "time": 1790835377133}
+ "mark": "648.5", "mark_iv": "52.3", "underlying": "84437.55", "time": 1790835377133, "index": "84301.2"}
 ```
 Any field but `symbol` and `time` may be null (no bid, no mark yet). `mark_iv` is in volatility points.
+`underlying` is the price the contract is valued against (an option's forward for its expiry); `index`
+is the spot index the venue charges fees on (Deribit's option fee is a share of it). A gateway declaring
+`option_marks` sends both `mark_iv` and `underlying` on an option's quotes once the venue reports them;
+the client prices the option's Greeks from them (Black-76, rate 0), so the venue's own Greeks are not
+carried.
 
 `time` is the instant the gateway last knew the quote to hold, not when it last changed. While a
 subscribed quote holds, the gateway sends it again with `time` advanced at least every **5 seconds**:
@@ -223,12 +372,14 @@ whose refreshes stop is stale and new orders on it wait.
 
 - **Start:** `GET /v1/health` (identity checks, and the stream's `stream`/`seq` as the anchor), then
   `/v1/account`, `/v1/positions`, `/v1/orders`, `/v1/deals` and `/v1/settlements` to reconcile, then
-  open the stream with `since=<anchor seq>`; what REST already reported is recognized and dropped.
-- **Reconnect:** reopen with `since=<last seq>`; events with `seq <=` the last processed one are
+  open the stream with `since=<anchor seq>&stream=<anchor stream>`; what REST already reported is
+  recognized and dropped.
+- **Reconnect:** reopen with `since=<last seq>&stream=<its stream>`; events with `seq <=` the last processed one are
   dropped, and so is a `fill` whose `fill_id` was already booked.
 - **Reset:** on a `reset` event, or a `stream` change, reconcile from `/v1/orders`, `/v1/positions`,
-  `/v1/deals` and `/v1/settlements` since the last processed fill, book missing fills by `fill_id` and
-  missing settlements by symbol and time, then continue from the reset's `seq`.
+  `/v1/deals` and `/v1/settlements` since the last processed fill (and `/v1/funding` since the last booked
+  funding record, when declared), book missing fills by `fill_id`, missing settlements by symbol and
+  time and missing funding by `funding_id`, then continue from the reset's `seq`.
 - **Submit:** POST once; on a timeout or `503`, resubmit the same body (idempotent); on `422` or
   `423` the order is rejected with the gateway's message.
 - **Several strategies on one account:** one stream and one client per account. Fills are attributed
@@ -236,6 +387,7 @@ whose refreshes stop is stale and new orders on it wait.
   costs are shared once, by holding, across them.
 - **Restart:** every order the client restores is resolved by id (`GET /v1/orders/{id}` and its
   deals); fills it booked before the restart are matched against its booked quantity, oldest first,
-  in that complete history. Settlements of contracts still held are read by symbol.
+  in that complete history. Settlements of contracts still held are read by symbol. Funding since the
+  last record it booked (persisted) is read from `/v1/funding`; a first start books none from before it.
 - **Unanswered submit:** resend the same body until a deadline, then resolve it by id: `404` means
   it was never placed.

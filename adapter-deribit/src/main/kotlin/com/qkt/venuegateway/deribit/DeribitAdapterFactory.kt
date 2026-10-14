@@ -30,6 +30,7 @@ class DeribitAdapterFactory : VenueAdapterFactory {
                 )
             },
             { onTicker, onConnection -> DeribitTickerStream(environment.socketUrl, onTicker, onConnection) },
+            history = DeribitPublicClient(environment.historyUrl),
         )
     }
 }

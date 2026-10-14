@@ -14,6 +14,7 @@ internal object JournalSchema {
             "orders(client_order_id TEXT PRIMARY KEY, body_hash TEXT, body_json TEXT, status TEXT NOT NULL, order_json TEXT)",
             "fills(fill_id TEXT PRIMARY KEY, client_order_id TEXT NOT NULL, time INTEGER NOT NULL, fill_json TEXT NOT NULL)",
             "settlements(symbol TEXT NOT NULL, time INTEGER NOT NULL, settlement_json TEXT NOT NULL, PRIMARY KEY(symbol, time))",
+            "funding(funding_id TEXT PRIMARY KEY, time INTEGER NOT NULL, funding_json TEXT NOT NULL)",
             "dead_ids(client_order_id TEXT PRIMARY KEY)",
         )
 

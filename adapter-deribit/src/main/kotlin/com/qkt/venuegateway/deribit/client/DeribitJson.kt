@@ -60,6 +60,7 @@ internal object DeribitJson {
             settlementCurrency =
                 o.text("settlement_currency") ?: o.text("counter_currency") ?: error("currency missing"),
             priceIndex = o.text("price_index") ?: error("price_index missing"),
+            active = (o["is_active"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: error("is_active missing"),
         )
     }
 
@@ -77,7 +78,18 @@ internal object DeribitJson {
             markIv = o.dec("mark_iv"),
             underlyingPrice = o.dec("underlying_price"),
             indexPrice = o.dec("index_price"),
+            openInterest = o.dec("open_interest"),
         )
+    }
+
+    fun orderBook(o: JsonObject): DeribitOrderBook {
+        fun levels(key: String) =
+            o[key]!!.jsonArray.map {
+                val (price, amount) = it.jsonArray.map(::decimal)
+                price!! to amount!!
+            }
+        val name = o.text("instrument_name") ?: error("instrument_name missing")
+        return DeribitOrderBook(name, o.long("timestamp"), levels("bids"), levels("asks"))
     }
 
     fun klines(o: JsonObject): List<DeribitKline> {
@@ -96,6 +108,30 @@ internal object DeribitJson {
             )
         }
     }
+
+    fun fundingRate(o: JsonObject) = DeribitFundingRate(o.long("timestamp"), o.req("interest_1h"), o.req("index_price"))
+
+    /** The trades of a `get_last_trades_by_instrument*` answer, as Deribit ordered them. */
+    fun markTrades(o: JsonObject): List<DeribitMarkTrade> =
+        o["trades"]!!.jsonArray.map {
+            val t = it.jsonObject
+            DeribitMarkTrade(t.long("trade_seq"), t.long("timestamp"), t.dec("mark_price"), t.dec("index_price"))
+        }
+
+    /** The prints of a `get_last_trades_by_instrument*` answer, as Deribit ordered them. */
+    fun publicTrades(o: JsonObject): List<DeribitPublicTrade> =
+        o["trades"]!!.jsonArray.map {
+            val t = it.jsonObject
+            DeribitPublicTrade(
+                tradeId = t.text("trade_id") ?: error("deribit field trade_id missing"),
+                seq = t.long("trade_seq"),
+                timestampMs = t.long("timestamp"),
+                price = t.req("price"),
+                amount = t.req("amount"),
+                direction = t.text("direction") ?: error("deribit field direction missing"),
+                liquidation = t.text("liquidation"),
+            )
+        }
 
     fun JsonElement.obj(): JsonObject = jsonObject
 }

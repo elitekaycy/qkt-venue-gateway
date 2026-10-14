@@ -11,10 +11,14 @@ data class WireChange(
     @SerialName("stop_price") val stopPrice: String? = null,
 )
 
-/** `POST /v1/positions/close`: a [symbol]'s position, all of it or [quantity]; or one hedging [ticket]. */
+/**
+ * `POST /v1/positions/close`: a [symbol]'s position, all of it or [quantity]; or one hedging [ticket]. With
+ * [clientOrderId] the close is idempotent on it, as a submit is: a retry returns the same closing order.
+ */
 @Serializable
 data class WireClose(
     val symbol: String? = null,
     val quantity: String? = null,
     val ticket: String? = null,
+    @SerialName("client_order_id") val clientOrderId: String? = null,
 )

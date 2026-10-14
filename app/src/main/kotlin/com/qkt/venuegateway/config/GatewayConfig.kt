@@ -35,6 +35,11 @@ data class GatewayConfig(
     val pluginsDir: Path? = null,
     val credentials: Credentials? = null,
 ) {
+    /** Every field but the role tokens, which are secrets and never printed. */
+    override fun toString() =
+        "GatewayConfig(host=$host, port=$port, stateDir=$stateDir, tokens=${tokens.keys}, adapter=$adapter, " +
+            "settings=$settings, pluginsDir=$pluginsDir, credentials=$credentials)"
+
     companion object {
         /** The prefix of every adapter setting's variable: `GATEWAY_SETTING_STOP_TRIGGER` is `stop_trigger`. */
         const val SETTING_PREFIX = "GATEWAY_SETTING_"

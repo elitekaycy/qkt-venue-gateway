@@ -8,10 +8,7 @@ import com.qkt.vgp.WireBars
 import com.qkt.vgp.WireQuote
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
-import io.ktor.server.websocket.webSocket
-import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
-import io.ktor.websocket.close
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 
@@ -19,7 +16,8 @@ import kotlinx.coroutines.channels.Channel
  * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only, a page of at most
  * [BARS_PAGE] windows, each page asked of the adapter alone (so no venue call is larger than a page),
  * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
- * and roots, never replayed. A slow client loses its oldest buffered quotes, never the newest.
+ * and roots, never replayed (a missing or wrong token is `401` before the upgrade). A slow client loses its
+ * oldest buffered quotes, never the newest.
  */
 internal fun Route.marketRoutes(
     gateway: Gateway,
@@ -29,10 +27,7 @@ internal fun Route.marketRoutes(
         call.serve(gateway, ANY_ROLE) {
             val q = request.queryParameters
             val code = q["symbol"] ?: throw InvalidRequestException("symbol missing")
-            val window = q["window_ms"]?.toLongOrNull() ?: throw InvalidRequestException("window_ms missing")
-            if (window <= 0 || window % MINUTE_MS != 0L || DAY_MS % window != 0L) {
-                throw InvalidRequestException("window_ms must be whole minutes dividing a day: $window")
-            }
+            val window = windowMs(q["window_ms"])
             val from = q["from"]?.toLongOrNull() ?: throw InvalidRequestException("from missing")
             val to = q["to"]?.toLongOrNull() ?: throw InvalidRequestException("to missing")
             val closedBy = gateway.clock()
@@ -50,11 +45,7 @@ internal fun Route.marketRoutes(
             json(WireBars.serializer(), WireBars(page.map(WireReads::bar), end.takeIf { it < last }))
         }
     }
-    webSocket("/v1/quotes") {
-        if (gateway.roleOf(call.request.headers["Authorization"]) == null) {
-            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "unauthorized"))
-            return@webSocket
-        }
+    tokenWebSocket(gateway, "/v1/quotes") {
         val q = call.request.queryParameters
         val codes =
             q["symbols"]
@@ -73,6 +64,15 @@ internal fun Route.marketRoutes(
             for (quote in buffer) send(Frame.Text(wireJson.encodeToString(WireQuote.serializer(), quote)))
         }
     }
+}
+
+/** [raw] as a window length: whole minutes dividing a day, or a bad request naming it. */
+internal fun windowMs(raw: String?): Long {
+    val window = raw?.toLongOrNull() ?: throw InvalidRequestException("window_ms missing")
+    if (window <= 0 || window % MINUTE_MS != 0L || DAY_MS % window != 0L) {
+        throw InvalidRequestException("window_ms must be whole minutes dividing a day: $window")
+    }
+    return window
 }
 
 private const val BARS_PAGE = 1000

@@ -27,6 +27,17 @@ class GatewayConfigTest {
     }
 
     @Test
+    fun `printing the config never prints a token or the venue secret`() {
+        val text =
+            GatewayConfig
+                .fromEnv(
+                    tokens + mapOf("GATEWAY_LOGIN" to "client-7", "GATEWAY_SECRET" to "v-secret"),
+                ).toString()
+
+        assertThat(text).doesNotContain("t-secret", "g-secret", "v-secret").contains("TRADER", "client-7")
+    }
+
+    @Test
     fun `set variables replace the defaults and settings are keyed by their lower-cased suffix`() {
         val config =
             GatewayConfig.fromEnv(

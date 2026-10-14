@@ -8,7 +8,9 @@ import java.math.BigDecimal
  * `rejected`. [price] is null when Deribit sends a word (`market_price`) instead of a number; a market
  * order's number is Deribit's protection cap, not a limit. [filledAmount] is zero when absent (an
  * untriggered stop has none). A stop that fires becomes a new order with a new [orderId], the same
- * [label] and [triggered] true.
+ * [label] and [triggered] true. [originalOrderType] is the type the order was sent as when Deribit changed
+ * it: a market order whose unfilled part Deribit left working is a `limit` at its price-band edge whose
+ * original type is `market`.
  */
 data class DeribitOrder(
     val orderId: String,
@@ -28,6 +30,7 @@ data class DeribitOrder(
     val createdMs: Long,
     val updatedMs: Long,
     val cancelReason: String?,
+    val originalOrderType: String? = null,
 )
 
 /** One execution, by Deribit's own [tradeId]; [fee] is positive when charged, negative when rebated. */
@@ -72,4 +75,33 @@ data class DeribitAccount(
 data class DeribitPage<T>(
     val items: List<T>,
     val more: Boolean,
+)
+
+/**
+ * One row of the account's transaction log (`private/get_transaction_log`), by Deribit's own [id]: [type]
+ * `trade`, `settlement`, `delivery`, `expiry`, `deposit`…; [interestPl] is the funding the row realized
+ * on a perpetual (positive a gain to the account), [position] the instrument's position after it,
+ * [commission] the fee the row charged (on an `expiry` row, the delivery fee).
+ */
+data class DeribitTransaction(
+    val id: Long,
+    val type: String,
+    val instrument: String?,
+    val currency: String,
+    val interestPl: BigDecimal?,
+    val position: BigDecimal?,
+    val commission: BigDecimal?,
+    val timestampMs: Long,
+)
+
+/**
+ * One row of the account's settlement history (`private/get_settlement_history_by_currency`): [type]
+ * `settlement` (the daily session settlement), `delivery` (a future expired) or `exercise` (an option
+ * expired); on the last two [indexPrice] is the delivery price the contract settled at.
+ */
+data class DeribitSettlement(
+    val type: String,
+    val instrument: String,
+    val indexPrice: BigDecimal,
+    val timestampMs: Long,
 )

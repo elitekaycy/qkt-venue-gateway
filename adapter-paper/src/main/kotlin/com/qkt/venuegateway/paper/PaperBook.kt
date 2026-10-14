@@ -1,11 +1,16 @@
 package com.qkt.venuegateway.paper
 
+import com.qkt.venuegateway.adapter.AccountSnapshot
+import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
+import com.qkt.venuegateway.adapter.PositionRow
+import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
@@ -32,6 +37,15 @@ class PaperBook(
 ) {
     /** The orders, fills and settlements this book made. */
     val state = PaperOrders(ledger, currency, feeRate)
+
+    /** The funding charged on held perpetuals ([PaperFunding]). */
+    val funding = PaperFundingLedger()
+
+    /** The codes whose prices the book needs: those of working orders and of held positions. */
+    fun quoted(): List<String> =
+        state.orders.values
+            .filter { it.status == OrderStatus.WORKING }
+            .map { it.symbol } + ledger.positions.keys
 
     /**
      * Places [order] against [ticker] (the latest, or null when none is known) at [nowMs]. The change
@@ -138,4 +152,48 @@ class PaperBook(
         }
         return state.fill(order, price, nowMs)
     }
+}
+
+/** The book's working orders. */
+internal fun PaperBook.working(): List<VenueOrder> = state.orders.values.filter { it.status == OrderStatus.WORKING }
+
+/** The book's positions as a netting venue reports them: one row per symbol held. */
+internal fun PaperBook.positionRows() =
+    Positions(Accounting.NETTING, ledger.positions.map { (s, p) -> PositionRow(s, p.quantity, p.avgPrice) })
+
+/** The account the book holds, its positions marked by [markOf]: no margin, so the whole equity is available. */
+internal fun PaperBook.account(markOf: (String) -> BigDecimal?): AccountSnapshot {
+    val equity = ledger.equity(markOf)
+    return AccountSnapshot(currency, ledger.balance, equity, BigDecimal.ZERO, equity)
+}
+
+/** A book as the adapter's settings open it: `starting_balance` (10000) and `fee_rate` (0), in [currency]. */
+internal fun paperBook(
+    settings: Map<String, String>,
+    currency: String,
+) = PaperBook(
+    PaperLedger(BigDecimal(settings["starting_balance"] ?: "10000")),
+    currency,
+    BigDecimal(settings["fee_rate"] ?: "0"),
+)
+
+/**
+ * Places [order] against [ticker] at [nowMs] and returns it as placed, handing what it changed to [publish]. An
+ * order the book rejects is saved to [store] and refused with its reason, publishing nothing.
+ */
+internal fun PaperBook.placeChecked(
+    order: NewOrder,
+    ticker: DeribitTicker,
+    nowMs: Long,
+    store: PaperStore,
+    publish: (PaperChange) -> Unit,
+): VenueOrder {
+    val change = place(order, ticker, nowMs)
+    val placed = state.orders.getValue(order.clientOrderId)
+    if (placed.status == OrderStatus.REJECTED) {
+        store.save(this)
+        throw VenueRefusedException(placed.rejectReason ?: "rejected")
+    }
+    publish(change)
+    return placed
 }

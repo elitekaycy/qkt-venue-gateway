@@ -1,0 +1,41 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "state": "inactive",
+    "price_index": "avax_usdc",
+    "kind": "option",
+    "instrument_name": "AVAX_USDC-6OCT26-12-C",
+    "maker_commission": 0.0003,
+    "taker_commission": 0.00031,
+    "instrument_type": "linear",
+    "expiration_timestamp": 1791273600000,
+    "instrument_id": 646987,
+    "product_group": "TIER_2",
+    "underlying_type": "crypto",
+    "creation_timestamp": 1790387040000,
+    "is_active": false,
+    "contract_size": 100,
+    "tick_size": 0.0005,
+    "strike": 12.0,
+    "counter_currency": "USDC",
+    "option_type": "call",
+    "min_trade_amount": 100,
+    "block_trade_commission": 0.0003,
+    "block_trade_min_trade_amount": 2500,
+    "block_trade_tick_size": 0.0005,
+    "settlement_currency": "USDC",
+    "settlement_period": "day",
+    "base_currency": "AVAX",
+    "index_id": 17000004,
+    "quote_currency": "USDC",
+    "tick_size_steps": [
+      {
+        "tick_size": 0.002,
+        "above_price": 0.1
+      }
+    ],
+    "lot_size": 1000,
+    "base_currency_uuid": "9d06e463-b3ba-5abf-9082-8761846b28ab",
+    "quote_currency_uuid": "2b92315d-eab7-5bef-84fa-089a131333f5"
+  }
+}

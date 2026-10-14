@@ -22,7 +22,7 @@ import org.junit.jupiter.api.io.TempDir
  */
 class OrderRecoveryTest {
     private val venue = FakeAdapter()
-    private val now = 50_000_000L
+    private var now = 50_000_000L
     private val body = WireSubmit("lost-1.x", "BTC_USDC-PERPETUAL", "buy", "market", "0.3", null, null, "gtc", false)
 
     private fun gateway(dir: Path) =
@@ -63,6 +63,7 @@ class OrderRecoveryTest {
     ) {
         val gateway = gateway(dir)
         lostThenForgotten(gateway, fill("f1", "0.1", "84000", now - 2_000), fill("f2", "0.2", "84003", now - 1_000))
+        now += GRACE_PASSED
 
         Reconciler(gateway).reconcile()
 
@@ -81,6 +82,7 @@ class OrderRecoveryTest {
         val gateway = gateway(dir)
         lostThenForgotten(gateway, fill("f1", "0.1", "84000", now - 1_000))
         gateway.journal.writeAhead(body.copy(clientOrderId = "ghost-1.x"), "h")
+        now += GRACE_PASSED
 
         Reconciler(gateway).reconcile()
 
@@ -139,5 +141,10 @@ class OrderRecoveryTest {
         ).isEqualTo("cancelled")
         assertThat(gateway.journal.workingOrders()).isEmpty()
         gateway.close()
+    }
+
+    private companion object {
+        /** Past the time a sent order may still reach the venue unseen. */
+        const val GRACE_PASSED = 3 * 60_000L
     }
 }

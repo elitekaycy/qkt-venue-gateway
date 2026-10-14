@@ -2,26 +2,38 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.TradeMode
 
-/** Where a Deribit account lives: its JSON-RPC WebSocket, its HTTPS host, and whether it is real money. */
+/**
+ * Where a Deribit account lives: its JSON-RPC WebSocket, its HTTPS host, the host of its whole public trade
+ * history (mainnet's `history.deribit.com`; testnet has none, and its own host keeps about a day of trades),
+ * and whether it is real money.
+ */
 enum class DeribitEnvironment(
     val socketUrl: String,
     val httpUrl: String,
+    val historyUrl: String,
     val mode: TradeMode,
 ) {
-    TESTNET("wss://test.deribit.com/ws/api/v2", "https://test.deribit.com", TradeMode.DEMO),
-    MAINNET("wss://www.deribit.com/ws/api/v2", "https://www.deribit.com", TradeMode.REAL),
+    TESTNET("wss://test.deribit.com/ws/api/v2", "https://test.deribit.com", "https://test.deribit.com", TradeMode.DEMO),
+    MAINNET(
+        "wss://www.deribit.com/ws/api/v2",
+        "https://www.deribit.com",
+        "https://history.deribit.com",
+        TradeMode.REAL,
+    ),
 }
 
 /**
  * The Deribit adapter's settings: `environment` (`testnet` or `mainnet`, never defaulted, since one
  * of them is real money), `currency` (`USDC`: linear contracts, whose amounts are coins; coin-margined
  * contracts quote amounts in dollars and are refused), and `stop_trigger` (`last_price`, `mark_price`
- * or `index_price`, default `last_price`): the price Deribit watches to fire a stop.
+ * or `index_price`, default `last_price`): the price Deribit watches to fire a stop. [retention] is how long
+ * the gateway keeps its own recordings of depth and open interest ([DeribitRetention], default for ever).
  */
 data class DeribitSettings(
     val environment: DeribitEnvironment,
     val currency: String,
     val stopTrigger: String,
+    val retention: DeribitRetention = DeribitRetention(),
 ) {
     companion object {
         private val TRIGGERS = setOf("last_price", "mark_price", "index_price")
@@ -40,6 +52,7 @@ data class DeribitSettings(
                     ?: error("deribit environment $environment is not testnet or mainnet"),
                 currency,
                 trigger,
+                DeribitRetention.of(settings),
             )
         }
     }

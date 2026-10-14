@@ -1,6 +1,6 @@
 # Contributing to qkt-venue-gateway
 
-The rules are in [CLAUDE.md](CLAUDE.md) (code, structure, tests, commits) and, for venues,
+The rules are in [CLAUDE.md](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/CLAUDE.md) (code, structure, tests, commits) and, for venues,
 [docs/adapters.md](docs/adapters.md). CI enforces them; this page is the flow.
 
 ## Before you write code
@@ -57,8 +57,8 @@ and how it was tested.
 Pull requests merge into `dev` by squash only, with every check above green and every review thread
 resolved; the PR title becomes the commit. `main` is only ever fast-forwarded to a green `dev` commit.
 A maintainer applies this once by importing both rulesets under Settings → Rules → Rulesets → Import:
-[`dev.json`](.github/rulesets/dev.json) (pull requests, squash, required checks) and
-[`main.json`](.github/rulesets/main.json) (no direct updates; only admins promote).
+[`dev.json`](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/.github/rulesets/dev.json) (pull requests, squash, required checks) and
+[`main.json`](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/.github/rulesets/main.json) (no direct updates; only admins promote).
 
 ## Releases
 

@@ -1,29 +1,27 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.AccountSnapshot
-import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.AdapterListener
+import com.qkt.venuegateway.adapter.Capability
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
-import com.qkt.venuegateway.adapter.OrderStatus
-import com.qkt.venuegateway.adapter.PositionRow
-import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.TradeMode
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueIdentity
+import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
+import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
-import com.qkt.venuegateway.adapter.VenueUnavailableException
 import com.qkt.venuegateway.deribit.DeribitBars
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.DeribitMarks
+import com.qkt.venuegateway.deribit.DeribitTape
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
-import java.io.IOException
-import java.math.BigDecimal
 import java.util.concurrent.Executors
 
 /**
@@ -31,90 +29,62 @@ import java.util.concurrent.Executors
  * from the feed [tickers] builds, matching and money in a [PaperBook], kept across restarts by a
  * [PaperStore]. Orders and fills reach the listener on one ordered thread after the call that made
  * them returns, as a venue acknowledges an order before it reports the fill. Expired contracts settle
- * through [PaperSettlement]. Settings: `currency` (USDC), `starting_balance` (10000), `fee_rate` (0),
- * `login` (paper), `settlement_check_ms` (60000). It holds no margin: margin used is 0 and the whole equity is available.
+ * through [PaperSettlement] and held perpetuals pay Deribit's published funding through [PaperFunding], both
+ * checked every `settlement_check_ms`. Settings: `currency` (USDC), `starting_balance` (10000), `fee_rate`
+ * (0), `login` (paper), `settlement_check_ms` (60000). It holds no margin: margin used is 0 and the whole
+ * equity is available. Marks are Deribit's, from the trade history on [history] ([DeribitMarks]).
+ * Open interest and the order book are Deribit's, recorded as they are read and kept as long as set ([PaperRecordings]).
+ * The tape and liquidations are Deribit's, from the trade history on [history] ([DeribitTape]).
  */
 class PaperAdapter(
     private val context: AdapterContext,
     private val market: DeribitMarketData,
+    private val history: DeribitMarketData = market,
     private val tickers: (onTicker: (DeribitTicker) -> Unit, onConnection: (Boolean, String) -> Unit) -> DeribitTickers,
 ) : VenueAdapter {
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
+    override val capabilities = Capability.entries.toSet()
     private val currency = context.settings["currency"] ?: "USDC"
     private val listing = DeribitListing(market, currency, context.clock)
-    private val book =
-        PaperBook(
-            PaperLedger(BigDecimal(context.settings["starting_balance"] ?: "10000")),
-            currency,
-            BigDecimal(context.settings["fee_rate"] ?: "0"),
-        )
+    private val book = paperBook(context.settings, currency)
     private val store = PaperStore(context.stateDir).also { it.load(book) }
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
-    private val settlement =
-        PaperSettlement(
-            market,
-            listing,
-            context.clock,
-            context.settings["settlement_check_ms"]?.toLong() ?: SETTLEMENT_CHECK_MS,
-        )
-    private val feed =
-        PaperFeed(listing) {
-            synchronized(book) {
-                book.state.orders.values
-                    .filter { it.status == OrderStatus.WORKING }
-                    .map { it.symbol } +
-                    book.ledger.positions.keys
-            }
-        }
+    private val funding = PaperFunding(market, listing, currency, context.clock)
+    private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
+    private val recordings = PaperRecordings(market, context)
+    private val upkeep =
+        PaperUpkeep(
+            book,
+            store,
+            PaperSettlement(market, listing, context.clock, checkMs),
+            funding,
+            recordings::prune,
+            events::execute,
+        ) { listener }
+    private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
     private var listener: AdapterListener? = null
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
         feed.start(tickers(::onTicker, listener::connection))
-        settlement.start { settleExpired() }
+        upkeep.start()
     }
 
     override fun identity() = VenueIdentity(context.settings["login"] ?: "paper", TradeMode.DEMO, currency)
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
-    override fun account(): AccountSnapshot =
-        synchronized(book) {
-            val equity = book.ledger.equity { feed[it]?.mark }
-            AccountSnapshot(currency, book.ledger.balance, equity, BigDecimal.ZERO, equity)
-        }
+    override fun account(): AccountSnapshot = synchronized(book) { book.account { feed[it]?.mark } }
 
-    override fun positions() =
-        synchronized(book) {
-            Positions(
-                Accounting.NETTING,
-                book.ledger.positions.map { (s, p) ->
-                    PositionRow(s, p.quantity, p.avgPrice)
-                },
-            )
-        }
+    override fun positions() = synchronized(book) { book.positionRows() }
 
-    override fun openOrders() =
-        synchronized(book) {
-            book.state.orders.values
-                .filter { it.status == OrderStatus.WORKING }
-        }
+    override fun openOrders() = synchronized(book) { book.working() }
 
     override fun place(order: NewOrder): VenueOrder {
         if (listing.find(order.symbol) == null) throw VenueRefusedException("${order.symbol} is not listed")
         val ticker = feed[order.symbol] ?: venue { market.ticker(order.symbol) }.also { feed.heard(it) }
-        val placed =
-            synchronized(book) {
-                val change = book.place(order, ticker, context.clock())
-                val placed = book.state.orders.getValue(order.clientOrderId)
-                if (placed.status == OrderStatus.REJECTED) {
-                    store.save(book)
-                    throw VenueRefusedException(placed.rejectReason ?: "rejected")
-                }
-                publish(change)
-                placed
-            }
+        val placed = synchronized(book) { book.placeChecked(order, ticker, context.clock(), store, ::publish) }
         feed.resubscribe()
         return placed
     }
@@ -141,6 +111,49 @@ class PaperAdapter(
         toMs: Long,
     ) = synchronized(book) { book.state.settlements.filter { it.timeMs in fromMs..toMs } }
 
+    override fun funding(
+        fromMs: Long,
+        toMs: Long,
+    ) = synchronized(book) { book.funding.records.filter { it.timeMs in fromMs..toMs } }
+
+    override fun fundingRates(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = venue { funding.rates(code, fromMs, toMs) }
+
+    override fun marks(
+        code: String,
+        windowMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenueMark> = venue { DeribitMarks.sampled(history, code, windowMs, fromMs, toMs) }
+
+    override fun openInterest(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = recordings.openInterest.read(code, fromMs, toMs)
+
+    override fun trades(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+        limit: Int,
+    ): List<VenuePrint> = venue { DeribitTape.prints(history, code, fromMs, toMs, limit) }
+
+    override fun liquidations(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ): List<VenuePrint> = venue { DeribitTape.liquidations(history, code, fromMs, toMs) }
+
+    override fun depth(
+        code: String,
+        fromMs: Long,
+        toMs: Long,
+    ) = recordings.depth.read(code, fromMs, toMs)
+
     override fun bars(
         code: String,
         windowMs: Long,
@@ -154,7 +167,7 @@ class PaperAdapter(
     ) = venue { feed.want(codes, roots) }
 
     override fun close() {
-        settlement.close()
+        upkeep.close()
         feed.close()
         events.shutdown()
     }
@@ -165,11 +178,6 @@ class PaperAdapter(
         synchronized(book) { publish(book.onTicker(ticker, context.clock())) }
     }
 
-    private fun settleExpired() {
-        val settled = synchronized(book) { settlement.due(book).also { if (it.isNotEmpty()) store.save(book) } }
-        settled.forEach { s -> events.execute { listener?.settlement(s) } }
-    }
-
     /** Saves and delivers what [change] made; called under the book's lock so deliveries keep its order. */
     private fun publish(change: PaperChange) {
         if (change.orders.isEmpty() && change.fills.isEmpty()) return
@@ -178,14 +186,7 @@ class PaperAdapter(
         change.fills.forEach { f -> events.execute { listener?.fill(f) } }
     }
 
-    private fun <T> venue(call: () -> T): T =
-        try {
-            call()
-        } catch (e: IOException) {
-            throw VenueUnavailableException("deribit: ${e.message}", e)
-        }
-
     private companion object {
-        const val SETTLEMENT_CHECK_MS = 60_000L
+        const val CHECK_MS = 60_000L
     }
 }

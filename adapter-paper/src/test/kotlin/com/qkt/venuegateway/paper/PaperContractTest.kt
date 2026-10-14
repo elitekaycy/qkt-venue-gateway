@@ -5,9 +5,13 @@ import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
-import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitKline
+import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.client.DeribitOrderBook
+import com.qkt.venuegateway.deribit.client.DeribitPage
+import com.qkt.venuegateway.deribit.client.DeribitPublicTrade
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.testkit.AdapterContractTest
@@ -26,7 +30,13 @@ class PaperContractTest : AdapterContractTest() {
             override fun instruments(
                 currency: String,
                 kind: String,
-            ) = if (kind == "future") listOf(listed(perp, null, null)) else listOf(listed(put, EXPIRY_MS, "82000"))
+            ) = if (kind ==
+                "future"
+            ) {
+                listOf(contractListed(perp, null, null))
+            } else {
+                listOf(contractListed(put, EXPIRY_MS, "82000"))
+            }
 
             override fun instrument(name: String) =
                 (instruments("USDC", "future") + instruments("USDC", "option")).first {
@@ -35,6 +45,17 @@ class PaperContractTest : AdapterContractTest() {
                 }
 
             override fun ticker(name: String) = quoted(name)
+
+            /** The perpetual's book as it stands: two levels a side around its quote. */
+            override fun orderBook(
+                name: String,
+                depth: Int,
+            ) = DeribitOrderBook(
+                name,
+                System.currentTimeMillis(),
+                levels("84000", "83999.5"),
+                levels("84000.5", "84001"),
+            )
 
             override fun klines(
                 name: String,
@@ -56,31 +77,69 @@ class PaperContractTest : AdapterContractTest() {
                 }
             }
 
+            override fun fundingRates(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+            ) = ((fromMs + HOUR_MS - 1) / HOUR_MS * HOUR_MS..toMs step HOUR_MS).map {
+                DeribitFundingRate(it, BigDecimal("0.00001"), BigDecimal("84000"))
+            }
+
+            /** One trade a minute, half a minute in, numbered by its minute. */
+            override fun edgeTrade(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                newest: Boolean,
+            ): DeribitMarkTrade? {
+                val minutes = ((fromMs - minute / 2 + minute - 1) / minute..(toMs - minute / 2) / minute)
+                return (if (newest) minutes.lastOrNull() else minutes.firstOrNull())?.let(::traded)
+            }
+
+            override fun tradesFrom(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                count: Int,
+            ) = DeribitPage(
+                ((fromMs - minute / 2 + minute - 1) / minute..(toMs - minute / 2) / minute).map(::traded),
+                false,
+            )
+
+            /** The same trades as prints: the aggressor alternating, every tenth minute's liquidating its taker. */
+            override fun tape(
+                name: String,
+                fromMs: Long,
+                toMs: Long,
+                count: Int,
+            ) = DeribitPage(tradesFrom(name, fromMs, toMs, count).items.map(::printed).take(count), false)
+
             override fun deliveryPrices(
                 index: String,
                 count: Int,
             ) = emptyList<Pair<LocalDate, BigDecimal>>()
         }
 
-    private fun listed(
-        name: String,
-        expiryMs: Long?,
-        strike: String?,
-    ) = DeribitInstrument(
-        name,
-        if (strike == null) "future" else "option",
-        expiryMs == null,
-        expiryMs,
-        strike?.let(::BigDecimal),
-        strike?.let { "put" },
-        BigDecimal.ONE,
-        BigDecimal("0.5"),
-        BigDecimal("0.01"),
-        "USDC",
-        "btc_usdc",
-    )
+    private fun levels(vararg prices: String) = prices.map { BigDecimal(it) to BigDecimal("0.5") }
 
-    /** The perpetual is quoted both sides; the option has no ask, so buying it is refused. */
+    private fun traded(minuteNo: Long) =
+        DeribitMarkTrade(minuteNo, minuteNo * minute + minute / 2, BigDecimal("84005"), BigDecimal("84000"))
+
+    private fun printed(trade: DeribitMarkTrade) =
+        DeribitPublicTrade(
+            "paper-${trade.seq}",
+            trade.seq,
+            trade.timestampMs,
+            BigDecimal("84005"),
+            BigDecimal("0.01"),
+            if (trade.seq % 2 == 0L) "buy" else "sell",
+            "T".takeIf { trade.seq % 10 == 0L },
+        )
+
+    /**
+     * The perpetual is quoted both sides, with its open interest; the option has no ask, so buying it is refused,
+     * and a mark IV and forward.
+     */
     private fun quoted(name: String): DeribitTicker {
         val bid = if (name == perp) BigDecimal("84000") else BigDecimal("100")
         val ask = if (name == perp) BigDecimal("84000.5") else null
@@ -94,9 +153,10 @@ class PaperContractTest : AdapterContractTest() {
                 BigDecimal.TEN
             },
             null,
+            BigDecimal("52.3").takeIf { name == put },
+            BigDecimal("84010").takeIf { name == put },
             null,
-            null,
-            null,
+            openInterest = if (name == perp) BigDecimal("1477.6341") else null,
         )
     }
 
@@ -147,7 +207,12 @@ class PaperContractTest : AdapterContractTest() {
 
     override val activeCode = perp
 
+    override val perpetualCode = perp
+
+    override val optionCode = put
+
     private companion object {
         const val EXPIRY_MS = 2_555_884_800_000L
+        const val HOUR_MS = 3_600_000L
     }
 }

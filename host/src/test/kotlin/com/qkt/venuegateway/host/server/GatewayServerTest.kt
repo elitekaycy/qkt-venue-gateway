@@ -145,12 +145,15 @@ class GatewayServerTest {
     @Test
     fun `only the guardian flips the kill switch, which then refuses orders that add risk`() {
         start()
+        val live = stream(0)
         val all = """{"scope":"all"}"""
         assertThat(call("POST", "/v1/kill", body = all).first).isEqualTo(401)
         assertThat(call("POST", "/v1/kill", token = "g-token", body = all).second).contains("\"all\":true")
+        assertThat(live.poll(5, TimeUnit.SECONDS)).contains("\"seq\":1", "\"type\":\"kill\"", "\"all\":true")
 
         assertThat(call("POST", "/v1/orders", body = submit("a-1.x")).second).contains("\"code\":\"kill_switch\"")
         assertThat(call("POST", "/v1/kill/release", token = "g-token", body = all).second).contains("\"all\":false")
+        assertThat(live.poll(5, TimeUnit.SECONDS)).contains("\"seq\":2", "\"type\":\"kill\"", "\"all\":false")
         assertThat(call("POST", "/v1/orders", body = submit("a-2.x")).first).isEqualTo(201)
     }
 
@@ -180,13 +183,22 @@ class GatewayServerTest {
                 "POST",
                 "/v1/positions/close",
                 token = "g-token",
-                body = """{"symbol":"BTC_USDC-PERPETUAL"}""",
+                body = """{"symbol":"BTC_USDC-PERPETUAL","client_order_id":"close-1"}""",
+            )
+        venue.net.remove("BTC_USDC-PERPETUAL")
+        val (retried, again) =
+            call(
+                "POST",
+                "/v1/positions/close",
+                body = """{"symbol":"BTC_USDC-PERPETUAL","client_order_id":"close-1"}""",
             )
 
         assertThat(changed).isEqualTo(200)
         assertThat(order).contains("\"limit_price\":\"49000\"")
         assertThat(guardianPatch).isEqualTo(401)
         assertThat(closed).isEqualTo(200)
-        assertThat(closing).contains("\"side\":\"sell\"", "\"reduce_only\":true", "\"quantity\":\"0.2\"")
+        assertThat(closing).contains("\"client_order_id\":\"close-1\"", "\"side\":\"sell\"", "\"reduce_only\":true")
+        assertThat(closing).contains("\"quantity\":\"0.2\"")
+        assertThat(retried to again).isEqualTo(200 to closing)
     }
 }

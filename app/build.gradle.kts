@@ -5,6 +5,7 @@ dependencies {
     "implementation"(project(":adapter-api"))
     "implementation"(project(":adapter-paper"))
     "implementation"(project(":adapter-deribit"))
+    "implementation"(project(":adapter-bybit"))
     "implementation"(libs.slf4j.api)
     "runtimeOnly"(libs.logback.classic)
     "testImplementation"(libs.okhttp)

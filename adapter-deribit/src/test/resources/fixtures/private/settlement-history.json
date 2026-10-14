@@ -1,0 +1,63 @@
+{
+ "method": "private/get_settlement_history_by_currency",
+ "params": {
+  "currency": "USDC",
+  "count": 20
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "result": {
+   "continuation": "none",
+   "settlements": [
+    {
+     "position": 0,
+     "timestamp": 1791014400571,
+     "type": "settlement",
+     "index_price": 84543.37,
+     "instrument_name": "BTC_USDC-30OCT26",
+     "mark_price": 84835.69,
+     "profit_loss": 0.0,
+     "session_profit_loss": 144265264.76821852
+    },
+    {
+     "position": 0,
+     "timestamp": 1791014400571,
+     "type": "settlement",
+     "index_price": 84543.37,
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "mark_price": 84545.09,
+     "profit_loss": 0.0,
+     "funding": 0.0,
+     "session_profit_loss": 144265264.76821852
+    },
+    {
+     "position": 0,
+     "timestamp": 1790928001112,
+     "type": "settlement",
+     "index_price": 86087.41,
+     "instrument_name": "BTC_USDC-PERPETUAL",
+     "mark_price": 86112.54,
+     "profit_loss": 0.0,
+     "funding": 0.0,
+     "session_profit_loss": 121719812.0812511
+    },
+    {
+     "position": 10000.0,
+     "timestamp": 1790928001112,
+     "type": "exercise",
+     "index_price": 0.334323,
+     "instrument_name": "TRX_USDC-2OCT26-0d342-C",
+     "mark_price": 0.0,
+     "profit_loss": -1.5,
+     "session_profit_loss": 121719812.0812511
+    }
+   ]
+  },
+  "usIn": 1791153769011260,
+  "usOut": 1791153769013407,
+  "usDiff": 2147,
+  "testnet": true,
+  "id": 1
+ },
+ "recorded": "2026-10-04 Deribit testnet"
+}

@@ -1,0 +1,46 @@
+{
+ "method": "private/get_order_state_by_label",
+ "params": {
+  "currency": "USDC",
+  "label": "rec-mkt-muv0857w"
+ },
+ "response": {
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": [
+   {
+    "label": "rec-mkt-muv0857w",
+    "price": 337.73,
+    "user_id": 1,
+    "direction": "buy",
+    "time_in_force": "good_til_cancelled",
+    "instrument_name": "AAPL_USDC-PERPETUAL",
+    "web": false,
+    "api": true,
+    "amount": 0.03,
+    "order_id": "USDC-210049235332295099",
+    "creation_timestamp": 1791189911731,
+    "mmp": false,
+    "filled_amount": 0.02,
+    "average_price": 335.295,
+    "post_only": false,
+    "replaced": false,
+    "reduce_only": false,
+    "starbase_order_id": 232785179494580220,
+    "last_update_timestamp": 1791189911731,
+    "contracts": 3,
+    "original_order_type": "market",
+    "order_state": "open",
+    "order_type": "limit",
+    "starbase_last_update_timestamp": 1791189911731340500,
+    "is_liquidation": false,
+    "risk_reducing": false
+   }
+  ],
+  "usIn": 1791189912161732,
+  "usOut": 1791189912162504,
+  "usDiff": 772,
+  "testnet": true
+ },
+ "recorded": "2026-10-05 Deribit testnet"
+}
