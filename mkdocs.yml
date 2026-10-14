@@ -1,0 +1,108 @@
+site_name: qkt-venue-gateway
+site_description: The gateway between qkt and a trading venue. Futures, perpetuals and options over one small protocol, VGP v1.
+site_url: https://venuegw.tryqkt.com/
+repo_url: https://github.com/elitekaycy/qkt-venue-gateway
+repo_name: elitekaycy/qkt-venue-gateway
+edit_uri: edit/dev/docs/
+copyright: Copyright &copy; 2026 elitekaycy
+
+docs_dir: docs
+site_dir: site
+
+exclude_docs: |
+  README.md
+  plans/
+
+theme:
+  name: material
+  logo: assets/logo-icon.svg
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+  favicon: assets/logo-icon.svg
+  palette:
+    - scheme: slate
+      primary: black
+      accent: deep purple
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+
+extra_css:
+  - assets/extra.css
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - Get started:
+      - get-started/index.md
+      - Quickstart: get-started/quickstart.md
+      - Run a gateway: get-started/run-a-gateway.md
+      - Going live: get-started/going-live.md
+  - Concepts:
+      - concepts/index.md
+      - How it works: concepts/how-it-works.md
+      - What it guarantees: concepts/guarantees.md
+      - Design: design.md
+  - Connect:
+      - connect/index.md
+      - Connect qkt: connect/qkt.md
+      - Kill switch and guardrails: connect/guardrails.md
+  - Adapters:
+      - Overview: adapters/overview.md
+      - Paper: adapters/paper.md
+      - Deribit: adapters/deribit.md
+      - Bybit: adapters/bybit.md
+      - Adapter rules: adapters.md
+      - Writing an adapter: writing-an-adapter.md
+  - Reference:
+      - reference/index.md
+      - Configuration: reference/configuration.md
+      - API at a glance: reference/api.md
+      - Wire protocol (VGP v1): vgp-v1-wire.md
+      - Ports and security: reference/ports-and-security.md
+  - Operations:
+      - operations/index.md
+      - Running the gateway: running.md
+      - State, backups and upgrades: operations/state-backups-upgrades.md
+      - Health and logs: operations/health-and-logs.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Project:
+      - project/index.md
+      - Changelog: project/changelog.md
+      - Contributing: project/contributing.md
+      - Security policy: project/security.md
+      - Code of conduct: project/code-of-conduct.md

@@ -2,6 +2,48 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.2.0 (2026-10-12)
+
+### Features
+
+- bybit: add the bybit adapter, linear and spot (#58) (b66223f)
+- testkit: check a market order never leaves a remainder working (#51) (f87f1af)
+- paper: keep recorded depth and open interest for a set window (#47) (65c4a10)
+- deribit: keep recorded depth and open interest for a set window (#46) (51ec8cc)
+- paper: record and serve deribit's order-book depth (#44) (0d6fe06)
+- deribit: record and serve the order book's ten best levels (#43) (28a05d8)
+- host: serve order-book depth as a declared capability (#42) (2c959ef)
+- paper: serve deribit's tape and liquidations (#41) (1888c34)
+- deribit: serve the public tape and its liquidations (#40) (5cf6d78)
+- host: serve the public tape and liquidations by contract (#39) (2ef98e4)
+- paper: declare option marks from deribit's option tickers (#36) (88d2750)
+- deribit: declare option marks, carried on every option ticker (#35) (3af6ddb)
+- api: declare option marks, the mark iv and forward on quotes (#34) (835a582)
+- paper: serve deribit's open interest as it is recorded (#33) (6af5229)
+- deribit: record and serve open interest from the ticker (#32) (e3d9a9c)
+- host: serve open interest as a declared capability (#31) (6443341)
+- paper: serve deribit's mark and index history (#30) (b7726a1)
+- deribit: serve mark and index history from the trade tape (#29) (8363c01)
+- host: serve mark and index history as the mark_prices capability (#28) (0cc12fc)
+- deribit: settle expired futures and options from their history (#26) (9fa0d74)
+- paper: charge held perpetuals deribit's published funding (#22) (e56163f)
+- deribit: report funding and funding rates, refuse unlisted codes (#21) (1bc29ed)
+- host: declare adapter capabilities and carry perpetual funding (#13) (4cfd216)
+- wire: carry the venue's fee index on quotes (#12) (dd9525e)
+
+### Fixes
+
+- host: send kill switch changes on the event stream (#57) (9b728e8)
+- deribit: cancel a market order's remainder, never let it rest (#52) (a5196e7)
+- deribit: leave inactive contracts out of the listing (#38) (fe213e5)
+- host: close stream and order listing gaps from the audit (#25) (130450c)
+- host: make positions/close idempotent on a client order id (#24) (f8ace6e)
+- host: look up unrecorded submits at the venue on a new journal (#23) (c6a8dce)
+- host: stop refreshing quotes while the adapter's feed is down (#16) (ffbd44c)
+- host: apply kill switch changes atomically, never print tokens (#17) (dd21980)
+- host: reconcile venue history from the last full run (#15) (86e777a)
+- host: keep order states forward and resolve lost submits safely (#14) (7788b4a)
+
 ## v0.1.0 (2026-10-01)
 
 ### Features

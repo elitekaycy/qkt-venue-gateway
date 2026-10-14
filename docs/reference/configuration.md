@@ -1,0 +1,47 @@
+# Configuration
+
+Everything is an environment variable. Defaults live in one place,
+[`GatewayConfig`](https://github.com/elitekaycy/qkt-venue-gateway/blob/main/app/src/main/kotlin/com/qkt/venuegateway/config/GatewayConfig.kt).
+A variable without a default is required, and the gateway won't start without it.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `GATEWAY_TRADER_TOKEN` | required | Bearer token qkt trades with |
+| `GATEWAY_GUARDIAN_TOKEN` | required | Bearer token for reads and the kill switch |
+| `GATEWAY_ADAPTER` | `paper` | The adapter: `paper`, `deribit`, `bybit`, or a plugin's type |
+| `GATEWAY_LISTEN` | `127.0.0.1:8443`; `0.0.0.0:8443` in the image | Address to serve on |
+| `GATEWAY_STATE_DIR` | `./state`; `/data` in the image | The journal and adapter state. Keep it on a volume |
+| `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | Venue credentials, both or neither |
+| `GATEWAY_PLUGINS_DIR` | none | Directory of extra adapter jars |
+| `GATEWAY_SETTING_<KEY>` | set by the adapter | An adapter setting, e.g. `GATEWAY_SETTING_STOP_TRIGGER` sets `stop_trigger` |
+
+Each adapter's settings are on its page: [paper](../adapters/paper.md#settings),
+[Deribit](../adapters/deribit.md#settings), [Bybit](../adapters/bybit.md#settings).
+
+## Secrets as files
+
+Any variable except a setting can be given as `<NAME>_FILE`, a path to a file holding the value. This is
+how Docker and Kubernetes secrets work:
+
+```yaml
+services:
+  gateway-deribit:
+    environment:
+      GATEWAY_SECRET_FILE: /run/secrets/deribit_secret
+    secrets: [deribit_secret]
+secrets:
+  deribit_secret:
+    file: ./secrets/deribit_secret     # keep out of git
+```
+
+## Start-up checks
+
+The gateway refuses to start, with a message that names the variable, when:
+
+- `GATEWAY_TRADER_TOKEN` or `GATEWAY_GUARDIAN_TOKEN` is missing.
+- Only one of `GATEWAY_LOGIN` and `GATEWAY_SECRET` is set.
+- `GATEWAY_LISTEN` is not `<host>:<port>`.
+- `GATEWAY_ADAPTER` names an adapter that is not installed.
+- A required adapter setting is missing, for example the environment of a Deribit or Bybit gateway.
+
+See [Troubleshooting](../operations/troubleshooting.md) for each message and its fix.

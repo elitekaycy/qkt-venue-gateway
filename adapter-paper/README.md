@@ -15,7 +15,7 @@ real gateway, with no venue account or API key.
   records it: Deribit publishes no history, so a read reaching the present records the ticker's
   `open_interest` and serves what was recorded (`open-interest/<code>/<day>.csv` in the state volume; an
   older gateway's single `open-interest/<code>.csv` is split into day files on the code's first read). A
-  series starts when the gateway first read it; see the [Deribit adapter](../adapter-deribit/README.md).
+  series starts when the gateway first read it; see the [Deribit adapter](https://venuegw.tryqkt.com/adapters/deribit/).
 - Order-book depth (`/v1/depth`) is Deribit's book, its ten best levels a side, recorded as the Deribit
   adapter records it: a read reaching the present takes `public/get_order_book` and serves what was
   recorded (`depth/<code>/<day>.csv` in the state volume), so a series starts when the gateway first read it.
