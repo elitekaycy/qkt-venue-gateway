@@ -1,10 +1,11 @@
 # qkt-venue-gateway — the VGP v1 gateway host and its adapters — design
 
-**Status:** built: the host, the paper adapter and the Deribit adapter (contract suite passed on
-testnet; qkt trades through it end to end). Deribit expiries are served from its settlement history. **Builds on:** the wire spec
-`2026-10-01-vgp-v1-wire.md` (what any gateway must do), the qkt client in `connector/gateway` (what it
-relies on), and `docs/research/2026-09-18-venue-plugin-architecture.md` §2 (why adapters run in a
-separate host: the kill switch must be a choke point outside qkt).
+**Status:** built: the host and three adapters, paper, Deribit and Bybit. The Deribit contract suite passed
+on testnet and qkt trades through it end to end. Deribit expiries are served from its settlement history.
+**Builds on:** the [wire protocol](vgp-v1-wire.md) (what any gateway must do), the qkt client
+in `connector/gateway` (what it relies on), and the venue plugin architecture research in the qkt
+repository (`docs/research/2026-09-18-venue-plugin-architecture.md`, §2: why adapters run in a separate
+host: the kill switch must be a choke point outside qkt).
 
 ## 1. What it is
 
@@ -41,6 +42,7 @@ consumer of VGP, and a gateway can be replaced, written in another language, or 
 | `host` | the VGP server: auth, journal, orders, stream, reconciler, kill switch, quotes, bars | any venue API |
 | `adapter-testkit` | `AdapterContractTest`: the behaviour every adapter must pass | the host |
 | `adapter-deribit` | Deribit, whole: its JSON-RPC in the `client` package (socket, auth, public and private calls, subscriptions), the mapping onto `adapter-api`, the adapter | VGP, the host |
+| `adapter-bybit` | Bybit, whole, in the same shape: its client, the mapping onto `adapter-api`, the adapter | VGP, the host |
 | `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client`) | VGP, the host |
 | `app` | config, choosing the adapter, starting the host | — |
 
@@ -60,8 +62,8 @@ adapter follows the same shape and depends only on `adapter-api` (and `adapter-t
   refreshed while they hold); a restart of the gateway, of qkt, or of the venue connection loses or
   doubles nothing; adding a venue is writing one adapter.
 - **Non-goals (v1):** more than one account per process; order types beyond market/limit/stop/stop-limit
-  with `reduce_only` and GTC/IOC/GTD; venue-native combos; liquidation events (the wire spec defines
-  none); HFT latency (holding periods are minutes to weeks).
+  with `reduce_only` and GTC/IOC/GTD; venue-native combos; HFT latency (holding periods are minutes to
+  weeks).
 
 ## 3. The adapter interface
 
@@ -240,7 +242,11 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    the host resolves an order it lost track of from its fills (`OrderRecovery`). Expiries are settled from
    Deribit's settlement history (`delivery` rows for futures, `exercise` rows for options at intrinsic
    value from the delivery price), recorded from the option the testnet account held to 2026-10-02.
-3. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
+3. **bybit** — Bybit testnet and mainnet. One gateway serves one category of one unified account: `linear`
+   (USDT- or USDC-settled perpetuals and dated futures, sizes in the base coin) or `spot` (pairs quoted in
+   USDT or USDC); run two gateways for both. Inverse contracts and options are not supported. Its settings,
+   capabilities and venue behaviour are on [its page](adapters/bybit.md).
+4. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
    `mt5-gateway` speaking VGP so MT5 accounts share the same client.
 
 **Futures chains** are not part of v1 (wire spec §3): a dated future carries no root on the wire, so the
@@ -255,9 +261,11 @@ chain endpoint is designed with its first consumer, live continuous futures (qkt
   address. Tokens: one for qkt (trading), one for guardrails (reads and the kill switch).
 - Logs are structured; health is the readiness probe; a venue link down for longer than 2 minutes alerts.
 
-## 12. Decisions for the reviewer
+## 12. Decisions
 
-1. **Language and server:** Kotlin on the JVM with Ktor (proposed), or Python (matching `mt5-gateway`).
+These were open questions in the first design. Each is decided; the reasoning is kept.
+
+1. **Language and server:** Kotlin on the JVM with Ktor, chosen over Python (matching `mt5-gateway`).
    The deciding question is which connectors each can reach:
 
    | Connector | Interfaces it offers | From Kotlin/JVM |
@@ -279,6 +287,6 @@ chain endpoint is designed with its first consumer, live continuous futures (qkt
    qkt (backtest, paper) and inside the gateway (live), from the research doc §2. Hence Kotlin/Ktor.
    Rithmic access for automated trading also needs the FCM's and Rithmic's approval (see the 2026-09-30
    futures prop findings), whatever the language.
-2. **Journal store:** SQLite (proposed) or an append-only file per day.
-3. **First venue:** Deribit USDC-linear (proposed), matching the options data qkt already backtests.
-4. **Paper adapter as the CI venue** (proposed) instead of mocking the venue in the host's tests.
+2. **Journal store:** SQLite, chosen over an append-only file per day (§4).
+3. **First venue:** Deribit USDC-linear, matching the options data qkt already backtests.
+4. **Paper adapter as the CI venue**, instead of mocking the venue in the host's tests.

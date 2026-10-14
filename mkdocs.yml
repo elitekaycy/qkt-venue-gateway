@@ -15,15 +15,15 @@ exclude_docs: |
 
 theme:
   name: material
+  logo: assets/logo-icon.svg
   icon:
-    logo: material/swap-horizontal-bold
     repo: fontawesome/brands/github
     edit: material/pencil
-  favicon: assets/favicon-placeholder.svg
+  favicon: assets/logo-icon.svg
   palette:
     - scheme: slate
       primary: black
-      accent: green
+      accent: deep purple
   features:
     - navigation.tabs
     - navigation.sections
@@ -67,14 +67,42 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Run it: running.md
+  - Get started:
+      - get-started/index.md
+      - Quickstart: get-started/quickstart.md
+      - Run a gateway: get-started/run-a-gateway.md
+      - Going live: get-started/going-live.md
+  - Concepts:
+      - concepts/index.md
+      - How it works: concepts/how-it-works.md
+      - What it guarantees: concepts/guarantees.md
+      - Design: design.md
+  - Connect:
+      - connect/index.md
+      - Connect qkt: connect/qkt.md
+      - Kill switch and guardrails: connect/guardrails.md
   - Adapters:
+      - Overview: adapters/overview.md
       - Paper: adapters/paper.md
       - Deribit: adapters/deribit.md
       - Bybit: adapters/bybit.md
       - Adapter rules: adapters.md
       - Writing an adapter: writing-an-adapter.md
   - Reference:
+      - reference/index.md
+      - Configuration: reference/configuration.md
+      - API at a glance: reference/api.md
       - Wire protocol (VGP v1): vgp-v1-wire.md
-  - Design: design.md
-  - Contributing: https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/CONTRIBUTING.md
+      - Ports and security: reference/ports-and-security.md
+  - Operations:
+      - operations/index.md
+      - Running the gateway: running.md
+      - State, backups and upgrades: operations/state-backups-upgrades.md
+      - Health and logs: operations/health-and-logs.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Project:
+      - project/index.md
+      - Changelog: project/changelog.md
+      - Contributing: project/contributing.md
+      - Security policy: project/security.md
+      - Code of conduct: project/code-of-conduct.md
