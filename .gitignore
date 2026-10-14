@@ -6,3 +6,6 @@ build/
 *.db-shm
 state/
 .env
+
+# mkdocs build output
+/site/
