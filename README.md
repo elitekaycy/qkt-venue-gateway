@@ -9,6 +9,7 @@
   <a href="https://github.com/elitekaycy/qkt-venue-gateway/actions/workflows/check.yml"><img src="https://github.com/elitekaycy/qkt-venue-gateway/actions/workflows/check.yml/badge.svg" alt="check"></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/github/v/tag/elitekaycy/qkt-venue-gateway?label=version&sort=semver" alt="version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="license"></a>
+  <a href="https://github.com/sponsors/elitekaycy"><img src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors&logoColor=white" alt="Sponsor"></a>
 </p>
 
 ---
