@@ -1,0 +1,80 @@
+site_name: qkt-venue-gateway
+site_description: The gateway between qkt and a trading venue. Futures, perpetuals and options over one small protocol, VGP v1.
+site_url: https://venuegw.tryqkt.com/
+repo_url: https://github.com/elitekaycy/qkt-venue-gateway
+repo_name: elitekaycy/qkt-venue-gateway
+edit_uri: edit/dev/docs/
+copyright: Copyright &copy; 2026 elitekaycy
+
+docs_dir: docs
+site_dir: site
+
+exclude_docs: |
+  README.md
+  plans/
+
+theme:
+  name: material
+  icon:
+    logo: material/swap-horizontal-bold
+    repo: fontawesome/brands/github
+    edit: material/pencil
+  favicon: assets/favicon-placeholder.svg
+  palette:
+    - scheme: slate
+      primary: black
+      accent: green
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+
+extra_css:
+  - assets/extra.css
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - Run it: running.md
+  - Adapters:
+      - Paper: adapters/paper.md
+      - Deribit: adapters/deribit.md
+      - Bybit: adapters/bybit.md
+      - Adapter rules: adapters.md
+      - Writing an adapter: writing-an-adapter.md
+  - Reference:
+      - Wire protocol (VGP v1): vgp-v1-wire.md
+  - Design: design.md
+  - Contributing: https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/CONTRIBUTING.md

@@ -195,7 +195,7 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   day: mainnet BTC_USDC-PERPETUAL about 150,000 prints, testnet about 15,000; mainnet USDC futures about 270
   liquidation prints across all contracts, testnet none.
 
-The full list of API calls is in [design.md](../docs/design.md) §10.
+The full list of API calls is in [design.md](https://venuegw.tryqkt.com/design/) §10.
 
 ## Contract suite
 

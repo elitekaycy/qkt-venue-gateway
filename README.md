@@ -114,6 +114,7 @@ The order filled when `positions` lists `BTC_USDC-PERPETUAL` with `"quantity":"0
 | Add a venue | [Writing an adapter](docs/writing-an-adapter.md) |
 | Call the API | [Wire protocol](docs/vgp-v1-wire.md) |
 | Understand the design | [Design](docs/design.md) |
+| Read it online | [venuegw.tryqkt.com](https://venuegw.tryqkt.com) |
 | Contribute | [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) |
 
 <br/>

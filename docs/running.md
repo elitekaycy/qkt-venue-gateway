@@ -2,7 +2,7 @@
 
 Run one gateway per venue account, next to qkt. Each gateway has its own container, port, tokens and
 volume. Venue-specific setup is in each adapter's README:
-[paper](../adapter-paper/README.md) and [deribit](../adapter-deribit/README.md).
+[paper](https://venuegw.tryqkt.com/adapters/paper/) and [deribit](https://venuegw.tryqkt.com/adapters/deribit/).
 
 ## Start
 
@@ -42,7 +42,7 @@ To run from source while developing, use `./gradlew :app:run` with the same two 
 ## Configuration
 
 Everything is an environment variable. Defaults live in one place,
-[`GatewayConfig`](../app/src/main/kotlin/com/qkt/venuegateway/config/GatewayConfig.kt). A variable
+[`GatewayConfig`](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/app/src/main/kotlin/com/qkt/venuegateway/config/GatewayConfig.kt). A variable
 without a default is required, and the gateway won't start without it.
 
 | Variable | Default | Meaning |
@@ -149,7 +149,7 @@ Prices and quantities are decimal strings. The full contract is in [vgp-v1-wire.
   docker compose start gateway-paper
   ```
 
-- **Upgrade.** Check out a release tag (changes are in [CHANGELOG.md](../CHANGELOG.md)), then run
+- **Upgrade.** Check out a release tag (changes are in [CHANGELOG.md](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/CHANGELOG.md)), then run
   `docker compose build && docker compose up -d`. The journal is kept, and qkt replays from its last
   sequence.
 
