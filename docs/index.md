@@ -11,13 +11,14 @@ hide:
   <span class="pill pill--accent">Apache 2.0</span>
   <span class="pill">VGP v1</span>
   <span class="pill">Deribit</span>
+  <span class="pill">Bybit</span>
 </div>
 
 # One small protocol between qkt and a trading venue — <em>one container per account.</em> { .vgw-hero__lede }
 
 <p class="vgw-hero__sub" markdown="0">
 qkt-venue-gateway sits between <a href="https://docs.tryqkt.com">qkt</a> and a venue. Futures,
-perpetuals and options all use the same protocol, so qkt trades them the same way.
+perpetuals, options and spot all use the same protocol, so qkt trades them the same way.
 </p>
 
 <div class="vgw-hero__ctas" markdown="0">
@@ -94,6 +95,7 @@ qkt refuses to start if the gateway's adapter, account or trade mode don't match
 |---|---|---|
 | [`paper`](adapters/paper.md) | Simulated account on Deribit's public prices | Stable |
 | [`deribit`](adapters/deribit.md) | Deribit testnet and mainnet | Stable; settlement history not served yet |
+| [`bybit`](adapters/bybit.md) | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New |
 
 Want another venue? See [writing an adapter](writing-an-adapter.md) and the [adapter rules](adapters.md).
 

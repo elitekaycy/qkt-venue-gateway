@@ -71,6 +71,7 @@ nav:
   - Adapters:
       - Paper: adapters/paper.md
       - Deribit: adapters/deribit.md
+      - Bybit: adapters/bybit.md
       - Adapter rules: adapters.md
       - Writing an adapter: writing-an-adapter.md
   - Reference:
