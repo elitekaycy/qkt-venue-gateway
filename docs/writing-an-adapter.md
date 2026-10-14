@@ -214,7 +214,7 @@ docker run --rm -p 127.0.0.1:8445:8443 -v gw-acme:/data \
   -e GATEWAY_LOGIN=… -e GATEWAY_SECRET=… qkt-venue-gateway
 ```
 
-Point a qkt `type: gateway` broker entry at `http://127.0.0.1:8445` ([running.md](running.md#connect-qkt)),
+Point a qkt `type: gateway` broker entry at `http://127.0.0.1:8445` ([Connect qkt](connect/qkt.md)),
 place an order, see it fill on the stream, close the position. Note the run in the PR.
 
 ## 9. Open the pull request

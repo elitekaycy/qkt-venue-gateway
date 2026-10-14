@@ -1,15 +1,15 @@
 :root {
-  --md-primary-fg-color: #0b3d2e;
-  --md-primary-fg-color--dark: #082e22;
-  --md-accent-fg-color: #2f9e6e;
-  --vgw-bg: #0a0e0c;
-  --vgw-bg-elev: #101512;
-  --vgw-line: #1c2420;
-  --vgw-fg: #e6ece8;
-  --vgw-fg-mute: #93a39a;
-  --vgw-accent: #2f9e6e;
-  --vgw-accent-soft: rgba(47, 158, 110, 0.14);
-  --vgw-up: #2f9e6e;
+  --md-primary-fg-color: #0d1117;
+  --md-primary-fg-color--dark: #0a0d12;
+  --md-accent-fg-color: #a78bfa;
+  --vgw-bg: #0b0e14;
+  --vgw-bg-elev: #11151c;
+  --vgw-line: #1d2430;
+  --vgw-fg: #e6e9ef;
+  --vgw-fg-mute: #9aa3b2;
+  --vgw-accent: #a78bfa;
+  --vgw-accent-soft: rgba(167, 139, 250, 0.14);
+  --vgw-up: #a78bfa;
   --vgw-down: #d4635a;
 }
 
@@ -210,4 +210,12 @@
   margin: 0;
   color: var(--vgw-fg-mute);
   font-size: 0.9rem;
+}
+
+.md-typeset img.vgw-hero__logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1.25rem;
 }
