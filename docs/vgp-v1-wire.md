@@ -47,7 +47,7 @@ Every non-2xx response has the body `{"error": {"code": "<code>", "message": "<t
 
 ### `GET /v1/health`
 ```json
-{"protocol": "vgp1", "adapter": "deribit", "adapter_version": "0.1.0",
+{"protocol": "vgp1", "adapter": "deribit", "adapter_version": "0.2.0",
  "account_login": "12345", "trade_mode": "demo", "venue_connected": true,
  "kill_switch": {"all": false, "symbols": []}, "server_time": 1790835316271,
  "stream": "4f1c...", "seq": 1041, "capabilities": ["bars", "funding", "funding_rates", "quotes"]}
