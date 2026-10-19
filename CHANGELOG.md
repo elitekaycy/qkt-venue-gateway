@@ -2,6 +2,13 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.2.1 (2026-10-19)
+
+### Fixes
+
+- deribit: list volume_step as min_trade_amount, not contract_size (#80) (862d191)
+- host: default the deals and settlements window to now (#76) (010db95)
+
 ## v0.2.0 (2026-10-12)
 
 ### Features
