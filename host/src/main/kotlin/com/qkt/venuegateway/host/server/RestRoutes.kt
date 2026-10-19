@@ -94,7 +94,7 @@ internal fun Route.restRoutes(gateway: Gateway) {
                 ) {
                     gateway.journal.fillsOf(id)
                 } else {
-                    gateway.journal.fills(param("from"), param("to"))
+                    gateway.journal.fills(param("from"), paramOrNow("to", gateway))
                 }
             json(WireDeals.serializer(), WireDeals(deals))
         }
@@ -108,7 +108,7 @@ internal fun Route.restRoutes(gateway: Gateway) {
                 ) {
                     gateway.journal.settlementsOf(symbol)
                 } else {
-                    gateway.journal.settlements(param("from"), param("to"))
+                    gateway.journal.settlements(param("from"), paramOrNow("to", gateway))
                 }
             json(WireSettlements.serializer(), WireSettlements(settled))
         }
@@ -145,3 +145,9 @@ private fun ApplicationCall.id(): String = parameters["id"] ?: throw InvalidRequ
 
 private fun ApplicationCall.param(name: String): Long =
     request.queryParameters[name]?.toLongOrNull() ?: throw InvalidRequestException("$name must be epoch milliseconds")
+
+/** Query parameter [name] as epoch milliseconds, the gateway's time when it is left out (a window up to now). */
+private fun ApplicationCall.paramOrNow(
+    name: String,
+    gateway: Gateway,
+): Long = if (request.queryParameters[name] == null) gateway.clock() else param(name)
