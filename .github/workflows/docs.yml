@@ -64,13 +64,22 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Check the live site answers
+      # The site sits behind Cloudflare, whose bot rules refuse GitHub's runners (403), so the check asks
+      # GitHub Pages itself: the Pages settings, then the page from GitHub's own servers.
+      - name: Check Pages serves the site
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          url=https://venuegw.tryqkt.com/
+          host=venuegw.tryqkt.com
+          pages="$(gh api "repos/$GITHUB_REPOSITORY/pages" -q '.build_type + " " + .cname')"
+          if [ "$pages" != "workflow $host" ]; then
+            echo "::error::Pages is '$pages', want 'workflow $host': check Settings > Pages (source GitHub Actions, custom domain)"
+            exit 1
+          fi
           for _ in $(seq 1 8); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" --resolve "$host:80:185.199.108.153" "http://$host/" || true)
             [ "$code" = 200 ] && exit 0
             sleep 15
           done
-          echo "::error::$url answered ${code:-nothing} after the deploy: check Settings > Pages (source GitHub Actions, custom domain)"
+          echo "::error::GitHub Pages answered ${code:-nothing} for $host after the deploy"
           exit 1
