@@ -247,7 +247,9 @@ Runs at start, after every venue reconnect, and every 60 seconds:
    USDT or USDC); run two gateways for both. Inverse contracts and options are not supported. Its settings,
    capabilities and venue behaviour are on [its page](adapters/bybit.md).
 4. Later: a futures venue for CME products (Rithmic or a bridge, see the prop-automation findings), and
-   `mt5-gateway` speaking VGP so MT5 accounts share the same client.
+   `mt5-gateway` speaking VGP so MT5 accounts share the same client. What its market-data decoder must
+   handle (implied book, statistics entries, book entries without a size) is in
+   `plans/2026-10-19-cme-mdp-decoder.md`.
 
 **Futures chains** are not part of v1 (wire spec §3): a dated future carries no root on the wire, so the
 chain endpoint is designed with its first consumer, live continuous futures (qkt phase 46).
