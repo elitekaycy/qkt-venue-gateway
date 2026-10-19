@@ -62,7 +62,7 @@ class DeribitListingTest {
         }
 
     @Test
-    fun `linear contracts are listed in coins, with contract size 1 and the venue contract size as volume step`() {
+    fun `linear contracts are listed in coins, with contract size 1 and the venue minimum amount as volume step`() {
         val listed =
             DeribitListing(
                 market,

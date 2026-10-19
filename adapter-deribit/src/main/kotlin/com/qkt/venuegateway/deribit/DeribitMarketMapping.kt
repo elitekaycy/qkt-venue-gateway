@@ -16,7 +16,9 @@ import java.math.BigDecimal
 /**
  * Where Deribit's market words become the gateway's neutral types. A linear (USDC/USDT-settled)
  * contract's amount is in its base coin, so one unit of quantity is one coin: every instrument is
- * listed with contract size (the P&L multiplier) 1, and Deribit's `contract_size` is the volume step.
+ * listed with contract size (the P&L multiplier) 1. Deribit takes amounts in multiples of
+ * `min_trade_amount`, which is both the volume step and the minimum; its `contract_size` can be coarser
+ * (a USDC option's is 1 with a minimum of 0.01), so it is not the step.
  */
 object DeribitMarketMapping {
     /** One hour of Deribit funding: a unit long paid `interest_1h × index` over the hour ending at its time. */
@@ -44,7 +46,7 @@ object DeribitMarketMapping {
             currency = i.settlementCurrency,
             contractSize = BigDecimal.ONE,
             tickSize = i.tickSize,
-            volumeStep = i.contractSize,
+            volumeStep = i.minTradeAmount,
             volumeMin = i.minTradeAmount,
             expiryMs = i.expiryMs,
             strike = i.strike,
