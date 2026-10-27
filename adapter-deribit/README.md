@@ -1,5 +1,7 @@
 # Deribit adapter
 
+> Venue: Deribit testnet and mainnet: USDC-linear perpetuals, futures and options · Status: Stable
+
 Trades one Deribit account: perpetuals, futures and options on USDC-linear contracts (sizes in
 coins). Coin-margined contracts are not supported. It passes the adapter contract suite on testnet.
 

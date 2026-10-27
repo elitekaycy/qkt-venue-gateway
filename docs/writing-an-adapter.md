@@ -40,8 +40,8 @@ dependencies {
 }
 ```
 
-Add `"adapter-acme"` to `settings.gradle.kts`, and `"implementation"(project(":adapter-acme"))` to
-`app/build.gradle.kts` so the gateway ships it.
+That is all the wiring: `settings.gradle.kts` includes every `adapter-<venue>/` directory with a
+`build.gradle.kts`, and the gateway app bundles each one it finds. No shared build file names the venue.
 
 ## 2. Probe and record (checkpoint 1)
 
@@ -186,15 +186,12 @@ ACME_CLIENT_ID=… ACME_CLIENT_SECRET=… ./gradlew :adapter-acme:test --tests '
 - `adapter-acme/README.md`, shaped like the Deribit one: setup, connect qkt, settings (variable,
   default, meaning), venue behaviour and the contract suite.
 - `adapter-acme/CLAUDE.md`: exactly `@README.md` and `@../docs/adapters.md`.
-- Root `README.md`: a row in the Adapters table, linking to `adapter-acme/README.md`.
-- `.github/workflows/adapter.yml`, in the test step's `env`:
-
-  ```yaml
-  ACME_CLIENT_ID: ${{ matrix.venue == 'acme' && secrets.ACME_CLIENT_ID || '' }}
-  ACME_CLIENT_SECRET: ${{ matrix.venue == 'acme' && secrets.ACME_CLIENT_SECRET || '' }}
-  ```
-
-  and ask a maintainer to add the two repository secrets (a testnet key, trade scope only).
+- Under the README's title, one line the root README's Adapters table is generated from:
+  `> Venue: Acme testnet and mainnet · Status: New`. Run `scripts/adapter-index.sh`: it writes the root
+  README and docs home tables, the docs page and its navigation entry (CI fails, naming that command, when
+  they are stale).
+- Ask a maintainer to add the repository secrets `ACME_CLIENT_ID` and `ACME_CLIENT_SECRET` (a testnet key,
+  trade scope only). The adapter workflow looks them up by the venue's name; nothing in it changes.
 
 Then check locally what CI will:
 

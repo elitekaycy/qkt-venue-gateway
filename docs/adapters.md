@@ -9,10 +9,12 @@ For a walk-through with code, see [writing-an-adapter.md](writing-an-adapter.md)
 ## The branch
 
 - One venue, one branch: `adapter/<venue>`, lowercase letters and digits only (`adapter/bybit`).
-- The branch carries the whole adapter, nothing else. It may change only:
-  `adapter-<venue>/**`, `settings.gradle.kts`, `app/build.gradle.kts`, `README.md`, `docs/adapters.md`
-  and `.github/workflows/adapter.yml` (to pass the venue's secrets). It is cut from `dev` and merges
-  into `dev`. A host or API change it needs is
+- The branch carries the whole adapter, nothing else. It may change only `adapter-<venue>/**` and the
+  adapter lists `scripts/adapter-index.sh` generates from it (the root README and docs home tables, the docs
+  page and navigation entry). Nothing else names a venue:
+  `settings.gradle.kts` includes every `adapter-<venue>/` with a build file, the app bundles each one, and
+  the adapter workflow reads the venue's `<VENUE>_CLIENT_ID` / `<VENUE>_CLIENT_SECRET` secrets by name. It
+  is cut from `dev` and merges into `dev`. A host or API change it needs is
   its own `feat/…` PR, merged first.
 - CI enforces both (`pr` workflow). Fixes to an existing adapter use the same branch name.
 
@@ -54,8 +56,8 @@ Each checkpoint is one or more commits on the branch; do not start the next with
 4. **Adapter and factory.** Registered under `META-INF/services`; refuses bad settings naming the key.
 5. **Contract.** `<Venue>ContractTest extends AdapterContractTest` passes against the test environment.
    It reads its key from `<VENUE>_CLIENT_ID` / `<VENUE>_CLIENT_SECRET` and skips locally without them.
-6. **Wire-up.** `settings.gradle.kts` includes the module; `app/build.gradle.kts` bundles it; the root
-   README's Adapters table has a row linking to the module README; `adapter.yml` passes its secrets.
+6. **Wire-up.** The module README's `> Venue: … · Status: …` line, and `scripts/adapter-index.sh` run;
+   the build discovers and bundles the module by itself.
 7. **End to end.** qkt trades through a gateway running the adapter on the test environment: an order
    placed, filled, seen on the stream, and closed. Note the run in the PR.
 
@@ -73,7 +75,7 @@ Each checkpoint is one or more commits on the branch; do not start the next with
 The `adapter` workflow runs for every PR touching an adapter, and nightly for all of them:
 
 1. `scripts/check-adapter.sh <venue>`: the layout above is complete (module, README, CLAUDE.md, service
-   registration, contract test, fixtures, settings and app inclusion, README row).
+   registration, contract test, fixtures, the README's Venue line).
 2. `./gradlew :adapter-<venue>:test` with the venue's secrets, then a check that the contract suite
    **ran**: when the venue's secrets are configured (repository secrets `<VENUE>_CLIENT_ID` and
    `<VENUE>_CLIENT_SECRET`, test-environment keys with trade scope only), a skipped contract test is a

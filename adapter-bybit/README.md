@@ -1,5 +1,7 @@
 # Bybit adapter
 
+> Venue: Bybit testnet and mainnet: USDT/USDC linear contracts, or spot · Status: New
+
 Trades one category of one Bybit unified account: `linear` (USDT- or USDC-settled perpetuals and dated
 futures, sizes in the base coin) or `spot` (pairs quoted in USDT or USDC). One gateway is one account and one
 category; run two gateways for both. Inverse contracts and options are not supported.

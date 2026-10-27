@@ -108,11 +108,13 @@ The order filled when `positions` lists `BTC_USDC-PERPETUAL` with `"quantity":"0
 
 ## Adapters
 
+<!-- adapters:start -->
 | Adapter | Venue | Status |
 | --- | --- | --- |
-| `paper` | Simulated account on Deribit's public prices | Stable. [Settings](adapter-paper/README.md) |
-| `deribit` | Deribit testnet and mainnet | Stable. [Setup](adapter-deribit/README.md) |
 | `bybit` | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New. [Setup](adapter-bybit/README.md) |
+| `deribit` | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable. [Setup](adapter-deribit/README.md) |
+| `paper` | Simulated account on Deribit's public prices; no account needed | Stable. [Setup](adapter-paper/README.md) |
+<!-- adapters:end -->
 
 Want another venue? See [writing an adapter](docs/writing-an-adapter.md).
 
