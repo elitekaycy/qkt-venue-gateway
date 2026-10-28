@@ -36,8 +36,15 @@ adapter-<venue>/
   src/test/resources/fixtures/ responses recorded from the venue, account ids removed
 ```
 
-- Depends on `adapter-api` only (another adapter's `client` package at most, as `paper` reuses
+- Depends on `adapter-api` and `venue-support` (another adapter's `client` package at most, as `paper` reuses
   Deribit's public client). Never `host`, `vgp-wire` or `app`.
+- Translates, nothing more. What no venue decides is written once in `venue-support` and used, never copied:
+  `ReconnectingSocket` (backoff, a replaced socket's events ignored, keepalive and silence), `SubscriptionSet`
+  (replayed on reconnect), `JsonHttp` (the venue's status and body back, transport failures as `IOException`,
+  signing from the exact payload), `JsonReads` (exact decimals, absent for `null` and `""`), `Paging` (spans,
+  cursors, by time), `Retry.until` (reads only), `Hmac`; and typed settings on `AdapterContext` (`enum`, `int`,
+  `decimal`, `bool`, each failing naming its key). A helper an adapter needs that is not venue-specific goes there
+  first, in its own `feat/…` PR.
 - Settings are `GATEWAY_SETTING_<KEY>` at run time; credentials are `GATEWAY_LOGIN`/`GATEWAY_SECRET`.
   A setting that chooses real money over a test environment has no default.
 - No threads, clocks or env reads of its own beyond what `AdapterContext` hands in.
