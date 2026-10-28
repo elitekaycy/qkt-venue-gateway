@@ -7,6 +7,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import okio.ByteString
 import org.slf4j.LoggerFactory
 
 /** Where a venue's socket protocol plugs into [ReconnectingSocket]: everything here is the venue's, nothing else is. */
@@ -154,6 +155,12 @@ class ReconnectingSocket(
             heardMs = clock()
             runCatching { protocol.text(text) }.onFailure { log.error("socket {} frame refused: {}", name, it.message) }
         }
+
+        /** A binary frame is read as UTF-8 text: venues that send JSON in binary frames (Alpaca's trade stream) say the same. */
+        override fun onMessage(
+            webSocket: WebSocket,
+            bytes: ByteString,
+        ) = onMessage(webSocket, bytes.utf8())
 
         override fun onClosing(
             webSocket: WebSocket,
