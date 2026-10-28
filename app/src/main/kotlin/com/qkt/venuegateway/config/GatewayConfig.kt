@@ -20,10 +20,12 @@ import java.nio.file.Path
  * | `GATEWAY_TRADER_TOKEN`, `GATEWAY_GUARDIAN_TOKEN` | required | each role's bearer token |
  * | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | the venue credentials, both or neither |
  * | `GATEWAY_PLUGINS_DIR` | none | adapter jars beside the built-in ones |
+ * | `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | UTC days every recording of the venue's market keeps besides today (0: all) |
  * | `GATEWAY_SETTING_<KEY>` | the adapter's | adapter setting `<key>`, lower-cased |
  *
  * Any variable but a setting may instead be given as `<NAME>_FILE`, the path of a file holding the
- * value (a Docker secret), but not both.
+ * value (a Docker secret), but not both. The per-recording retentions adapters once read
+ * (`GATEWAY_SETTING_DEPTH_RETENTION_DAYS`, `_OPEN_INTEREST_`, `_TRADES_`) are refused, naming the one that replaced them.
  */
 data class GatewayConfig(
     val host: String,
@@ -34,11 +36,13 @@ data class GatewayConfig(
     val settings: Map<String, String>,
     val pluginsDir: Path? = null,
     val credentials: Credentials? = null,
+    val recordingRetentionDays: Int = 0,
 ) {
     /** Every field but the role tokens, which are secrets and never printed. */
     override fun toString() =
         "GatewayConfig(host=$host, port=$port, stateDir=$stateDir, tokens=${tokens.keys}, adapter=$adapter, " +
-            "settings=$settings, pluginsDir=$pluginsDir, credentials=$credentials)"
+            "settings=$settings, pluginsDir=$pluginsDir, credentials=$credentials, " +
+            "recordingRetentionDays=$recordingRetentionDays)"
 
     companion object {
         /** The prefix of every adapter setting's variable: `GATEWAY_SETTING_STOP_TRIGGER` is `stop_trigger`. */
@@ -50,7 +54,11 @@ data class GatewayConfig(
                 "GATEWAY_LISTEN" to "127.0.0.1:8443",
                 "GATEWAY_STATE_DIR" to "./state",
                 "GATEWAY_ADAPTER" to "paper",
+                "GATEWAY_RECORDING_RETENTION_DAYS" to "0",
             )
+
+        /** Adapter settings the host's one recording retention replaced. */
+        private val RETIRED = listOf("depth_retention_days", "open_interest_retention_days", "trades_retention_days")
 
         /** The config [env] describes; fails naming the variable at fault. */
         fun fromEnv(env: Map<String, String>): GatewayConfig {
@@ -66,8 +74,24 @@ data class GatewayConfig(
                 settings = settings(env),
                 pluginsDir = vars.optional("GATEWAY_PLUGINS_DIR")?.let { Path.of(it) },
                 credentials = credentials(vars),
+                recordingRetentionDays = retention(vars, env),
             )
         }
+
+        private fun retention(
+            vars: Vars,
+            env: Map<String, String>,
+        ): Int {
+            val name = "GATEWAY_RECORDING_RETENTION_DAYS"
+            RETIRED.map { SETTING_PREFIX + it.uppercase() }.firstOrNull { !env[it].isNullOrBlank() }?.let {
+                error("$it is retired: one retention keeps every recording, $name (0 keeps all)")
+            }
+            val days = vars.withDefault(name)
+            require(DAYS.matches(days)) { "$name must be a whole number of days, 0 to keep all: $days" }
+            return days.toInt()
+        }
+
+        private val DAYS = Regex("\\d{1,6}")
 
         private fun settings(env: Map<String, String>): Map<String, String> =
             env

@@ -81,15 +81,10 @@ class DeribitAdapter(
             ::prune,
             context.scheduler,
         )
-    private val retention = settings.retention
+    private val retentionDays = context.recordingRetentionDays
     private val openInterest =
-        DeribitOpenInterest(
-            { venue { market.ticker(it) } },
-            context.stateDir,
-            context.clock,
-            retention.openInterestDays,
-        )
-    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retention.depthDays)
+        DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock, retentionDays)
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retentionDays)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener

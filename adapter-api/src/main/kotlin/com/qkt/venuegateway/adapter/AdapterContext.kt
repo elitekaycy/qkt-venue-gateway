@@ -25,6 +25,9 @@ data class Credentials(
  * call goes through (an adapter derives what it needs with `newBuilder()`, which shares its connections and
  * dispatcher, and never shuts it down) and the [scheduler] its timers and ordered work run on (through a
  * `venue-support` `Strand`; the pool is the host's). Both default to private ones, for tests and plugins run alone.
+ * [recordingRetentionDays] is how many UTC days every recording the adapter keeps of its venue's market (depth,
+ * open interest, the tape: [com.qkt.venuegateway.adapter.recording]) holds besides today, the host's one
+ * retention (`GATEWAY_RECORDING_RETENTION_DAYS`); 0 keeps everything.
  */
 class AdapterContext(
     val settings: Map<String, String>,
@@ -33,7 +36,12 @@ class AdapterContext(
     val credentials: Credentials? = null,
     val http: OkHttpClient = OkHttpClient(),
     val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(2, daemon("adapter")),
+    val recordingRetentionDays: Int = 0,
 ) {
+    init {
+        require(recordingRetentionDays >= 0) { "recording retention must be 0 or more days: $recordingRetentionDays" }
+    }
+
     /** Setting [key], or a failure naming it. */
     fun required(key: String): String =
         settings[key]?.takeIf { it.isNotBlank() } ?: error("${variable(key)} is required")

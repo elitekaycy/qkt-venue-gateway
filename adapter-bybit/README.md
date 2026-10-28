@@ -54,8 +54,7 @@ qkt writes `-` in venue codes as `_`.
 | `GATEWAY_SETTING_CATEGORY` | required | `linear` or `spot`. Never defaulted |
 | `GATEWAY_SETTING_CURRENCY` | `USDT` | The coin a linear contract settles in, or a spot pair is quoted in: `USDT` or `USDC` |
 | `GATEWAY_SETTING_STOP_TRIGGER` | `last_price` | Price a linear stop fires on: `last_price`, `mark_price` or `index_price` (spot: `last_price` only) |
-| `GATEWAY_SETTING_TRADES_RETENTION_DAYS` | `0` | UTC days of the recorded tape and liquidations kept besides today; `0` keeps everything |
-| `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` | `0` | The same for recorded depth |
+| `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | The host's one retention: UTC days of the recorded tape, liquidations and depth kept besides today; `0` keeps everything (the retired `GATEWAY_SETTING_TRADES_RETENTION_DAYS` and `_DEPTH_` are refused, naming it) |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key and its secret |
 
 ## Capabilities

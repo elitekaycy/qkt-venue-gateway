@@ -27,14 +27,13 @@ enum class DeribitEnvironment(
  * The Deribit adapter's settings: `environment` (`testnet` or `mainnet`, never defaulted, since one
  * of them is real money), `currency` (`USDC`: linear contracts, whose amounts are coins; coin-margined
  * contracts quote amounts in dollars and are refused), and `stop_trigger` (`last_price`, `mark_price`
- * or `index_price`, default `last_price`): the price Deribit watches to fire a stop. [retention] is how long
- * the gateway keeps its own recordings of depth and open interest ([DeribitRetention], default for ever).
+ * or `index_price`, default `last_price`): the price Deribit watches to fire a stop. How long the gateway keeps its
+ * own recordings of depth and open interest is the host's one retention (`AdapterContext.recordingRetentionDays`).
  */
 data class DeribitSettings(
     val environment: DeribitEnvironment,
     val currency: String,
     val stopTrigger: String,
-    val retention: DeribitRetention = DeribitRetention(),
 ) {
     companion object {
         private val TRIGGERS = setOf("last_price", "mark_price", "index_price")
@@ -47,7 +46,7 @@ data class DeribitSettings(
                 currency == "USDC",
             ) { "deribit currency $currency is not supported: only USDC (linear) contracts are" }
             require(trigger in TRIGGERS) { "deribit stop_trigger $trigger is not one of $TRIGGERS" }
-            return DeribitSettings(environment, currency, trigger, DeribitRetention.of(context.settings))
+            return DeribitSettings(environment, currency, trigger)
         }
     }
 }

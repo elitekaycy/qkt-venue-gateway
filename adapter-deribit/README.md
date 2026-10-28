@@ -68,8 +68,7 @@ qkt writes `-` in venue codes as `_`.
 | `GATEWAY_SETTING_ENVIRONMENT` | required | `testnet`, or `mainnet` for real money. Never defaulted |
 | `GATEWAY_SETTING_CURRENCY` | `USDC` | The only supported currency |
 | `GATEWAY_SETTING_STOP_TRIGGER` | `last_price` | Price a stop fires on: `last_price`, `mark_price` or `index_price` |
-| `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` | `0` | UTC days of recorded depth kept besides today (see Depth); `0` keeps everything |
-| `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` | `0` | The same for recorded open interest (see Open interest) |
+| `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | The host's one retention: UTC days of recorded depth and open interest kept besides today (see Retention); `0` keeps everything |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key's client id and secret |
 
 ## Venue behaviour
@@ -178,12 +177,14 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   every 10 seconds, and would need its own staleness guard for a dropped socket.
 - **Retention of the recordings.** Depth and open interest are recorded only by this gateway, so what it
   deletes is lost for good unless `qkt fetch --depth` / `qkt fetch --open-interest` copied it first. By
-  default (`0`) nothing is deleted. With `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` or
-  `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` set to N, the gateway keeps today's file and the N days
+  default (`0`) nothing is deleted. With the host's one retention, `GATEWAY_RECORDING_RETENTION_DAYS`, set to N,
+  the gateway keeps today's file and the N days
   before it, and deletes every older day file, of every contract, when it connects and then once a UTC day
   (on the 10-minute refresh timer; each deletion is logged). A read of a range that reaches before the
   window answers what remains. Fetch into qkt more often than every N days. A value that is not a whole
-  number of days fails the start, naming the setting.
+  number of days fails the start, naming the variable, as does a retired `GATEWAY_SETTING_DEPTH_RETENTION_DAYS`
+  or `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS`. Each day file starts with its header line (`time,bids,asks`,
+  `time,open_interest`), as Deribit's always have; the Bybit adapter's files have none, as theirs never had.
 
 - **Tape and liquidations.** `/v1/trades` and `/v1/liquidations` read the same
   `get_last_trades_by_instrument_and_time` pages as marks, on the same hosts (mainnet's history host; testnet's

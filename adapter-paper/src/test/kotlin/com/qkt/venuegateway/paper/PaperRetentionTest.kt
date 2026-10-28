@@ -12,7 +12,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-/** The paper venue keeps its recordings of Deribit's market as long as its settings say, and no longer. */
+/** The paper venue keeps its recordings of Deribit's market as long as the host's retention says, and no longer. */
 class PaperRetentionTest {
     private val now =
         LocalDate
@@ -33,8 +33,11 @@ class PaperRetentionTest {
 
     private fun adapter(
         dir: Path,
-        settings: Map<String, String>,
-    ) = PaperAdapter(AdapterContext(settings + ("settlement_check_ms" to "50"), { now }, dir), unused) { _, _ -> Idle }
+        retentionDays: Int,
+    ) = PaperAdapter(
+        AdapterContext(mapOf("settlement_check_ms" to "50"), { now }, dir, recordingRetentionDays = retentionDays),
+        unused,
+    ) { _, _ -> Idle }
 
     private fun record(
         dir: Path,
@@ -60,7 +63,7 @@ class PaperRetentionTest {
         listOf("depth", "open-interest").forEach { kind ->
             listOf("2026-10-01", "2026-10-04").forEach { record(dir, kind, it) }
         }
-        val adapter = adapter(dir, mapOf("depth_retention_days" to "1", "open_interest_retention_days" to "2"))
+        val adapter = adapter(dir, 2)
         adapter.connect(HeardListener(mutableListOf()))
 
         val deadline = System.currentTimeMillis() + 5_000
@@ -76,18 +79,17 @@ class PaperRetentionTest {
     }
 
     @Test
-    fun `without retention settings everything is kept, and a bad value is refused naming the setting`(
+    fun `without a retention everything is kept, and a negative one is refused`(
         @TempDir dir: Path,
     ) {
         record(dir, "depth", "2020-01-01")
-        val adapter = adapter(dir, emptyMap())
+        val adapter = adapter(dir, 0)
         adapter.connect(HeardListener(mutableListOf()))
         Thread.sleep(200)
         adapter.close()
 
         assertThat(days(dir, "depth")).containsExactly("2020-01-01.csv")
-        assertThatThrownBy { adapter(dir, mapOf("depth_retention_days" to "a week")) }
-            .hasMessageContaining("setting depth_retention_days")
+        assertThatThrownBy { adapter(dir, -1) }.hasMessageContaining("recording retention")
     }
 
     private object Idle : DeribitTickers {

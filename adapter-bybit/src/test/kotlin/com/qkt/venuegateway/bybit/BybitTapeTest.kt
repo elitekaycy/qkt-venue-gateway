@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.bybit
 
 import com.qkt.venuegateway.adapter.Side
+import com.qkt.venuegateway.adapter.recording.RecordedTape
 import com.qkt.venuegateway.bybit.client.BybitMarketJson
 import com.qkt.venuegateway.bybit.client.BybitPrint
 import java.nio.file.Files
@@ -31,7 +32,43 @@ class BybitTapeTest {
             .map { BybitMarketJson.liquidation(it.jsonObject) }
     private val taped = mutableListOf<String>()
 
-    private fun tape(now: Long = 1_791_241_500_000L) = BybitTape(dir, { now }, 0, { recent }) { taped += it }
+    /** Bybit's tape as the adapter records it: its pushes and latest trades mapped, then recorded. */
+    private inner class Tape(
+        now: Long,
+        days: Int,
+        private val latest: List<BybitPrint>,
+    ) {
+        private val recorded = RecordedTape(dir, { now }, days) { taped += it }
+
+        fun trades(
+            code: String,
+            fromMs: Long,
+            toMs: Long,
+            limit: Int,
+        ) = recorded.trades(code, fromMs, toMs, limit) { latest.map(BybitMarketMapping::print) }
+
+        fun liquidations(
+            code: String,
+            fromMs: Long,
+            toMs: Long,
+        ) = recorded.liquidations(code, fromMs, toMs)
+
+        fun onTrades(
+            code: String,
+            prints: List<BybitPrint>,
+        ) = recorded.onTrades(code, prints.map(BybitMarketMapping::print))
+
+        fun onLiquidations(
+            code: String,
+            prints: List<BybitPrint>,
+        ) = recorded.onLiquidations(code, prints.map(BybitMarketMapping::liquidation))
+
+        fun resume() = recorded.resume()
+
+        fun prune() = recorded.prune()
+    }
+
+    private fun tape(now: Long = 1_791_241_500_000L) = Tape(now, 0, recent)
 
     @Test
     fun `a first read records bybit's latest trades and serves the range oldest first`() {
@@ -108,12 +145,26 @@ class BybitTapeTest {
     @Test
     fun `day files past the retention are pruned, at most once a day`() {
         val old = BybitPrint("old", 1_790_000_000_000, recent.first().price, recent.first().size, "Buy")
-        val tape = BybitTape(dir, { 1_791_241_500_000L }, 3, { emptyList() }) {}
+        val tape = Tape(1_791_241_500_000L, 3, emptyList())
         tape.onTrades("BTCUSDT", listOf(old, recent.first()))
 
         assertThat(tape.prune()).isEqualTo(1)
         assertThat(tape.prune()).isZero
         assertThat(tape.trades("BTCUSDT", 0, Long.MAX_VALUE, 50).map { it.id }).containsExactly(recent.first().id)
+    }
+
+    @Test
+    fun `recorded lines keep bybit's words, a liquidation's side the position liquidated`() {
+        val tape = tape()
+        tape.onLiquidations("BTCUSDT", liquidations.take(1))
+        tape.onTrades("BTCUSDT", listOf(recent.first()))
+
+        val p = liquidations.first()
+        val t = recent.first()
+        assertThat(lines("liquidations"))
+            .containsExactly("${p.timeMs},${p.id},${p.price.toPlainString()},${p.size.toPlainString()},${p.side}")
+        assertThat(lines("trades"))
+            .containsExactly("${t.timeMs},${t.id},${t.price.toPlainString()},${t.size.toPlainString()},${t.side}")
     }
 
     private fun lines(kind: String) =

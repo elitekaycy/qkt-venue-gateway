@@ -8,7 +8,6 @@ import java.time.ZoneOffset
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -61,32 +60,6 @@ class DeribitRetentionTest {
         kind: String,
         code: String,
     ) = Files.list(dir.resolve("$kind/$code")).use { f -> f.map { it.fileName.toString() }.sorted().toList() }
-
-    @Test
-    fun `retention is 0 unless set, whole days are read, and anything else is refused naming the setting`() {
-        assertThat(DeribitRetention.of(emptyMap())).isEqualTo(DeribitRetention(0, 0))
-        assertThat(deribitSettings(mapOf("environment" to "testnet")).retention).isEqualTo(DeribitRetention(0, 0))
-        val set =
-            mapOf(
-                "environment" to "testnet",
-                "depth_retention_days" to "30",
-                "open_interest_retention_days" to "7",
-            )
-        assertThat(deribitSettings(set).retention).isEqualTo(DeribitRetention(30, 7))
-        listOf("-1", "1.5", "thirty", "+3", " 3").forEach { bad ->
-            assertThatThrownBy { DeribitRetention.of(mapOf("depth_retention_days" to bad)) }
-                .hasMessageContaining("setting depth_retention_days")
-                .hasMessageContaining(bad)
-            assertThatThrownBy {
-                deribitSettings(
-                    mapOf(
-                        "environment" to "testnet",
-                        "open_interest_retention_days" to bad,
-                    ),
-                )
-            }.hasMessageContaining("setting open_interest_retention_days")
-        }
-    }
 
     @Test
     fun `day files older than the window are deleted for every contract and the newer ones kept`(
@@ -165,8 +138,7 @@ class DeribitRetentionTest {
         recordDay(dir, "depth", "BTC_USDC-PERPETUAL", "1969-12-30")
         recordDay(dir, "depth", "BTC_USDC-PERPETUAL", "1970-01-01")
         recordDay(dir, "open-interest", "BTC_USDC-PERPETUAL", "1969-12-30")
-        val settings = mapOf("depth_retention_days" to "1", "open_interest_retention_days" to "1")
-        val (adapter, _) = ScriptedDeribit(order()).adapter(dir, unusedMarket(), settings = settings)
+        val (adapter, _) = ScriptedDeribit(order()).adapter(dir, unusedMarket(), retentionDays = 1)
 
         val deadline = System.currentTimeMillis() + 5_000
         while (days(dir, "open-interest", "BTC_USDC-PERPETUAL").isNotEmpty() && System.currentTimeMillis() < deadline) {

@@ -43,7 +43,15 @@ fun start(
             http.connectionPool.evictAll()
         }
     val context =
-        AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials, http, scheduler)
+        AdapterContext(
+            config.settings,
+            clock,
+            config.stateDir.resolve("adapter"),
+            config.credentials,
+            http,
+            scheduler,
+            config.recordingRetentionDays,
+        )
     val adapter =
         runCatching { factory.create(context) }.getOrElse {
             throw IllegalStateException(
