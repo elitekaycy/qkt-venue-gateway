@@ -1,11 +1,11 @@
 package com.qkt.venuegateway.bybit.client
 
-import com.qkt.venuegateway.bybit.client.BybitJson.dec
-import com.qkt.venuegateway.bybit.client.BybitJson.long
-import com.qkt.venuegateway.bybit.client.BybitJson.need
-import com.qkt.venuegateway.bybit.client.BybitJson.obj
-import com.qkt.venuegateway.bybit.client.BybitJson.req
-import com.qkt.venuegateway.bybit.client.BybitJson.text
+import com.qkt.venuegateway.support.JsonReads.decimal
+import com.qkt.venuegateway.support.JsonReads.long
+import com.qkt.venuegateway.support.JsonReads.need
+import com.qkt.venuegateway.support.JsonReads.needDecimal
+import com.qkt.venuegateway.support.JsonReads.obj
+import com.qkt.venuegateway.support.JsonReads.text
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonObject
 
@@ -24,9 +24,9 @@ internal object BybitMarketJson {
             baseCoin = o.need("baseCoin"),
             quoteCoin = o.need("quoteCoin"),
             settleCoin = o.text("settleCoin") ?: o.need("quoteCoin"),
-            tickSize = o.obj("priceFilter").req("tickSize"),
-            qtyStep = lot.dec("qtyStep") ?: lot.req("basePrecision"),
-            minOrderQty = lot.req("minOrderQty"),
+            tickSize = o.obj("priceFilter").needDecimal("tickSize"),
+            qtyStep = lot.decimal("qtyStep") ?: lot.needDecimal("basePrecision"),
+            minOrderQty = lot.needDecimal("minOrderQty"),
             deliveryMs = o.text("deliveryTime")?.toLong()?.takeIf { it > 0 },
         )
     }
@@ -48,14 +48,14 @@ internal object BybitMarketJson {
     ) = BybitTicker(
         symbol = base.symbol,
         timeMs = timeMs,
-        bid = o.dec("bid1Price") ?: base.bid,
-        bidSize = o.dec("bid1Size") ?: base.bidSize,
-        ask = o.dec("ask1Price") ?: base.ask,
-        askSize = o.dec("ask1Size") ?: base.askSize,
-        last = o.dec("lastPrice") ?: base.last,
-        mark = o.dec("markPrice") ?: base.mark,
-        index = o.dec("indexPrice") ?: base.index,
-        openInterest = o.dec("openInterest") ?: base.openInterest,
+        bid = o.decimal("bid1Price") ?: base.bid,
+        bidSize = o.decimal("bid1Size") ?: base.bidSize,
+        ask = o.decimal("ask1Price") ?: base.ask,
+        askSize = o.decimal("ask1Size") ?: base.askSize,
+        last = o.decimal("lastPrice") ?: base.last,
+        mark = o.decimal("markPrice") ?: base.mark,
+        index = o.decimal("indexPrice") ?: base.index,
+        openInterest = o.decimal("openInterest") ?: base.openInterest,
     )
 
     /** A kline answer's rows (newest first as Bybit sends them), oldest first; [volume] for trade klines only. */
@@ -76,16 +76,17 @@ internal object BybitMarketJson {
                 )
             }.sortedBy { it.startMs }
 
-    fun fundingRate(o: JsonObject) = BybitFundingRate(o.long("fundingRateTimestamp"), o.req("fundingRate"))
+    fun fundingRate(o: JsonObject) = BybitFundingRate(o.long("fundingRateTimestamp"), o.needDecimal("fundingRate"))
 
-    fun openInterest(o: JsonObject) = BybitOpenInterest(o.long("timestamp"), o.req("openInterest"))
+    fun openInterest(o: JsonObject) = BybitOpenInterest(o.long("timestamp"), o.needDecimal("openInterest"))
 
     /** One `/v5/market/recent-trade` item. */
     fun recentTrade(o: JsonObject) =
-        BybitPrint(o.need("execId"), o.long("time"), o.req("price"), o.req("size"), o.need("side"))
+        BybitPrint(o.need("execId"), o.long("time"), o.needDecimal("price"), o.needDecimal("size"), o.need("side"))
 
     /** One `publicTrade` push item (`i`, `T`, `p`, `v`, `S`). */
-    fun streamTrade(o: JsonObject) = BybitPrint(o.need("i"), o.long("T"), o.req("p"), o.req("v"), o.need("S"))
+    fun streamTrade(o: JsonObject) =
+        BybitPrint(o.need("i"), o.long("T"), o.needDecimal("p"), o.needDecimal("v"), o.need("S"))
 
     /**
      * One `allLiquidation` push item (`T`, `s`, `S`, `v`, `p`). Bybit gives a liquidation no id, so its id is
@@ -93,8 +94,8 @@ internal object BybitMarketJson {
      */
     fun liquidation(o: JsonObject): BybitPrint {
         val time = o.long("T")
-        val price = o.req("p")
-        val size = o.req("v")
+        val price = o.needDecimal("p")
+        val size = o.needDecimal("v")
         return BybitPrint("$time-${price.toPlainString()}-${size.toPlainString()}", time, price, size, o.need("S"))
     }
 

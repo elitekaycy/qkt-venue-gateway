@@ -2,6 +2,7 @@ package com.qkt.venuegateway.bybit.client
 
 import com.qkt.venuegateway.bybit.client.BybitJson.cursor
 import com.qkt.venuegateway.bybit.client.BybitJson.items
+import com.qkt.venuegateway.support.JsonReads
 import java.math.BigDecimal
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -19,7 +20,7 @@ class BybitPrivateClient(
     /** Sends [order]; Bybit answers only its ids, so the order as it then stands is read back by [orderByLink]. */
     fun place(order: BybitNewOrder): String =
         rest.post("/v5/order/create", BybitPrivateJson.create(order)).result.let {
-            BybitJson.run { it.need("orderId") }
+            JsonReads.run { it.need("orderId") }
         }
 
     /** Cancels [symbol]'s order [orderLinkId]; a [BybitException] when Bybit holds no open order of it. */
@@ -122,9 +123,9 @@ class BybitPrivateClient(
         val result = rest.get("/v5/account/wallet-balance", listOf("accountType" to "UNIFIED"), signed = true).result
         val account = result.items().firstOrNull() ?: error("bybit answered no unified wallet")
         return account.items("coin").associate {
-            BybitJson.run {
+            JsonReads.run {
                 it.need("coin") to
-                    (it.dec("walletBalance") ?: BigDecimal.ZERO)
+                    (it.decimal("walletBalance") ?: BigDecimal.ZERO)
             }
         }
     }
