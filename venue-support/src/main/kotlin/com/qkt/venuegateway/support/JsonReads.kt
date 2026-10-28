@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.support
 
 import java.math.BigDecimal
+import java.time.OffsetDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -31,6 +32,10 @@ object JsonReads {
     fun JsonObject.longOrNull(key: String): Long? = text(key)?.let { BigDecimal(it).longValueExact() }
 
     fun JsonObject.bool(key: String): Boolean? = text(key)?.toBooleanStrict()
+
+    /** An RFC 3339 time at [key] (`2026-10-28T00:44:03.565024076Z`, offsets included) in epoch milliseconds. */
+    fun JsonObject.instantMs(key: String): Long? =
+        text(key)?.let { OffsetDateTime.parse(it).toInstant().toEpochMilli() }
 
     fun JsonObject.obj(key: String): JsonObject = this[key] as? JsonObject ?: missing(key)
 

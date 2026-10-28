@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.support
 
 import java.io.IOException
+import java.net.URLEncoder
 import java.time.Duration
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -33,13 +34,16 @@ class HttpAnswer(
  * JSON over HTTPS to [baseUrl]. Every call returns the venue's [HttpAnswer] whatever its status, so the venue's own
  * envelope (an error code in a 200, a message in a 4xx) is read in its mapping, not guessed here; only the venue
  * being unreachable, or no answer within [timeoutMs], is an [IOException]. [sign] adds a venue's auth headers to
- * each request from the exact payload sent (the query string, or the body). Nothing is retried: a lost answer is the
- * caller's to resolve, because a retried order is a second order.
+ * each request from the exact payload sent (the query string, or the body). With [encodeQuery] each query value is
+ * URL-encoded (a venue whose times carry `:` and `+`, or whose page tokens carry `=`); without it values are sent as
+ * given, for a venue that signs the exact query string. Nothing is retried: a lost answer is the caller's to resolve,
+ * because a retried order is a second order.
  */
 class JsonHttp(
     private val baseUrl: String,
     timeoutMs: Long = 10_000,
     http: OkHttpClient = OkHttpClient(),
+    private val encodeQuery: Boolean = false,
     private val sign: (
         request: Request.Builder,
         method: String,
@@ -49,7 +53,7 @@ class JsonHttp(
 ) {
     private val http = http.newBuilder().callTimeout(Duration.ofMillis(timeoutMs)).build()
 
-    /** GETs [path] with [params] in their order, sent as given (the caller encodes what its venue needs encoded). */
+    /** GETs [path] with [params] in their order, encoded when [encodeQuery] says so. */
     fun get(
         path: String,
         params: List<Pair<String, String>> = emptyList(),
@@ -76,7 +80,10 @@ class JsonHttp(
         params: List<Pair<String, String>>,
         body: String?,
     ): HttpAnswer {
-        val query = params.joinToString("&") { (k, v) -> "$k=$v" }
+        val query =
+            params.joinToString(
+                "&",
+            ) { (k, v) -> "$k=${if (encodeQuery) URLEncoder.encode(v, Charsets.UTF_8) else v}" }
         val url = if (query.isEmpty()) "$baseUrl$path" else "$baseUrl$path?$query"
         val request = Request.Builder().url(url.toHttpUrl()).method(method, body?.toRequestBody(JSON_TYPE))
         sign(request, method, path, body ?: query)
