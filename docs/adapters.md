@@ -42,7 +42,8 @@ adapter-<venue>/
   `ReconnectingSocket` (backoff, a replaced socket's events ignored, keepalive and silence), `SubscriptionSet`
   (replayed on reconnect), `JsonHttp` (the venue's status and body back, transport failures as `IOException`,
   signing from the exact payload), `JsonReads` (exact decimals, absent for `null` and `""`), `Paging` (spans,
-  cursors, by time), `Retry.until` (reads only), `Hmac`; and typed settings on `AdapterContext` (`enum`, `int`,
+  cursors, by time), `Retry.until` (reads only), `Hmac`, `Listing` (a venue's listing, read again when due and on
+  a miss); and typed settings on `AdapterContext` (`enum`, `int`,
   `decimal`, `bool`, each failing naming its key). What a venue keeps no history of is recorded by `adapter-api`'s
   `recording` package, kept for the host's one retention (`AdapterContext.recordingRetentionDays`): `RecordedDepth`
   (the adapter hands it the book as it stands), `RecordedOpenInterest` (the figure as it stands) and `RecordedTape`
