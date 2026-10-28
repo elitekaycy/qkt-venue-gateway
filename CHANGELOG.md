@@ -2,6 +2,12 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.3.1 (2026-10-28)
+
+### Fixes
+
+- alpaca: report a coin buy's fee in the coin, as the venue filled it (#104) (b535880)
+
 ## v0.3.0 (2026-10-28)
 
 ### Features
