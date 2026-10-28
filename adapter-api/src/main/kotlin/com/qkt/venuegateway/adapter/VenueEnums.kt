@@ -3,8 +3,14 @@ package com.qkt.venuegateway.adapter
 /** Whether an account trades money ([REAL]) or a venue's test environment ([DEMO]). */
 enum class TradeMode { DEMO, REAL }
 
-/** What an instrument is. */
-enum class InstrumentKind { SPOT, PERPETUAL, FUTURE, OPTION }
+/** What an instrument is: [EQUITY] is a share of a company, held outright (not a CFD on it). */
+enum class InstrumentKind { SPOT, PERPETUAL, FUTURE, OPTION, EQUITY }
+
+/**
+ * What the account may do with an instrument the venue still lists: a delisted or halted share is [CLOSE_ONLY] or
+ * [DISABLED], a share the venue will not lend is [LONG_ONLY]. qkt refuses opening orders the mode forbids itself.
+ */
+enum class Tradability { FULL, LONG_ONLY, SHORT_ONLY, CLOSE_ONLY, DISABLED }
 
 /** How the venue holds positions: one net position per symbol, or one per ticket. */
 enum class Accounting { NETTING, HEDGING }
