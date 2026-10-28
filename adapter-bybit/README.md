@@ -126,9 +126,10 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   only what changed, so they are merged) and `orderbook.1.<s>` (whole every push; a spot ticker carries no bid
   or ask). The public socket is reported as the quote feed. Bybit drops a socket silent for a while; the
   adapter pings every 20 s and reconnects one silent for 60 s.
-- **Bars** are Bybit's klines (1, 3, 5, 15, 30, 60, 120, 240, 360, 720 minutes and a day, UTC-aligned); other
-  whole-minute windows are built from the longest of those dividing them. The kline holding now is still
-  forming and is never served. Klines are read 1000 a call.
+- **Bars** are built by the host from Bybit's klines (1, 3, 5, 15, 30, 60, 120, 240, 360, 720 minutes and a
+  day, UTC-aligned): a window Bybit serves is its klines, another whole-minute window is built from the longest
+  of those dividing it, and the kline holding now is still forming and is never served. Klines are read 1000 a
+  call.
 - **Marks** are the closes of Bybit's mark-price and index-price klines, one per window, stamped at the
   window's last millisecond (never earlier than Bybit could have reported them).
 - **Funding rates** from `/v5/market/funding/history` (every 8 h on BTCUSDT): the rate, no price.

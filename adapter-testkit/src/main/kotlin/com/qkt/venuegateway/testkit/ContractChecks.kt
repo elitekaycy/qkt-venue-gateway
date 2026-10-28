@@ -8,7 +8,7 @@ import com.qkt.venuegateway.adapter.VenueBar
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
 
-/** The shape every listing, bar series and position report keeps, whatever the venue. */
+/** The shape every listing, kline series and position report keeps, whatever the venue. */
 internal object ContractChecks {
     /** Codes are unique and every instrument carries the fields its kind needs, no more. */
     fun listing(instruments: List<Instrument>) {
@@ -17,20 +17,21 @@ internal object ContractChecks {
         instruments.forEach(::instrument)
     }
 
-    /** Bars start inside `[fromMs, toMs)`, in order, on [windowMs] boundaries, closed by [nowMs], and consistent. */
-    fun bars(
+    /**
+     * Klines [resolutionMs] long start inside `[fromMs, toMs)`, in order, on their boundaries, and are consistent
+     * (the newest may still be forming: the host serves only closed bars).
+     */
+    fun klines(
         bars: List<VenueBar>,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-        nowMs: Long,
     ) {
-        assertThat(bars).describedAs("bars over the last window").isNotEmpty
-        assertThat(bars.zipWithNext().all { (a, b) -> a.startMs < b.startMs }).describedAs("bars ascend").isTrue
+        assertThat(bars).describedAs("klines over the last window").isNotEmpty
+        assertThat(bars.zipWithNext().all { (a, b) -> a.startMs < b.startMs }).describedAs("klines ascend").isTrue
         bars.forEach { bar ->
-            assertThat(bar.startMs).describedAs("bar start").isGreaterThanOrEqualTo(fromMs).isLessThan(toMs)
-            assertThat(bar.startMs % windowMs).describedAs("bar ${bar.startMs} on a window boundary").isZero
-            assertThat(bar.startMs + windowMs).describedAs("bar ${bar.startMs} is closed").isLessThanOrEqualTo(nowMs)
+            assertThat(bar.startMs).describedAs("kline start").isGreaterThanOrEqualTo(fromMs).isLessThan(toMs)
+            assertThat(bar.startMs % resolutionMs).describedAs("kline ${bar.startMs} on its boundary").isZero
             assertThat(bar.high).describedAs("high of ${bar.startMs}").isGreaterThanOrEqualTo(bar.open.max(bar.close))
             assertThat(bar.low).describedAs("low of ${bar.startMs}").isLessThanOrEqualTo(bar.open.min(bar.close))
             assertThat(bar.volume).describedAs("volume of ${bar.startMs}").isGreaterThanOrEqualTo(BigDecimal.ZERO)

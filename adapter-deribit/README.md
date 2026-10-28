@@ -92,7 +92,8 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   the remainder filled first (wire spec: a market order never rests). A pushed remainder is not reported;
   its cancel goes out without waiting and Deribit's next push carries the result, and a lost cancel is
   retried by the next read (the host reconciles every minute).
-- **Klines.** Responses are silently cut at 5001 rows, so bars are fetched in chunks.
+- **Klines.** Responses are silently cut at 5001 rows, so klines are fetched in chunks. The host builds bars
+  from them (1, 3, 5, 10, 15, 30, 60, 120, 180, 360 and 720 minutes and a day).
 - **Settlements.** Expiries are read from `private/get_settlement_history_by_currency`: a `delivery` row
   when a future expires, an `exercise` row when an option does (out of the money too), both at 08:00 UTC
   and carrying the delivery price as `index_price` (the same figure `public/get_delivery_prices` publishes

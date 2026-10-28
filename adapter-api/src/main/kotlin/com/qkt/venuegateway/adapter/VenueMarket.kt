@@ -20,7 +20,7 @@ data class VenueQuote(
     val index: BigDecimal? = null,
 )
 
-/** One closed bar starting at [startMs]. */
+/** One bar (a venue kline, or a window the host built from them) starting at [startMs]. */
 data class VenueBar(
     val startMs: Long,
     val open: BigDecimal,

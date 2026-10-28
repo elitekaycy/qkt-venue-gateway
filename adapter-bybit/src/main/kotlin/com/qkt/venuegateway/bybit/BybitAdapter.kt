@@ -12,6 +12,7 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.bybit.BybitErrors.venue
+import com.qkt.venuegateway.bybit.client.BYBIT_KLINE_INTERVALS
 import com.qkt.venuegateway.bybit.client.BybitPrivateClient
 import com.qkt.venuegateway.bybit.client.BybitPublicClient
 import org.slf4j.LoggerFactory
@@ -159,12 +160,14 @@ class BybitAdapter(
         toMs: Long,
     ) = history.depth(code, fromMs, toMs)
 
-    override fun bars(
+    override val klineResolutions = BYBIT_KLINE_INTERVALS.keys
+
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = history.bars(code, windowMs, fromMs, toMs)
+    ) = history.klines(code, resolutionMs, fromMs, toMs)
 
     /** Quotes the listed [codes]; Bybit lists no options on these categories, so [roots] name nothing to quote. */
     override fun subscribeQuotes(

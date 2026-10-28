@@ -13,7 +13,10 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
  * option marks are only checked when declared: a venue without them has nothing to refuse).
  */
 internal object CapabilityChecks {
-    /** When declared, [activeCode]'s recent bars are well formed and a subscription quotes it, bid at or below ask. */
+    /**
+     * When declared, [activeCode]'s recent klines (those its bars of [windowMs] are built from) are well formed and
+     * a subscription quotes it, bid at or below ask.
+     */
     fun barsAndQuotes(
         adapter: VenueAdapter,
         listener: RecordingListener,
@@ -24,7 +27,9 @@ internal object CapabilityChecks {
         val nowMs = System.currentTimeMillis()
         val fromMs = nowMs - BARS_CHECKED * windowMs
         if (Capability.BARS in adapter.capabilities) {
-            ContractChecks.bars(adapter.bars(activeCode, windowMs, fromMs, nowMs), windowMs, fromMs, nowMs, nowMs)
+            assertThat(adapter.klineResolutions).describedAs("kline resolutions").contains(MINUTE_MS)
+            val resolution = adapter.klineResolutions.filter { windowMs % it == 0L }.max()
+            ContractChecks.klines(adapter.klines(activeCode, resolution, fromMs, nowMs), resolution, fromMs, nowMs)
         }
         if (Capability.QUOTES !in adapter.capabilities) return
         adapter.subscribeQuotes(setOf(activeCode), emptySet())
@@ -184,5 +189,6 @@ internal object CapabilityChecks {
     }
 
     private const val BARS_CHECKED = 30L
+    private const val MINUTE_MS = 60_000L
     private const val HISTORY_CHECKED_MS = 2 * 86_400_000L
 }
