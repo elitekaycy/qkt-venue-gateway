@@ -8,6 +8,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okio.ByteString.Companion.encodeUtf8
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -138,5 +139,26 @@ class ReconnectingSocketTest {
             check(System.currentTimeMillis() < until) { "condition not met in 5 s" }
             Thread.sleep(20)
         }
+    }
+
+    @Test
+    fun `a binary frame reaches the protocol as its UTF-8 text`() {
+        server.enqueue(
+            MockResponse().withWebSocketUpgrade(
+                object : WebSocketListener() {
+                    override fun onOpen(
+                        webSocket: WebSocket,
+                        response: Response,
+                    ) {
+                        webSocket.send("{\"stream\":\"listening\"}".encodeUtf8())
+                    }
+                },
+            ),
+        )
+        val protocol = Recorder()
+        socket(protocol).start()
+        val deadline = System.currentTimeMillis() + 5_000
+        while (protocol.frames.isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertThat(protocol.frames).containsExactly("{\"stream\":\"listening\"}")
     }
 }
