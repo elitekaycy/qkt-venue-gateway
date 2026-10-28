@@ -142,7 +142,7 @@ class MarketRoutesTest {
     }
 
     @Test
-    fun `each page asks the adapter for one page of windows, and next stops at the last closed window`() {
+    fun `each page asks the adapter for its closed windows' klines, and next stops at the last closed window`() {
         start()
         now = 2_500 * minute + 30_000
         venue.bars +=
@@ -158,9 +158,24 @@ class MarketRoutesTest {
         assertThat(firstCall).isEqualTo(0L to 1_000 * minute)
         assertThat(Regex("\"start\":").findAll(first).count()).isEqualTo(1_000)
         assertThat(first).contains("\"next\":${1_000 * minute}")
-        assertThat(venue.barCalls.last()).isEqualTo(2_000 * minute to now)
+        assertThat(venue.barCalls.last()).isEqualTo(2_000 * minute to 2_500 * minute)
         assertThat(Regex("\"start\":").findAll(last).count()).isEqualTo(500)
         assertThat(last).doesNotContain("\"next\":")
+    }
+
+    @Test
+    fun `a page whose end cuts a window still serves that window whole, built from every kline in it`() {
+        start()
+        now = 5_000 * minute
+        venue.bars +=
+            (0L until 4_004L).map {
+                VenueBar(it * minute, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE)
+            }
+
+        val page = get("/v1/bars?symbol=BTC_USDC-PERPETUAL&window_ms=240000&from=30000&to=${5_000 * minute}")
+
+        val whole = "\"open\":\"1\",\"high\":\"10\",\"low\":\"1\",\"close\":\"10\",\"volume\":\"4\""
+        assertThat(page).endsWith("{\"start\":${4_000 * minute},$whole}],\"next\":${4_000 * minute + 30_000}}")
     }
 
     private val seen = java.util.concurrent.CopyOnWriteArrayList<String>()

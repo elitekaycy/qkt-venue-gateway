@@ -6,6 +6,10 @@ import com.qkt.venuegateway.support.JsonReads
 import com.qkt.venuegateway.support.Page
 import com.qkt.venuegateway.support.Paging
 
+/** The kline intervals Bybit serves, by length in milliseconds: 1 to 720 minutes, aligned to UTC, and a day (`D`). */
+val BYBIT_KLINE_INTERVALS: Map<Long, String> =
+    listOf(1L, 3, 5, 15, 30, 60, 120, 240, 360, 720).associate { it * 60_000 to "$it" } + (86_400_000L to "D")
+
 /**
  * Bybit's public market over [rest] (no key): listings, tickers, klines, funding rates, open interest, the
  * latest public trades and the order book, each of one category (`linear`, `spot`). Bybit answers time ranges

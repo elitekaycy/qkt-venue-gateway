@@ -163,7 +163,9 @@ class AcmeContractTest : AdapterContractTest() {
 }
 ```
 
-Declare `capabilities` honestly. The suite checks each declared one in shape (funding records unique,
+Declare `capabilities` honestly. With `BARS`, declare the venue's kline lengths (`klineResolutions`, a minute among
+them) and answer `klines` as the venue sends them; the host builds and closes every bar window from them. The suite
+checks each declared one in shape (`activeCode`'s klines in range, ascending, on their boundaries and consistent; funding records unique,
 in their window and never zero; funding rates ascending at positive prices; settlements in their window;
 `activeCode`'s marks over its last 30 bar windows, at most one a window, positive; its open interest
 ascending, never negative, and holding at least the present figure; its depth ascending, holding the

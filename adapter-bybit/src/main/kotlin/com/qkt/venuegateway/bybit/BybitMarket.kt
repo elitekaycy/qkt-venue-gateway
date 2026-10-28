@@ -9,14 +9,16 @@ import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.bybit.BybitErrors.venue
+import com.qkt.venuegateway.bybit.client.BYBIT_KLINE_INTERVALS
 import com.qkt.venuegateway.bybit.client.BybitPrint
 import com.qkt.venuegateway.bybit.client.BybitPublicClient
 import org.slf4j.LoggerFactory
 
 /**
- * What the adapter serves of Bybit's public market beyond quotes, for codes of its [listing] only: bars, marks,
- * funding rates and open interest from Bybit's histories; the tape, liquidations and depth from what the gateway
- * records ([BybitTape], [BybitDepth]), pruned to their retention at most once a UTC day as they are read.
+ * What the adapter serves of Bybit's public market beyond quotes, for codes of its [listing] only: klines (the host
+ * builds bars from them), marks ([BybitMarks]), funding rates and open interest from Bybit's histories; the tape,
+ * liquidations and depth from what the gateway records ([BybitTape], [BybitDepth]), pruned to their retention at
+ * most once a UTC day as they are read.
  */
 internal class BybitMarket(
     private val public: BybitPublicClient,
@@ -27,7 +29,7 @@ internal class BybitMarket(
 ) {
     private val log = LoggerFactory.getLogger(BybitMarket::class.java)
     private val category = settings.category
-    private val bars = BybitBars(public, category)
+    private val marks = BybitMarks(public, category)
     private val openInterest = BybitOpenInterest(public, category, context.clock)
     private val depth =
         BybitDepth({
@@ -37,19 +39,23 @@ internal class BybitMarket(
     /** The recorded tape, its pushes fed by the adapter's public socket. */
     val tape = BybitTape(context.stateDir, context.clock, settings.retention.tradesDays, ::recent, tapeCodes)
 
-    fun bars(
+    fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> = venue { bars.closed(listed(code), windowMs, fromMs, toMs, context.clock()) }
+    ): List<VenueBar> =
+        venue {
+            val interval = BYBIT_KLINE_INTERVALS.getValue(resolutionMs)
+            public.klines(category, listed(code), "kline", interval, resolutionMs, fromMs, toMs - 1)
+        }.map(BybitMarketMapping::bar)
 
     fun marks(
         code: String,
         windowMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueMark> = venue { bars.marks(listed(code), windowMs, fromMs, toMs, context.clock()) }
+    ): List<VenueMark> = venue { marks.sampled(listed(code), windowMs, fromMs, toMs, context.clock()) }
 
     fun fundingRates(
         code: String,

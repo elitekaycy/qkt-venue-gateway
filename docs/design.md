@@ -94,7 +94,8 @@ interface VenueAdapter : AutoCloseable {
     fun trades(code: String, fromMs: Long, toMs: Long, limit: Int): List<VenuePrint>  // only with TRADES
     fun liquidations(code: String, fromMs: Long, toMs: Long): List<VenuePrint>  // only with LIQUIDATIONS
     fun depth(code: String, fromMs: Long, toMs: Long): List<VenueDepth>  // only with DEPTH
-    fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
+    val klineResolutions: Set<Long>                    // the kline lengths the venue serves (ms), a minute among them
+    fun klines(code: String, resolutionMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // raw klines; the host builds closed bars
     fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
 }
 
@@ -124,6 +125,11 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, one reading
   a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`, and one
   reading a contract's book depth only on one declaring `DEPTH`.
+- **Bars are built by the host.** An adapter declares the kline lengths its venue serves
+  (`klineResolutions`, a minute among them) and answers `klines` as the venue reports them, the newest
+  perhaps still forming. The host builds every window once for all venues: from the largest native length
+  dividing it (first open, highest high, lowest low, last close, summed volume), closed windows only, and asks
+  the adapter for those windows' klines alone.
 - **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
   triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
   turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order

@@ -1,8 +1,8 @@
 # Adapters: rules and the path to a new venue
 
 An adapter translates one venue's API into `adapter-api` and nothing more. Everything a venue does not
-decide (journal, idempotency, recovery from fills, kill switch, quote refresh) is the host's, written
-once. The interface and its rules are in [design.md](design.md) §3; this page is how an adapter is built,
+decide (journal, idempotency, recovery from fills, kill switch, quote refresh, building bars from klines) is the
+host's, written once. The interface and its rules are in [design.md](design.md) §3; this page is how an adapter is built,
 tested and merged. It is strict on purpose: an adapter that passes it works with qkt as it is.
 For a walk-through with code, see [writing-an-adapter.md](writing-an-adapter.md).
 

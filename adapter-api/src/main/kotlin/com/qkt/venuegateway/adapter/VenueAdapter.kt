@@ -121,10 +121,20 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueDepth> = throw VenueUnsupportedException("depth")
 
-    /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
-    fun bars(
+    /**
+     * The kline lengths the venue serves, in milliseconds, each a whole number of minutes dividing a day; with
+     * [Capability.BARS] they include a minute. The host builds every bar window from the largest dividing it.
+     */
+    val klineResolutions: Set<Long>
+
+    /**
+     * [code]'s klines [resolutionMs] long (one of [klineResolutions]) starting in `[fromMs, toMs)`, oldest first,
+     * as the venue reports them: the newest may still be forming (the host serves only closed bars). An empty
+     * range still refuses a code the adapter does not serve.
+     */
+    fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
     ): List<VenueBar>

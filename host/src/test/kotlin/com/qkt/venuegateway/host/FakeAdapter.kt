@@ -193,12 +193,15 @@ internal open class FakeAdapter : VenueAdapter {
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
     val subscriptions = CopyOnWriteArrayList<Pair<Set<String>, Set<String>>>()
 
-    override fun bars(
+    override val klineResolutions = setOf(60_000L)
+
+    /** The one-minute klines in [bars] starting in the asked range, as a venue answers. */
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = bars.toList().also { barCalls += fromMs to toMs }
+    ) = bars.filter { it.startMs in fromMs until toMs }.also { barCalls += fromMs to toMs }
 
     override fun subscribeQuotes(
         codes: Set<String>,

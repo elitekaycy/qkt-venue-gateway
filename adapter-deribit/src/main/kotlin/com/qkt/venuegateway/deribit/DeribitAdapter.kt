@@ -172,12 +172,14 @@ class DeribitAdapter(
         toMs: Long,
     ): List<VenueDepth> = depth.read(code, fromMs, toMs)
 
-    override fun bars(
+    override val klineResolutions = DeribitMarketMapping.klineResolutions
+
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> = venue { DeribitBars.closed(market, code, windowMs, fromMs, toMs, context.clock()) }
+    ): List<VenueBar> = venue { DeribitMarketMapping.klines(market, code, resolutionMs, fromMs, toMs) }
 
     override fun subscribeQuotes(
         codes: Set<String>,

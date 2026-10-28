@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.host.server
 
 import com.qkt.venuegateway.host.Gateway
+import com.qkt.venuegateway.host.market.BarBuilder
 import com.qkt.venuegateway.host.market.QuoteHub
 import com.qkt.venuegateway.host.wire.InvalidRequestException
 import com.qkt.venuegateway.host.wire.WireReads
@@ -13,8 +14,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 
 /**
- * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only, a page of at most
- * [BARS_PAGE] windows, each page asked of the adapter alone (so no venue call is larger than a page),
+ * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only ([BarBuilder]), a page of at most
+ * [BARS_PAGE] windows, each page's klines asked of the adapter alone (so no venue call is larger than a page),
  * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
  * and roots, never replayed (a missing or wrong token is `401` before the upgrade). A slow client loses its
  * oldest buffered quotes, never the newest.
@@ -33,15 +34,8 @@ internal fun Route.marketRoutes(
             val closedBy = gateway.clock()
             val last = minOf(to, closedBy)
             val end = minOf(last, from + BARS_PAGE * window)
-            val page =
-                if (from >= end) {
-                    emptyList()
-                } else {
-                    gateway.adapter
-                        .bars(code, window, from, end)
-                        .filter { it.startMs in from until end && it.startMs + window <= closedBy }
-                        .sortedBy { it.startMs }
-                }
+            val adapter = gateway.adapter
+            val page = if (from < end) BarBuilder.closed(adapter, code, window, from, end, closedBy) else emptyList()
             json(WireBars.serializer(), WireBars(page.map(WireReads::bar), end.takeIf { it < last }))
         }
     }

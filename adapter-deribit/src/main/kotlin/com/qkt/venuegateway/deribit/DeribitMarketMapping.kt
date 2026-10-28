@@ -2,13 +2,16 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
+import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueDepth
 import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenueLevel
 import com.qkt.venuegateway.adapter.VenueOpenInterest
 import com.qkt.venuegateway.adapter.VenueQuote
+import com.qkt.venuegateway.deribit.client.DERIBIT_KLINE_MINUTES
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
+import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitOrderBook
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import java.math.BigDecimal
@@ -21,6 +24,26 @@ import java.math.BigDecimal
  * (a USDC option's is 1 with a minimum of 0.01), so it is not the step.
  */
 object DeribitMarketMapping {
+    private const val MINUTE_MS = 60_000L
+
+    /** The kline lengths Deribit serves, in milliseconds. */
+    val klineResolutions: Set<Long> = DERIBIT_KLINE_MINUTES.map { it * MINUTE_MS }.toSet()
+
+    /**
+     * [code]'s klines [resolutionMs] long starting in `[fromMs, toMs)` on [market], as bars, oldest first. An empty
+     * range still asks Deribit (for the kline holding [fromMs]), so an unknown code or an outage reads as for any other.
+     */
+    fun klines(
+        market: DeribitMarketData,
+        code: String,
+        resolutionMs: Long,
+        fromMs: Long,
+        toMs: Long,
+    ) = market
+        .klines(code, resolutionMs / MINUTE_MS, fromMs, maxOf(fromMs, toMs - 1))
+        .filter { it.startMs in fromMs until toMs }
+        .map { VenueBar(it.startMs, it.open, it.high, it.low, it.close, it.volume) }
+
     /** One hour of Deribit funding: a unit long paid `interest_1h × index` over the hour ending at its time. */
     fun fundingRate(r: DeribitFundingRate) = VenueFundingRate(r.timestampMs, r.interest1h, r.indexPrice)
 

@@ -57,9 +57,11 @@ class TestVenueFactory : VenueAdapterFactory {
                 toMs: Long,
             ) = emptyList<com.qkt.venuegateway.adapter.VenueSettlement>()
 
-            override fun bars(
+            override val klineResolutions = setOf(60_000L)
+
+            override fun klines(
                 code: String,
-                windowMs: Long,
+                resolutionMs: Long,
                 fromMs: Long,
                 toMs: Long,
             ) = emptyList<com.qkt.venuegateway.adapter.VenueBar>()
