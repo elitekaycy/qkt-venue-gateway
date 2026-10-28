@@ -60,4 +60,29 @@ class JsonHttpTest {
         server.shutdown()
         assertThatThrownBy { http().get("/v2/clock") }.isInstanceOf(IOException::class.java)
     }
+
+    @Test
+    fun `query values are encoded only when asked, and signed as sent`() {
+        server.enqueue(MockResponse().setBody("[]"))
+        server.enqueue(MockResponse().setBody("[]"))
+        val params = listOf("after" to "2026-10-28T00:00:00+01:00", "page_token" to "abc=")
+        http().get("/v2/account/activities", params)
+        assertThat(
+            server.takeRequest().path,
+        ).isEqualTo("/v2/account/activities?after=2026-10-28T00:00:00+01:00&page_token=abc=")
+        val encoding =
+            JsonHttp(
+                server.url("").toString().trimEnd('/'),
+                timeoutMs = 2_000,
+                encodeQuery = true,
+            ) { request, _, _, payload ->
+                request.header("X-Signed", payload)
+            }
+        encoding.get("/v2/account/activities", params)
+        val sent = server.takeRequest()
+        assertThat(
+            sent.path,
+        ).isEqualTo("/v2/account/activities?after=2026-10-28T00%3A00%3A00%2B01%3A00&page_token=abc%3D")
+        assertThat(sent.getHeader("X-Signed")).isEqualTo("after=2026-10-28T00%3A00%3A00%2B01%3A00&page_token=abc%3D")
+    }
 }

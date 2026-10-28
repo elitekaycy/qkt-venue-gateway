@@ -2,6 +2,7 @@ package com.qkt.venuegateway.support
 
 import com.qkt.venuegateway.support.JsonReads.bool
 import com.qkt.venuegateway.support.JsonReads.decimal
+import com.qkt.venuegateway.support.JsonReads.instantMs
 import com.qkt.venuegateway.support.JsonReads.long
 import com.qkt.venuegateway.support.JsonReads.need
 import com.qkt.venuegateway.support.JsonReads.needDecimal
@@ -47,5 +48,17 @@ class JsonReadsTest {
             )
         }.hasMessageContaining("field absent missing").hasMessageNotContaining("acct-123")
         assertThatThrownBy { o.needDecimal("empty") }.hasMessageContaining("field empty missing")
+    }
+
+    @Test
+    fun `an RFC 3339 time reads with its fraction and offset`() {
+        val t =
+            Json
+                .parseToJsonElement(
+                    """{"z":"2026-10-28T00:44:03.565024076Z","o":"2026-10-27T20:44:03-04:00"}""",
+                ).jsonObject
+        assertThat(t.instantMs("z")).isEqualTo(1_793_148_243_565)
+        assertThat(t.instantMs("o")).isEqualTo(1_793_148_243_000)
+        assertThat(t.instantMs("missing")).isNull()
     }
 }
