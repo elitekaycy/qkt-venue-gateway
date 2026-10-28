@@ -63,7 +63,7 @@ class BybitPublicClient(
         fromMs: Long,
         toMs: Long,
     ): List<BybitFundingRate> =
-        backwards(fromMs, toMs, BybitFundingRate::timeMs) { end ->
+        Paging.backwards(fromMs, toMs, { end ->
             val params =
                 listOf(
                     "category" to category,
@@ -77,7 +77,7 @@ class BybitPublicClient(
                 .result
                 .items()
                 .map(BybitMarketJson::fundingRate)
-        }
+        }, BybitFundingRate::timeMs)
 
     /** [symbol]'s open interest taken every [interval] (`5min`) from [fromMs] to [toMs], oldest first. */
     fun openInterest(
@@ -87,7 +87,7 @@ class BybitPublicClient(
         fromMs: Long,
         toMs: Long,
     ): List<BybitOpenInterest> =
-        backwards(fromMs, toMs, BybitOpenInterest::timeMs) { end ->
+        Paging.backwards(fromMs, toMs, { end ->
             val params =
                 listOf("category" to category, "symbol" to symbol, "intervalTime" to interval) +
                     listOf("startTime" to "$fromMs", "endTime" to "$end", "limit" to "200")
@@ -96,7 +96,7 @@ class BybitPublicClient(
                 .result
                 .items()
                 .map(BybitMarketJson::openInterest)
-        }
+        }, BybitOpenInterest::timeMs)
 
     /** [symbol]'s latest public trades, at most [limit] (Bybit keeps 1000 of a contract, 60 of a spot pair), oldest first. */
     fun recentTrades(
@@ -127,27 +127,6 @@ class BybitPublicClient(
                     ),
                 ).result
         return BybitMarketJson.book(result, JsonReads.run { result.long("ts") })
-    }
-
-    /**
-     * Walks `[fromMs, toMs]` from its end back, a page at a time (Bybit answers the newest of a range first),
-     * each next page ending just before the oldest item of the last; oldest first, each item once.
-     */
-    private fun <T> backwards(
-        fromMs: Long,
-        toMs: Long,
-        time: (T) -> Long,
-        page: (endMs: Long) -> List<T>,
-    ): List<T> {
-        val byTime = sortedMapOf<Long, T>()
-        var end = toMs
-        while (end >= fromMs) {
-            val items = page(end).filter { time(it) in fromMs..end }
-            items.forEach { byTime.putIfAbsent(time(it), it) }
-            if (items.isEmpty()) break
-            end = items.minOf(time) - 1
-        }
-        return byTime.values.toList()
     }
 
     /** How far each call reaches. */

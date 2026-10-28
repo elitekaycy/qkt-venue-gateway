@@ -11,7 +11,10 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Reading Deribit's JSON exactly: numbers come as JSON numbers (`83940.0`, `1e-06`), so each is read
- * from its literal text into a [BigDecimal], never through a double.
+ * from its literal text into a [BigDecimal], never through a double. These readers stay Deribit's rather than
+ * [com.qkt.venuegateway.support.JsonReads], whose semantics differ where it matters: an empty string here is a
+ * malformed number (it fails) where `JsonReads` reads it as absent; [text] reads only JSON strings where `JsonReads`
+ * reads any value's text; and [long] truncates a fractional timestamp where `JsonReads` refuses one.
  */
 internal object DeribitJson {
     fun decimal(element: JsonElement?): BigDecimal? {

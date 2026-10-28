@@ -4,6 +4,8 @@ import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.TRADES_PER_CALL
+import com.qkt.venuegateway.support.Batch
+import com.qkt.venuegateway.support.Paging
 
 /**
  * A contract's mark and index per window (wire spec `/v1/marks`) from Deribit's trade history, whose every
@@ -54,19 +56,17 @@ object DeribitMarks {
         first: DeribitMarkTrade,
         last: DeribitMarkTrade,
         perCall: Int,
-    ): List<DeribitMarkTrade> {
-        val bySeq = HashMap<Long, DeribitMarkTrade>()
-        var start = first.timestampMs
-        while (true) {
-            val page = history.tradesFrom(code, start, last.timestampMs, perCall)
-            page.items.filter { it.seq in first.seq..last.seq }.forEach { bySeq.putIfAbsent(it.seq, it) }
-            if (!page.more || page.items.isEmpty()) break
-            val end = page.items.maxOf { it.timestampMs }
-            check(end > start) { "deribit trades of $code fill a page within $start ms; they cannot be paged" }
-            start = end
-        }
-        return bySeq.values.toList()
-    }
+    ): List<DeribitMarkTrade> =
+        Paging.whileMore(
+            first.timestampMs,
+            fetch = { start ->
+                history.tradesFrom(code, start, last.timestampMs, perCall).let { Batch(it.items, it.more) }
+            },
+            id = DeribitMarkTrade::seq,
+            time = DeribitMarkTrade::timestampMs,
+            what = "deribit trades of $code",
+            keep = { it.seq in first.seq..last.seq },
+        )
 
     /** One call per window between [first]'s and [last]'s: its last trade (the last window's is [last]). */
     private fun byWindow(

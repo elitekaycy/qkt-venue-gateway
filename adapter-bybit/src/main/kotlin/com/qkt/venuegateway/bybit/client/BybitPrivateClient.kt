@@ -3,6 +3,7 @@ package com.qkt.venuegateway.bybit.client
 import com.qkt.venuegateway.bybit.client.BybitJson.cursor
 import com.qkt.venuegateway.bybit.client.BybitJson.items
 import com.qkt.venuegateway.support.JsonReads
+import com.qkt.venuegateway.support.Paging
 import java.math.BigDecimal
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -145,21 +146,12 @@ class BybitPrivateClient(
         params: List<Pair<String, String>>,
     ): List<kotlinx.serialization.json.JsonObject> {
         val scope = listOf("category" to category) + listOfNotNull(settleCoin?.let { "settleCoin" to it })
-        val all = mutableListOf<kotlinx.serialization.json.JsonObject>()
-        var cursor: String? = null
-        do {
-            val result =
-                rest
-                    .get(
-                        path,
-                        scope + params + listOfNotNull(cursor?.let { "cursor" to it }),
-                        signed = true,
-                    ).result
-            val items = result.items()
-            all += items
-            cursor = result.cursor()?.takeIf { items.isNotEmpty() }
-        } while (cursor != null && all.size < MAX_ITEMS)
-        return all
+        val page = { cursor: String? ->
+            val query = scope + params + listOfNotNull(cursor?.let { "cursor" to it })
+            val result = rest.get(path, query, signed = true).result
+            result.items() to result.cursor()
+        }
+        return Paging.continuation(page, maxItems = MAX_ITEMS)
     }
 
     private companion object {
