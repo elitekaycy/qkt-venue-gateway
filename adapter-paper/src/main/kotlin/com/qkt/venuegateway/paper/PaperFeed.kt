@@ -1,13 +1,15 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueQuote
+import com.qkt.venuegateway.adapter.daemon
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
+import com.qkt.venuegateway.support.Strand
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ScheduledExecutorService
 import org.slf4j.LoggerFactory
 
 /**
@@ -20,16 +22,11 @@ import org.slf4j.LoggerFactory
 class PaperFeed(
     private val listing: DeribitListing,
     private val refreshMs: Long = 600_000,
+    scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(daemon("paper-feed")),
     private val trading: () -> Collection<String>,
 ) {
     private val log = LoggerFactory.getLogger(PaperFeed::class.java)
-    private val timer =
-        Executors.newSingleThreadScheduledExecutor {
-            Thread(
-                it,
-                "paper-feed",
-            ).apply { isDaemon = true }
-        }
+    private val timer = Strand(scheduler, "paper-feed")
     private val latest = ConcurrentHashMap<String, DeribitTicker>()
     private var tickers: DeribitTickers? = null
     private var codes = emptySet<String>()
@@ -39,7 +36,7 @@ class PaperFeed(
     fun start(feed: DeribitTickers) {
         tickers = feed.also { it.start() }
         resubscribe()
-        timer.scheduleWithFixedDelay(::renew, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
+        timer.every(refreshMs, refreshMs, ::renew)
     }
 
     /** The latest ticker of [name], or null before any. */
@@ -70,7 +67,7 @@ class PaperFeed(
     }
 
     fun close() {
-        timer.shutdownNow()
+        timer.close()
         tickers?.close()
     }
 

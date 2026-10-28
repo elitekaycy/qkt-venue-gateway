@@ -36,12 +36,20 @@ class DeribitSocket(
     private val onNotification: (channel: String, data: JsonElement) -> Unit,
     private val onConnection: (Boolean, String) -> Unit,
     private val onOpen: (call: (method: String, params: JsonObject) -> JsonElement) -> Unit = {},
+    http: OkHttpClient = OkHttpClient(),
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(DeribitSocket::class.java)
-    private val http = OkHttpClient.Builder().pingInterval(15, TimeUnit.SECONDS).build()
     private val ids = AtomicLong()
     private val pending = ConcurrentHashMap<Long, CompletableFuture<JsonElement>>()
-    private val link = ReconnectingSocket(url, "deribit-$name", Session(), http = http)
+
+    // The host's client with Deribit's ping: shares its connections and dispatcher, which stay the host's to close.
+    private val link =
+        ReconnectingSocket(
+            url,
+            "deribit-$name",
+            Session(),
+            http = http.newBuilder().pingInterval(15, TimeUnit.SECONDS).build(),
+        )
 
     /** The link being opened or up, for fire-and-forget frames; null between links. */
     @Volatile private var current: SocketLink? = null
@@ -94,7 +102,6 @@ class DeribitSocket(
     override fun close() {
         stopped = true
         link.close()
-        http.dispatcher.executorService.shutdown()
     }
 
     private fun onText(text: String) {

@@ -14,6 +14,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
 
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
@@ -24,8 +25,9 @@ import kotlinx.serialization.json.jsonPrimitive
 class DeribitPublicClient(
     private val baseUrl: String = "https://www.deribit.com",
     timeoutMs: Long = 10_000,
+    client: OkHttpClient = OkHttpClient(),
 ) : DeribitMarketData {
-    private val http = JsonHttp(baseUrl, timeoutMs)
+    private val http = JsonHttp(baseUrl, timeoutMs, client)
 
     /** The live instruments of [currency] (`USDC`) of [kind] (`future`, `option`). */
     override fun instruments(

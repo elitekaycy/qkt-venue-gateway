@@ -1,6 +1,7 @@
 package com.qkt.venuegateway
 
 import com.qkt.venuegateway.adapter.AdapterContext
+import com.qkt.venuegateway.adapter.daemon
 import com.qkt.venuegateway.config.GatewayConfig
 import com.qkt.venuegateway.host.Gateway
 import com.qkt.venuegateway.host.Reconciler
@@ -8,6 +9,8 @@ import com.qkt.venuegateway.host.journal.Journal
 import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.market.QuoteHub
 import com.qkt.venuegateway.host.server.GatewayServer
+import java.util.concurrent.Executors
+import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 
 /** `qkt-venue-gateway`: one account's gateway, configured by `GATEWAY_*` variables, until it is stopped. */
@@ -30,7 +33,17 @@ fun start(
 ): RunningGateway {
     val log = LoggerFactory.getLogger("com.qkt.venuegateway.Main")
     val factory = AdapterLoader(config.pluginsDir).factory(config.adapter)
-    val context = AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials)
+    // One HTTP client and one scheduler for the adapter: it derives from them, the host shuts them down last.
+    val http = OkHttpClient()
+    val scheduler = Executors.newScheduledThreadPool(ADAPTER_THREADS, daemon("adapter"))
+    val runtime =
+        AutoCloseable {
+            scheduler.shutdownNow()
+            http.dispatcher.executorService.shutdown()
+            http.connectionPool.evictAll()
+        }
+    val context =
+        AdapterContext(config.settings, clock, config.stateDir.resolve("adapter"), config.credentials, http, scheduler)
     val adapter =
         runCatching { factory.create(context) }.getOrElse {
             throw IllegalStateException(
@@ -60,7 +73,7 @@ fun start(
         config.host,
         port,
     )
-    return RunningGateway(port, listOf(server, reconciler, hub, gateway))
+    return RunningGateway(port, listOf(server, reconciler, hub, gateway, runtime))
 }
 
 /** A started gateway listening on [port]; closing it stops every part, last started first. */
@@ -70,3 +83,6 @@ class RunningGateway(
 ) : AutoCloseable {
     override fun close() = parts.forEach { runCatching { it.close() } }
 }
+
+/** Threads of the scheduler the adapter's timers and ordered work share (each socket keeps its own). */
+private const val ADAPTER_THREADS = 4

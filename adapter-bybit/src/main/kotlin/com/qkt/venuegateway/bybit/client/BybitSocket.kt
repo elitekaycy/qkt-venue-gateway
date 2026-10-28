@@ -31,9 +31,9 @@ class BybitSocket(
     private val onConnection: (Boolean, String) -> Unit,
     private val auth: (() -> String)? = null,
     silenceMs: Long = 60_000,
+    http: OkHttpClient = OkHttpClient(),
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(BybitSocket::class.java)
-    private val http = OkHttpClient.Builder().build()
     private val json = Json { ignoreUnknownKeys = true }
 
     @Volatile private var authed = CompletableFuture<Boolean>()
@@ -54,7 +54,6 @@ class BybitSocket(
     override fun close() {
         stopped = true
         link.close()
-        http.dispatcher.executorService.shutdown()
     }
 
     private fun onText(text: String) {

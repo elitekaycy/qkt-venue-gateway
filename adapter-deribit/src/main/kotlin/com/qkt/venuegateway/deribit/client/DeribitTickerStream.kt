@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import okhttp3.OkHttpClient
 
 /**
  * Deribit's public ticker channels (`ticker.<instrument>.<interval>`) over a [DeribitSocket] at [url].
@@ -18,6 +19,7 @@ class DeribitTickerStream(
     private val onTicker: (DeribitTicker) -> Unit,
     onConnection: (Boolean, String) -> Unit,
     private val interval: String = "100ms",
+    http: OkHttpClient = OkHttpClient(),
 ) : DeribitTickers {
     private val lock = Any()
     private var wanted: Set<String> = emptySet()
@@ -28,6 +30,7 @@ class DeribitTickerStream(
             onNotification = ::onNotification,
             onConnection = onConnection,
             onOpen = { resubscribe() },
+            http = http,
         )
 
     override fun start() = socket.start()

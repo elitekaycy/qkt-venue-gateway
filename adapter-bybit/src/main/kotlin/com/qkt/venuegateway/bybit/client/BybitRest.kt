@@ -30,8 +30,8 @@ class BybitRest(
     private val clock: () -> Long = System::currentTimeMillis,
     private val recvWindowMs: Long = 5_000,
     timeoutMs: Long = 10_000,
+    client: OkHttpClient = OkHttpClient(),
 ) {
-    private val client = OkHttpClient()
     private val open = JsonHttp(baseUrl, timeoutMs, client)
     private val signed = JsonHttp(baseUrl, timeoutMs, client) { request, _, _, payload -> sign(request, payload) }
 

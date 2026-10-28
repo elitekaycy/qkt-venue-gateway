@@ -17,11 +17,12 @@ class BybitAdapterFactory : VenueAdapterFactory {
         val settings = BybitSettings.of(context)
         val credentials = context.requiredCredentials()
         val environment = settings.environment
-        val signed = BybitRest(environment.restUrl, credentials.login, credentials.secret, context.clock)
+        val signed =
+            BybitRest(environment.restUrl, credentials.login, credentials.secret, context.clock, client = context.http)
         val settleCoin = settings.currency.takeIf { settings.contracts }
         return BybitAdapter(
             context,
-            BybitPublicClient(BybitRest(environment.restUrl)),
+            BybitPublicClient(BybitRest(environment.restUrl, client = context.http)),
             BybitPrivateClient(signed, settings.category, settleCoin),
             { onOrder, onExecution, onConnection ->
                 BybitAccountStream(
@@ -32,7 +33,8 @@ class BybitAdapterFactory : VenueAdapterFactory {
                     settings.category,
                     onOrder,
                     onExecution,
-                    onConnection,
+                    http = context.http,
+                    onConnection = onConnection,
                 )
             },
             { onTicker, onTrades, onLiquidations, onConnection ->
@@ -42,7 +44,8 @@ class BybitAdapterFactory : VenueAdapterFactory {
                     onTicker,
                     onTrades,
                     onLiquidations,
-                    onConnection,
+                    http = context.http,
+                    onConnection = onConnection,
                 )
             },
         )
