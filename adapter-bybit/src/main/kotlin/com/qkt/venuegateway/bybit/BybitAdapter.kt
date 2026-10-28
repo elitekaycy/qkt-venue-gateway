@@ -36,7 +36,7 @@ class BybitAdapter(
 ) : VenueAdapter {
     override val id = "bybit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    private val settings = BybitSettings.of(context.settings)
+    private val settings = BybitSettings.of(context)
     private val log = LoggerFactory.getLogger(BybitAdapter::class.java)
 
     override val capabilities = settings.capabilities
