@@ -169,11 +169,8 @@ class BybitAdapter(
         toMs: Long,
     ) = history.klines(code, resolutionMs, fromMs, toMs)
 
-    /** Quotes the listed [codes]; Bybit lists no options on these categories, so [roots] name nothing to quote. */
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = marketStream.quote(history.quotable(codes + roots))
+    /** Quotes the listed [codes]; any other is logged and left out. */
+    override fun subscribeQuotes(codes: Set<String>) = marketStream.quote(history.quotable(codes))
 
     override fun close() {
         marketStream.close()

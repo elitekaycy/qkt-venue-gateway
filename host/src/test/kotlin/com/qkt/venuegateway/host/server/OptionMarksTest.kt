@@ -90,7 +90,7 @@ class OptionMarksTest {
             },
         )
         val deadline = System.currentTimeMillis() + 5_000
-        while (venue.subscriptions.none { option in it.first }) {
+        while (venue.subscriptions.none { option in it }) {
             check(System.currentTimeMillis() < deadline) { "never subscribed" }
             Thread.sleep(10)
         }
