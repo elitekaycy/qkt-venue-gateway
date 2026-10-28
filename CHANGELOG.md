@@ -2,6 +2,20 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.3.0 (2026-10-28)
+
+### Features
+
+- alpaca: trade US shares and coin pairs on an Alpaca account (#93) (884e93a)
+- support: read rfc 3339 times and encode query values on request (#99) (edb9636)
+- api: share socket, http, json and paging helpers for adapters (#87) (d73c78e)
+- api: list equities with their category and trading mode (#85) (435122e)
+
+### Fixes
+
+- ci: count a release from the newest tag, not the nearest on dev (#100) (c342efd)
+- paper: refuse deribit errors and publish the listener safely (#89) (89b021b)
+
 ## v0.2.1 (2026-10-19)
 
 ### Fixes
