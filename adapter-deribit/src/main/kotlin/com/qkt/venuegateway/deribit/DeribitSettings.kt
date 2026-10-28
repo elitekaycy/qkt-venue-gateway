@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.deribit
 
+import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.TradeMode
 
 /**
@@ -38,22 +39,15 @@ data class DeribitSettings(
     companion object {
         private val TRIGGERS = setOf("last_price", "mark_price", "index_price")
 
-        fun of(settings: Map<String, String>): DeribitSettings {
-            val environment =
-                settings["environment"] ?: error("setting environment is required: testnet or mainnet")
-            val currency = settings["currency"] ?: "USDC"
-            val trigger = settings["stop_trigger"] ?: "last_price"
+        fun of(context: AdapterContext): DeribitSettings {
+            val environment = context.enum("environment", DeribitEnvironment.entries.toTypedArray())
+            val currency = context.text("currency", "USDC")
+            val trigger = context.text("stop_trigger", "last_price")
             require(
                 currency == "USDC",
             ) { "deribit currency $currency is not supported: only USDC (linear) contracts are" }
             require(trigger in TRIGGERS) { "deribit stop_trigger $trigger is not one of $TRIGGERS" }
-            return DeribitSettings(
-                DeribitEnvironment.entries.firstOrNull { it.name.equals(environment, ignoreCase = true) }
-                    ?: error("deribit environment $environment is not testnet or mainnet"),
-                currency,
-                trigger,
-                DeribitRetention.of(settings),
-            )
+            return DeribitSettings(environment, currency, trigger, DeribitRetention.of(context.settings))
         }
     }
 }

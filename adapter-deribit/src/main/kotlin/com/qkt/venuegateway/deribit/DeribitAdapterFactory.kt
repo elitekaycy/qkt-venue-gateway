@@ -12,7 +12,7 @@ class DeribitAdapterFactory : VenueAdapterFactory {
     override val type = "deribit"
 
     override fun create(context: AdapterContext): VenueAdapter {
-        val settings = DeribitSettings.of(context.settings)
+        val settings = DeribitSettings.of(context)
         val credentials = context.requiredCredentials()
         val environment = settings.environment
         return DeribitAdapter(

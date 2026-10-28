@@ -17,9 +17,9 @@ class PaperAdapterFactory : VenueAdapterFactory {
     override val type = "paper"
 
     override fun create(context: AdapterContext): VenueAdapter {
-        val market = DeribitPublicClient(context.settings["deribit_url"] ?: "https://www.deribit.com")
-        val ws = context.settings["deribit_ws_url"] ?: "wss://www.deribit.com/ws/api/v2"
-        val history = DeribitPublicClient(context.settings["deribit_history_url"] ?: "https://history.deribit.com")
+        val market = DeribitPublicClient(context.text("deribit_url", "https://www.deribit.com"))
+        val ws = context.text("deribit_ws_url", "wss://www.deribit.com/ws/api/v2")
+        val history = DeribitPublicClient(context.text("deribit_history_url", "https://history.deribit.com"))
         return PaperAdapter(context, market, history) { onTicker, onConnection ->
             DeribitTickerStream(ws, onTicker, onConnection)
         }
