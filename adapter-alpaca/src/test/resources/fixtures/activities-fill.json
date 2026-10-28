@@ -1,0 +1,47 @@
+[
+ {
+  "id": "20261027193831446::40aea131-e19e-432e-a851-b645fc30599c",
+  "activity_type": "FILL",
+  "transaction_time": "2026-10-27T23:38:31.446533Z",
+  "type": "partial_fill",
+  "price": "80777.77",
+  "qty": "0.000068069",
+  "side": "buy",
+  "symbol": "BTC/USD",
+  "leaves_qty": "0.000131931",
+  "order_id": "7f36ea40-5eb9-4a72-a552-f39a6275fa15",
+  "cum_qty": "0.000068069",
+  "order_status": "partially_filled",
+  "swap_rate": "1"
+ },
+ {
+  "id": "20261027193831446::93ddbd06-4968-4071-8c64-5806b06ffb3c",
+  "activity_type": "FILL",
+  "transaction_time": "2026-10-27T23:38:31.446546Z",
+  "type": "fill",
+  "price": "80836.26",
+  "qty": "0.000131931",
+  "side": "buy",
+  "symbol": "BTC/USD",
+  "leaves_qty": "0",
+  "order_id": "7f36ea40-5eb9-4a72-a552-f39a6275fa15",
+  "cum_qty": "0.0002",
+  "order_status": "filled",
+  "swap_rate": "1"
+ },
+ {
+  "id": "20261027194042401::171099a3-9adf-4e52-9cd0-32de74028763",
+  "activity_type": "FILL",
+  "transaction_time": "2026-10-27T23:40:42.401507Z",
+  "type": "fill",
+  "price": "80811.35",
+  "qty": "0.000199499",
+  "side": "sell",
+  "symbol": "BTC/USD",
+  "leaves_qty": "0",
+  "order_id": "1061e360-3463-4c36-b29a-daf9ae3107f9",
+  "cum_qty": "0.000199499",
+  "order_status": "filled",
+  "swap_rate": "1"
+ }
+]

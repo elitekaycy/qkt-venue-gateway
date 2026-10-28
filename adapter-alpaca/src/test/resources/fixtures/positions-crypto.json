@@ -1,0 +1,22 @@
+[
+ {
+  "asset_id": "64bbff51-59d6-4b3c-9351-13ad85e3c752",
+  "symbol": "BTCUSD",
+  "exchange": "CRYPTO",
+  "asset_class": "crypto",
+  "asset_marginable": false,
+  "qty": "0.000199499",
+  "qty_available": "0.000199499",
+  "avg_entry_price": "80816.353363776",
+  "side": "long",
+  "market_value": "16.111459",
+  "cost_basis": "16.122782",
+  "unrealized_pl": "-0.011323",
+  "unrealized_plpc": "-0.0007",
+  "unrealized_intraday_pl": "-0.011323",
+  "unrealized_intraday_plpc": "-0.0007",
+  "current_price": "80759.6",
+  "lastday_price": "79969.91",
+  "change_today": "0.00987"
+ }
+]

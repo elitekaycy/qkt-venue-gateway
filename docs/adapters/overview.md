@@ -6,6 +6,7 @@ runs exactly one adapter, chosen by `GATEWAY_ADAPTER`.
 <!-- adapters:start -->
 | Adapter | `GATEWAY_ADAPTER` | Venue | Status |
 |---|---|---|---|
+| [Alpaca](alpaca.md) | `alpaca` | Alpaca paper and live: US shares (whole shares, regular, extended and overnight sessions) and USD coin pairs | New |
 | [Bybit](bybit.md) | `bybit` | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New |
 | [Deribit](deribit.md) | `deribit` | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable |
 | [Paper](paper.md) | `paper` | Simulated account on Deribit's public prices; no account needed | Stable |

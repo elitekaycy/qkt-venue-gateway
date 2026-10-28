@@ -111,6 +111,7 @@ The order filled when `positions` lists `BTC_USDC-PERPETUAL` with `"quantity":"0
 <!-- adapters:start -->
 | Adapter | Venue | Status |
 | --- | --- | --- |
+| `alpaca` | Alpaca paper and live: US shares (whole shares, regular, extended and overnight sessions) and USD coin pairs | New. [Setup](adapter-alpaca/README.md) |
 | `bybit` | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New. [Setup](adapter-bybit/README.md) |
 | `deribit` | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable. [Setup](adapter-deribit/README.md) |
 | `paper` | Simulated account on Deribit's public prices; no account needed | Stable. [Setup](adapter-paper/README.md) |

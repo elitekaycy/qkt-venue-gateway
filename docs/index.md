@@ -13,6 +13,7 @@ hide:
   <span class="pill pill--accent">Apache 2.0</span>
   <span class="pill">VGP v1</span>
   <!-- pills:start -->
+  <span class="pill">Alpaca</span>
   <span class="pill">Bybit</span>
   <span class="pill">Deribit</span>
   <span class="pill">Paper</span>
@@ -114,6 +115,7 @@ either side.</p>
 <!-- adapters:start -->
 | Adapter | Venue | Status |
 |---|---|---|
+| [`alpaca`](adapters/alpaca.md) | Alpaca paper and live: US shares (whole shares, regular, extended and overnight sessions) and USD coin pairs | New |
 | [`bybit`](adapters/bybit.md) | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New |
 | [`deribit`](adapters/deribit.md) | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable |
 | [`paper`](adapters/paper.md) | Simulated account on Deribit's public prices; no account needed | Stable |

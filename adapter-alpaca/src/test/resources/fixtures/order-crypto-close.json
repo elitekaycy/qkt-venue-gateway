@@ -1,0 +1,7 @@
+{
+ "available": "0.000199499",
+ "balance": "0.000199499",
+ "code": 40310000,
+ "message": "insufficient balance for BTC (requested: 0.0002, available: 0.000199499)",
+ "symbol": "USD"
+}

@@ -1,0 +1,10 @@
+[
+ {
+  "opcode": 1,
+  "text": "[{\"T\":\"success\",\"msg\":\"connected\"}]"
+ },
+ {
+  "opcode": 1,
+  "text": "[{\"T\":\"error\",\"code\":406,\"msg\":\"connection limit exceeded\"}]"
+ }
+]
