@@ -5,6 +5,8 @@ import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitPublicTrade
 import com.qkt.venuegateway.deribit.client.TRADES_PER_CALL
+import com.qkt.venuegateway.support.Batch
+import com.qkt.venuegateway.support.Paging
 
 /**
  * A contract's public tape and its liquidations (wire spec `/v1/trades`, `/v1/liquidations`) from Deribit's trade
@@ -75,17 +77,16 @@ object DeribitTape {
         toMs: Long,
         perCall: Int,
         enough: Int,
-    ): List<DeribitPublicTrade> {
-        val byId = LinkedHashMap<String, DeribitPublicTrade>()
-        var start = fromMs
-        while (start < toMs) {
-            val page = history.tape(code, start, toMs - 1, perCall)
-            page.items.filter { it.timestampMs in fromMs until toMs }.forEach { byId.putIfAbsent(it.tradeId, it) }
-            if (!page.more || page.items.isEmpty() || byId.size >= enough) break
-            val end = page.items.maxOf { it.timestampMs }
-            check(end > start) { "deribit trades of $code fill a page within $start ms; they cannot be paged" }
-            start = end
-        }
-        return byId.values.sortedWith(compareBy({ it.timestampMs }, { it.seq }))
-    }
+    ): List<DeribitPublicTrade> =
+        Paging
+            .whileMore(
+                fromMs,
+                toMs,
+                { start -> history.tape(code, start, toMs - 1, perCall).let { Batch(it.items, it.more) } },
+                DeribitPublicTrade::tradeId,
+                DeribitPublicTrade::timestampMs,
+                "deribit trades of $code",
+                keep = { it.timestampMs in fromMs until toMs },
+                enough = enough,
+            ).sortedWith(compareBy({ it.timestampMs }, { it.seq }))
 }
