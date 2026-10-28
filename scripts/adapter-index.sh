@@ -53,7 +53,8 @@ splice mkdocs.yml "$nav" '# adapters:start' '# adapters:end'
 
 for f in docs/adapters/*.md; do
   v=$(basename "$f" .md)
-  [[ $v == overview ]] || [[ " ${pages[*]} " == *" $v "* ]] || { $check && stale=1 || rm "$f"; }
+  [[ $v == overview || " ${pages[*]} " == *" $v "* ]] && continue
+  if $check; then stale=1; else rm "$f"; fi
 done
 if $check && ((stale)); then echo "::error::the adapter lists are out of date: run scripts/adapter-index.sh" >&2; exit 1; fi
 exit 0
