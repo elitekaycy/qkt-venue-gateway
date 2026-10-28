@@ -4,6 +4,8 @@ import com.qkt.venuegateway.adapter.VenueDepth
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.client.DeribitJson
 import com.qkt.venuegateway.deribit.client.DeribitOrderBook
+import com.qkt.venuegateway.deribit.market.DeribitDepth
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Path

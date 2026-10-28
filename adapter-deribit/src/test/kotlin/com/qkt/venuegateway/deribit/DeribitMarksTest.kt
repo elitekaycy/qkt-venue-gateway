@@ -7,6 +7,7 @@ import com.qkt.venuegateway.deribit.client.DeribitMarkTrade
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitPage
 import com.qkt.venuegateway.deribit.client.DeribitPrivateJson
+import com.qkt.venuegateway.deribit.market.DeribitMarks
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.LocalDate

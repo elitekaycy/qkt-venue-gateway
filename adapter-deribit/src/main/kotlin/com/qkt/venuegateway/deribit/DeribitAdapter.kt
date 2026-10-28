@@ -26,6 +26,12 @@ import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.deribit.client.DeribitTrade
 import com.qkt.venuegateway.deribit.client.DeribitTrading
+import com.qkt.venuegateway.deribit.market.DeribitDepth
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.market.DeribitMarks
+import com.qkt.venuegateway.deribit.market.DeribitOpenInterest
+import com.qkt.venuegateway.deribit.market.DeribitTape
 
 /**
  * One Deribit account (settings: [DeribitSettings]; credentials: the API key's client id as login and

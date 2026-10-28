@@ -1,12 +1,12 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.Side
-import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.client.DeribitFundingRate
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitListing
 import java.io.IOException
 import java.math.BigDecimal
 import java.nio.file.Path

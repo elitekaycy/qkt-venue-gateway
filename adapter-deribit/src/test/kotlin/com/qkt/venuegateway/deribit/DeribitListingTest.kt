@@ -6,6 +6,8 @@ import com.qkt.venuegateway.deribit.client.DeribitJson
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
 import java.math.BigDecimal
 import java.time.LocalDate
 import kotlinx.serialization.json.Json
