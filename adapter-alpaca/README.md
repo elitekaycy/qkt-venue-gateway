@@ -52,7 +52,7 @@ SYMBOLS
 | `GATEWAY_SETTING_ENVIRONMENT` | required | `paper`, or `live` for real money. Never defaulted |
 | `GATEWAY_SETTING_FEED` | `iex` | The stock data feed quotes and bars come from: `iex` (free) or `sip` (paid) |
 | `GATEWAY_SETTING_EXTENDED_HOURS` | `false` | `true` sends every limit DAY or GTC order on a share with Alpaca's `extended_hours`, so it may fill pre-market (04:00-09:30 New York), after hours (16:00-20:00) and overnight (20:00-04:00). VGP orders carry no such flag, so it is the account's choice |
-| `GATEWAY_SETTING_ASSET_CLASSES` | `us_equity` | What is listed and traded: `us_equity`, `crypto`, or both (`us_equity,crypto`). Coin pairs are opt-in: with `crypto` enabled, a coin buy's order stays working in qkt for the sliver Alpaca takes as its fee in the coin ([qkt#1515](https://github.com/elitekaycy/qkt/issues/1515)), so do not run strategies gated on open orders over coin pairs |
+| `GATEWAY_SETTING_ASSET_CLASSES` | `us_equity` | What is listed and traded: `us_equity`, `crypto`, or both (`us_equity,crypto`). Coin pairs are opt-in. A coin buy's fee is reported in the coin, which qkt 0.64.0 and later books as the quantity received ([qkt#1515](https://github.com/elitekaycy/qkt/issues/1515)); an older qkt holds more than the venue after a buy. Alpaca's dollar fee on a coin sale is reported by no fill, order or activity, so qkt's realized differs from the account's cash by it |
 | `GATEWAY_SETTING_FRACTIONAL` | `false` | `true` lists a share Alpaca can split (`fractionable`) in steps of 0.000000001; a fractional quantity is then sent on DAY orders only (Alpaca refuses it on any other) and refused before Alpaca otherwise. Off by default because qkt's orders are GTC unless they say otherwise |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key id and its secret |
 
@@ -94,17 +94,16 @@ Measured on the paper environment, 2026-10-27/28, every answer recorded in `src/
   both read as a sell.
 - **Coin fees** are taken in the coin bought: 0.0002 BTC bought left 0.000199499 BTC (tier 1, 0.25% taker, rounded
   up to 9 decimals). No answer carries the fee: not the fill, the order, the FILL activity, nor any CFEE activity (none
-  posted). Only the trade stream's `position_qty`, the position after each execution, says what was received, so a
-  coin buy is reported at the quantity received (the position before it is read whenever the stream connects and moved
-  by each fill), with the difference as a USD commission at the fill price. Proven with qkt: 0.0002 bought was booked
-  as 0.0001995 with a $0.04042709 commission, equal to Alpaca's position; the close sold 0.0001995 and both sides read
-  zero. A sale pays its fee in dollars and moves the position by what it sold; that dollar fee is reported nowhere per
-  fill, so it is not in the fill's costs. A coin buy filled while the stream was down is read back from the activities
-  at the quantity bought.
-- **qkt gap with coin pairs.** Alpaca reports a coin buy's order `filled` while its fills add to the quantity received,
-  and qkt waits for the remainder: the order stays working in qkt for the fee's sliver ([qkt#1515](https://github.com/elitekaycy/qkt/issues/1515)). Coin pairs
-  are therefore listed only when `GATEWAY_SETTING_ASSET_CLASSES` names `crypto`; with it, do not run strategies gated on
-  open orders (`OPEN_ORDERS`) over coin pairs.
+  posted). Only the trade stream's `position_qty`, the position after each execution, says what was received, so the
+  adapter keeps each symbol's position (read whenever the stream connects, moved by each fill) and reports a coin buy
+  as Alpaca filled it, with the difference as a `commission` in the coin: the VGP rule for a spot pair's base asset,
+  by which qkt 0.64.0 and later completes the order on Alpaca's quantity and books the holding as the quantity
+  received ([qkt#1515](https://github.com/elitekaycy/qkt/issues/1515); proven on paper 2026-10-28: a BTCUSD round
+  trip flat at the venue, qkt's realized equal to the deals' cash). An older qkt holds more than the venue after a
+  buy. A sale pays its fee in dollars and moves the position by what it sold; that dollar fee is reported nowhere per
+  fill, so the account's cash moves by it beyond qkt's realized. A coin buy filled while the stream was down is read
+  back from the activities at the quantity bought, with no fee. Coin pairs are listed only when
+  `GATEWAY_SETTING_ASSET_CLASSES` names `crypto`.
 - **Fractional shares.** On a `fractionable` share Alpaca took 0.5 share on market, limit, stop and extended-hours
   limit DAY orders, and refused a fraction on GTC (`fractional orders must be DAY orders`), sold short (`fractional
   orders cannot be sold short`), worth under $1 (`cost basis must be >= minimal amount of order 1`), on a share it
