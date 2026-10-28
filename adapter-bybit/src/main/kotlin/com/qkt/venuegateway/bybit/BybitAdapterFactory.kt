@@ -14,7 +14,7 @@ class BybitAdapterFactory : VenueAdapterFactory {
     override val type = "bybit"
 
     override fun create(context: AdapterContext): VenueAdapter {
-        val settings = BybitSettings.of(context.settings)
+        val settings = BybitSettings.of(context)
         val credentials = context.requiredCredentials()
         val environment = settings.environment
         val signed = BybitRest(environment.restUrl, credentials.login, credentials.secret, context.clock)

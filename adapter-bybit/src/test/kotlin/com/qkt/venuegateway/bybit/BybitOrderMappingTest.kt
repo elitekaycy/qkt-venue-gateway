@@ -13,14 +13,14 @@ import org.junit.jupiter.api.Test
 
 class BybitOrderMappingTest {
     private val linear =
-        BybitSettings.of(
+        bybitSettings(
             mapOf(
                 "environment" to "testnet",
                 "category" to "linear",
                 "stop_trigger" to "mark_price",
             ),
         )
-    private val spot = BybitSettings.of(mapOf("environment" to "testnet", "category" to "spot"))
+    private val spot = bybitSettings(mapOf("environment" to "testnet", "category" to "spot"))
 
     private fun order(
         type: OrderType,

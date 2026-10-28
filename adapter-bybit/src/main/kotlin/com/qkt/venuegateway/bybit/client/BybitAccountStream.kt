@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.bybit.client
 
+import com.qkt.venuegateway.support.Hmac
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -13,14 +14,13 @@ import kotlinx.serialization.json.jsonObject
 class BybitAccountStream(
     url: String,
     private val key: String,
-    secret: String,
+    private val secret: String,
     private val clock: () -> Long,
     category: String,
     private val onOrder: (BybitOrder) -> Unit,
     private val onExecution: (BybitExecution) -> Unit,
     onConnection: (Boolean, String) -> Unit,
 ) : AutoCloseable {
-    private val signer = BybitSigner(secret)
     private val orderTopic = "order.$category"
     private val executionTopic = "execution.$category"
     private val socket =
@@ -32,7 +32,7 @@ class BybitAccountStream(
 
     private fun auth(): String {
         val expires = clock() + 10_000
-        return """{"op":"auth","args":["$key",$expires,"${signer.sign("GET/realtime$expires")}"]}"""
+        return """{"op":"auth","args":["$key",$expires,"${Hmac.sha256Hex(secret, "GET/realtime$expires")}"]}"""
     }
 
     private fun push(

@@ -1,10 +1,10 @@
 package com.qkt.venuegateway.bybit.client
 
-import com.qkt.venuegateway.bybit.client.BybitJson.dec
-import com.qkt.venuegateway.bybit.client.BybitJson.long
-import com.qkt.venuegateway.bybit.client.BybitJson.need
-import com.qkt.venuegateway.bybit.client.BybitJson.req
-import com.qkt.venuegateway.bybit.client.BybitJson.text
+import com.qkt.venuegateway.support.JsonReads.decimal
+import com.qkt.venuegateway.support.JsonReads.long
+import com.qkt.venuegateway.support.JsonReads.need
+import com.qkt.venuegateway.support.JsonReads.needDecimal
+import com.qkt.venuegateway.support.JsonReads.text
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -23,14 +23,14 @@ internal object BybitPrivateJson {
             symbol = o.need("symbol"),
             side = o.need("side"),
             orderType = o.need("orderType"),
-            qty = o.req("qty"),
-            price = o.dec("price")?.takeIf { it.signum() != 0 },
-            triggerPrice = o.dec("triggerPrice")?.takeIf { it.signum() != 0 },
+            qty = o.needDecimal("qty"),
+            price = o.decimal("price")?.takeIf { it.signum() != 0 },
+            triggerPrice = o.decimal("triggerPrice")?.takeIf { it.signum() != 0 },
             stopOrderType = o.text("stopOrderType")?.takeIf { it != "UNKNOWN" },
             timeInForce = o.need("timeInForce"),
             orderStatus = o.need("orderStatus"),
-            cumExecQty = o.req("cumExecQty"),
-            avgPrice = o.dec("avgPrice")?.takeIf { it.signum() != 0 },
+            cumExecQty = o.needDecimal("cumExecQty"),
+            avgPrice = o.decimal("avgPrice")?.takeIf { it.signum() != 0 },
             reduceOnly = (o["reduceOnly"] as? JsonPrimitive)?.content == "true",
             rejectReason = o.text("rejectReason")?.takeIf { it != "EC_NoError" },
             positionIdx = o.text("positionIdx")?.toInt() ?: 0,
@@ -46,21 +46,21 @@ internal object BybitPrivateJson {
             symbol = o.need("symbol"),
             side = o.need("side"),
             execType = o.text("execType"),
-            execQty = o.req("execQty"),
-            execPrice = o.req("execPrice"),
-            execFee = o.dec("execFee") ?: BigDecimal.ZERO,
+            execQty = o.needDecimal("execQty"),
+            execPrice = o.needDecimal("execPrice"),
+            execFee = o.decimal("execFee") ?: BigDecimal.ZERO,
             feeCurrency = o.text("feeCurrency"),
             execTimeMs = o.long("execTime"),
-            orderQty = o.dec("orderQty"),
-            leavesQty = o.dec("leavesQty"),
+            orderQty = o.decimal("orderQty"),
+            leavesQty = o.decimal("leavesQty"),
         )
 
     fun position(o: JsonObject) =
         BybitPosition(
             symbol = o.need("symbol"),
             side = o.text("side")?.takeIf { it != "None" },
-            size = o.req("size"),
-            avgPrice = o.dec("avgPrice")?.takeIf { it.signum() != 0 },
+            size = o.needDecimal("size"),
+            avgPrice = o.decimal("avgPrice")?.takeIf { it.signum() != 0 },
             positionIdx = o.text("positionIdx")?.toInt() ?: 0,
             createdMs = o.text("createdTime")?.toLong(),
         )
@@ -73,11 +73,11 @@ internal object BybitPrivateJson {
         val row = BybitJson.run { o.items("coin") }.firstOrNull { it.text("coin") == coin }
         return BybitWallet(
             coin = coin,
-            walletBalance = row?.dec("walletBalance") ?: BigDecimal.ZERO,
-            equity = row?.dec("equity") ?: BigDecimal.ZERO,
-            initialMargin = o.req("totalInitialMargin"),
-            maintenanceMargin = o.req("totalMaintenanceMargin"),
-            available = o.req("totalAvailableBalance"),
+            walletBalance = row?.decimal("walletBalance") ?: BigDecimal.ZERO,
+            equity = row?.decimal("equity") ?: BigDecimal.ZERO,
+            initialMargin = o.needDecimal("totalInitialMargin"),
+            maintenanceMargin = o.needDecimal("totalMaintenanceMargin"),
+            available = o.needDecimal("totalAvailableBalance"),
         )
     }
 

@@ -1,6 +1,8 @@
 package com.qkt.venuegateway.bybit.client
 
-import com.qkt.venuegateway.bybit.client.BybitJson.long
+import com.qkt.venuegateway.support.JsonReads
+import com.qkt.venuegateway.support.JsonReads.long
+import com.qkt.venuegateway.support.SubscriptionSet
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.json.JsonArray
@@ -23,9 +25,9 @@ class BybitMarketStream(
     private val onLiquidations: (symbol: String, List<BybitPrint>) -> Unit,
     onConnection: (Boolean, String) -> Unit,
 ) : AutoCloseable {
-    private val wanted = ConcurrentHashMap.newKeySet<String>()
+    private val wanted = SubscriptionSet<String>()
     private val tickers = ConcurrentHashMap<String, BybitTicker>()
-    private val socket = BybitSocket(url, "market", { wanted.toList() }, ::push, onConnection)
+    private val socket = BybitSocket(url, "market", wanted::all, ::push, onConnection)
 
     fun start() = socket.start()
 
@@ -39,7 +41,7 @@ class BybitMarketStream(
     override fun close() = socket.close()
 
     private fun add(topics: List<String>) {
-        val added = topics.filter(wanted::add)
+        val added = wanted.want(topics)
         if (added.isNotEmpty()) socket.subscribe(added)
     }
 
@@ -55,7 +57,7 @@ class BybitMarketStream(
                     symbol,
                     timeMs,
                     frame["data"]!!.jsonObject,
-                    BybitJson.run { frame.text("type") } == "snapshot",
+                    JsonReads.run { frame.text("type") } == "snapshot",
                 )
             "orderbook.1" -> best(symbol, timeMs, BybitMarketJson.book(frame["data"]!!.jsonObject, timeMs))
             "publicTrade" -> onTrades(symbol, items(frame).map(BybitMarketJson::streamTrade))
