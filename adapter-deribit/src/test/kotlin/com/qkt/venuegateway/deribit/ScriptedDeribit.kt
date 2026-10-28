@@ -108,11 +108,18 @@ internal class ScriptedDeribit(
         market: DeribitMarketData,
         history: DeribitMarketData = market,
         settings: Map<String, String> = emptyMap(),
+        retentionDays: Int = 0,
         onTickerConnection: ((Boolean, String) -> Unit) -> Unit = {},
     ): Pair<DeribitAdapter, RecordingListener> {
         val adapter =
             DeribitAdapter(
-                AdapterContext(mapOf("environment" to "testnet") + settings, { 0L }, dir, Credentials("client-7", "s")),
+                AdapterContext(
+                    mapOf("environment" to "testnet") + settings,
+                    { 0L },
+                    dir,
+                    Credentials("client-7", "s"),
+                    recordingRetentionDays = retentionDays,
+                ),
                 market,
                 { onOrder, onTrade, onConnection ->
                     also {

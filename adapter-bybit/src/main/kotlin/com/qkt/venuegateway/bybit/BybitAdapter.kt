@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory
  * tape and liquidations, so its drops are the quote feed's. Fills are `Trade` executions and funding is `Funding`
  * executions ([BybitMapping]), both read back from the execution list by the host's reconcile. Contracts declare
  * funding, funding rates, marks and open interest from Bybit's own histories; the tape, liquidations and depth
- * are recorded ([BybitTape], [BybitDepth]). Expiry settlements are not served: none has yet been recorded from
+ * are recorded ([BybitMarket]). Expiry settlements are not served: none has yet been recorded from
  * Bybit to map from.
  */
 class BybitAdapter(
@@ -62,8 +62,8 @@ class BybitAdapter(
     private val marketStream =
         market(
             { listener?.quote(BybitMarketMapping.quote(it)) },
-            { code, prints -> history.tape.onTrades(code, prints) },
-            { code, prints -> history.tape.onLiquidations(code, prints) },
+            { code, prints -> history.tape.onTrades(code, prints.map(BybitMarketMapping::print)) },
+            { code, prints -> history.tape.onLiquidations(code, prints.map(BybitMarketMapping::liquidation)) },
         ) { up, reason -> listener?.quoteFeed(up, reason) }
     private val history: BybitMarket = BybitMarket(public, settings, listing, context) { marketStream.tape(it) }
 

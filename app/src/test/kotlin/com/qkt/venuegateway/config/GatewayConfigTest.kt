@@ -24,6 +24,24 @@ class GatewayConfigTest {
         assertThat(config.settings).isEmpty()
         assertThat(config.pluginsDir).isNull()
         assertThat(config.credentials).isNull()
+        assertThat(config.recordingRetentionDays).isZero
+    }
+
+    @Test
+    fun `one retention covers every recording, whole days only, and the retired per-recording ones are refused`() {
+        val days = GatewayConfig.fromEnv(tokens + ("GATEWAY_RECORDING_RETENTION_DAYS" to "30"))
+
+        assertThat(days.recordingRetentionDays).isEqualTo(30)
+        listOf("-1", "1.5", "a week").forEach { bad ->
+            assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_RECORDING_RETENTION_DAYS" to bad)) }
+                .hasMessageContaining("GATEWAY_RECORDING_RETENTION_DAYS")
+                .hasMessageContaining(bad)
+        }
+        listOf("DEPTH", "OPEN_INTEREST", "TRADES").forEach { kind ->
+            assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_SETTING_${kind}_RETENTION_DAYS" to "7")) }
+                .hasMessageContaining("GATEWAY_SETTING_${kind}_RETENTION_DAYS is retired")
+                .hasMessageContaining("GATEWAY_RECORDING_RETENTION_DAYS")
+        }
     }
 
     @Test

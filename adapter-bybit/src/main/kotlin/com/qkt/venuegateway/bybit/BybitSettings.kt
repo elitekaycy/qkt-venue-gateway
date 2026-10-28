@@ -20,15 +20,14 @@ enum class BybitEnvironment(
  * gateway trades one category of one account. `currency` (default `USDT`) is the coin a linear contract
  * settles in, or the coin a spot pair is quoted in: only that coin's instruments are listed and traded.
  * `stop_trigger` (`last_price`, `mark_price` or `index_price`, default `last_price`) is the price a linear stop
- * fires on; spot stops fire on the last price. [retention] is how long the gateway keeps what it records of
- * Bybit's market, which Bybit keeps no history of ([BybitRetention]).
+ * fires on; spot stops fire on the last price. How long the gateway keeps what it records of Bybit's market, which
+ * Bybit keeps no history of, is the host's one retention (`AdapterContext.recordingRetentionDays`).
  */
 data class BybitSettings(
     val environment: BybitEnvironment,
     val category: String,
     val currency: String,
     val stopTrigger: String,
-    val retention: BybitRetention = BybitRetention(),
 ) {
     /** Whether the category trades contracts (linear) rather than coins (spot). */
     val contracts get() = category == LINEAR
@@ -73,7 +72,7 @@ data class BybitSettings(
             require(category == LINEAR || trigger == "last_price") {
                 "bybit spot stops fire on the last price only: stop_trigger $trigger"
             }
-            return BybitSettings(environment, category, currency, stopTrigger, BybitRetention.of(context.settings))
+            return BybitSettings(environment, category, currency, stopTrigger)
         }
     }
 }

@@ -38,7 +38,7 @@ consumer of VGP, and a gateway can be replaced, written in another language, or 
 | Module | Owns | Never touches |
 |---|---|---|
 | `vgp-wire` | the qkt-facing DTOs (decimal strings, error envelope) | venues |
-| `adapter-api` | `VenueAdapter` and the neutral types adapters hand the host | HTTP to qkt, the journal |
+| `adapter-api` | `VenueAdapter`, the neutral types adapters hand the host, and the recordings of what venues keep no history of (depth, open interest, the tape; one retention, the host's) | HTTP to qkt, the journal |
 | `host` | the VGP server: auth, journal, orders, stream, reconciler, kill switch, quotes, bars | any venue API |
 | `adapter-testkit` | `AdapterContractTest`: the behaviour every adapter must pass | the host |
 | `adapter-deribit` | Deribit, whole: its JSON-RPC in the `client` package (socket, auth, public and private calls, subscriptions), the mapping onto `adapter-api`, the adapter | VGP, the host |

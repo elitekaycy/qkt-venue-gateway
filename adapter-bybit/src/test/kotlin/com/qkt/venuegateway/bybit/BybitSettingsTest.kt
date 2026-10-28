@@ -10,14 +10,13 @@ class BybitSettingsTest {
     private val testnet = mapOf("environment" to "testnet", "category" to "linear")
 
     @Test
-    fun `by default an account trades usdt, stops on the last price and keeps its recordings for ever`() {
+    fun `by default an account trades usdt and stops on the last price`() {
         val s = bybitSettings(testnet)
 
         assertThat(s.environment).isEqualTo(BybitEnvironment.TESTNET)
         assertThat(s.environment.mode).isEqualTo(TradeMode.DEMO)
         assertThat(s.currency).isEqualTo("USDT")
         assertThat(s.stopTrigger).isEqualTo("LastPrice")
-        assertThat(s.retention).isEqualTo(BybitRetention(0, 0))
     }
 
     @Test
@@ -49,12 +48,6 @@ class BybitSettingsTest {
                 testnet + ("stop_trigger" to "bid"),
             )
         }.hasMessageContaining("stop_trigger bid")
-        assertThatThrownBy {
-            bybitSettings(testnet + ("trades_retention_days" to "3d"))
-        }.hasMessageContaining("trades_retention_days")
-        assertThatThrownBy {
-            bybitSettings(testnet + ("depth_retention_days" to "-1"))
-        }.hasMessageContaining("depth_retention_days")
     }
 
     @Test
@@ -67,11 +60,10 @@ class BybitSettingsTest {
 
     @Test
     fun `contracts serve their histories and spot only what spot has`() {
-        val linear = bybitSettings(testnet + ("stop_trigger" to "mark_price") + ("trades_retention_days" to "7"))
+        val linear = bybitSettings(testnet + ("stop_trigger" to "mark_price"))
         val spot = bybitSettings(testnet + ("category" to "spot") + ("currency" to "USDC"))
 
         assertThat(linear.stopTrigger).isEqualTo("MarkPrice")
-        assertThat(linear.retention.tradesDays).isEqualTo(7)
         assertThat(linear.capabilities).containsExactlyInAnyOrder(
             Capability.BARS,
             Capability.QUOTES,

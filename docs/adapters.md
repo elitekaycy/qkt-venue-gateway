@@ -43,8 +43,11 @@ adapter-<venue>/
   (replayed on reconnect), `JsonHttp` (the venue's status and body back, transport failures as `IOException`,
   signing from the exact payload), `JsonReads` (exact decimals, absent for `null` and `""`), `Paging` (spans,
   cursors, by time), `Retry.until` (reads only), `Hmac`; and typed settings on `AdapterContext` (`enum`, `int`,
-  `decimal`, `bool`, each failing naming its key). A helper an adapter needs that is not venue-specific goes there
-  first, in its own `feat/…` PR.
+  `decimal`, `bool`, each failing naming its key). What a venue keeps no history of is recorded by `adapter-api`'s
+  `recording` package, kept for the host's one retention (`AdapterContext.recordingRetentionDays`): `RecordedDepth`
+  (the adapter hands it the book as it stands), `RecordedOpenInterest` (the figure as it stands) and `RecordedTape`
+  (the prints it hears), all over `DayFiles` (a CSV a code a UTC day, a torn last line cut). A helper an adapter
+  needs that is not venue-specific goes there first, in its own `feat/…` PR.
 - Settings are `GATEWAY_SETTING_<KEY>` at run time; credentials are `GATEWAY_LOGIN`/`GATEWAY_SECRET`.
   A setting that chooses real money over a test environment has no default.
 - No threads, clocks or env reads of its own beyond what `AdapterContext` hands in.
