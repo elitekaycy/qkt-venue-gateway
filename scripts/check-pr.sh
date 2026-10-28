@@ -14,6 +14,9 @@ subject_ok() { [[ ${#1} -le 72 && $1 =~ $subject_re ]]; }
 
 case $branch in
   dependabot/*) exit 0 ;;
+  # A promotion of dev to main: every commit on dev came from a pull request that passed these rules, with
+  # GitHub's " (#NN)" added to its subject, which can carry a 72-character title past the limit.
+  dev) exit 0 ;;
   adapter/*) [[ $branch =~ ^adapter/[a-z][a-z0-9]*$ ]] || err "adapter branch must be adapter/<venue>: $branch" ;;
   claude/*) [[ $branch =~ ^claude/[A-Za-z0-9._-]+$ ]] || err "bad session branch name: $branch" ;;
   *) [[ $branch =~ ^($types)/[a-z0-9][a-z0-9._-]*$ ]] || err "branch must be <type>/<topic> or adapter/<venue>: $branch" ;;
