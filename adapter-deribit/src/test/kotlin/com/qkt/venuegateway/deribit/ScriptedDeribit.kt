@@ -21,6 +21,7 @@ internal class ScriptedDeribit(
     private val open: DeribitOrder,
 ) : DeribitTrading {
     val byLabel = mutableMapOf<String, List<DeribitOrder>>()
+    val labelCancels = mutableListOf<String>()
     val edits = mutableListOf<String>()
     val transactions = mutableListOf<DeribitTransaction>()
     val settled = mutableListOf<DeribitSettlement>()
@@ -66,7 +67,7 @@ internal class ScriptedDeribit(
     override fun cancelByLabel(
         currency: String,
         label: String,
-    ) = cancelled
+    ) = cancelled.also { labelCancels += label }
 
     override fun editByLabel(
         label: String,

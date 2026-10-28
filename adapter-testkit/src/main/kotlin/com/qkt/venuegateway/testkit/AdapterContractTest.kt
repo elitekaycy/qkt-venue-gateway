@@ -49,6 +49,9 @@ abstract class AdapterContractTest {
     /** The bar length checked; the venue must serve it. */
     protected open val barWindowMs: Long = 60_000L
 
+    /** Whether the venue changes a working order; one that does not refuses every change. */
+    protected open val modifies: Boolean = true
+
     /** How long a push may take to arrive. */
     protected open val pushTimeoutMs: Long = 30_000L
 
@@ -89,7 +92,7 @@ abstract class AdapterContractTest {
     }
 
     @Test
-    fun `a resting order is pushed, found by its label, listed open and cancelled, and unknown labels are null`(
+    fun `a resting order is pushed, found by its label, listed open, changed and cancelled, unknown labels null`(
         @TempDir dir: Path,
     ) {
         val (adapter, listener) = connect(dir)
@@ -104,11 +107,12 @@ abstract class AdapterContractTest {
         assertThat(adapter.orderByLabel(id)?.status).isEqualTo(OrderStatus.WORKING)
         assertThat(adapter.openOrders().map { it.clientOrderId }).contains(id)
 
-        assertThat(adapter.cancel(id)?.status).isEqualTo(OrderStatus.CANCELLED)
+        if (modifies) orders.moveAndReadBack(adapter, restingOrder(id))
+        adapter.cancel(id)
         assertThat(adapter.orderByLabel(id)?.status).isEqualTo(OrderStatus.CANCELLED)
         assertThat(adapter.openOrders().map { it.clientOrderId }).doesNotContain(id)
-        assertThat(adapter.cancel(label())).isNull()
-        assertThat(adapter.orderByLabel(label())).isNull()
+        val unknown = label().also(adapter::cancel)
+        assertThat(adapter.orderByLabel(unknown)).isNull()
     }
 
     @Test

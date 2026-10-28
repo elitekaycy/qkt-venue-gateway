@@ -211,6 +211,8 @@ class PaperContractTest : AdapterContractTest() {
 
     override val optionCode = put
 
+    override val modifies = false
+
     private companion object {
         const val EXPIRY_MS = 2_555_884_800_000L
         const val HOUR_MS = 3_600_000L

@@ -38,12 +38,12 @@ class TestVenueFactory : VenueAdapterFactory {
 
             override fun place(order: NewOrder) = throw VenueRefusedException("test venue takes no orders")
 
-            override fun cancel(clientOrderId: String) = null
+            override fun cancel(clientOrderId: String) {}
 
             override fun modify(
                 clientOrderId: String,
                 change: OrderChange,
-            ) = null
+            ) = false
 
             override fun orderByLabel(clientOrderId: String) = null
 
@@ -66,10 +66,7 @@ class TestVenueFactory : VenueAdapterFactory {
                 toMs: Long,
             ) = emptyList<com.qkt.venuegateway.adapter.VenueBar>()
 
-            override fun subscribeQuotes(
-                codes: Set<String>,
-                roots: Set<String>,
-            ) {}
+            override fun subscribeQuotes(codes: Set<String>) {}
 
             override fun close() {}
         }

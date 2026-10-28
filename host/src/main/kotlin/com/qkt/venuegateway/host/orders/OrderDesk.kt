@@ -63,8 +63,8 @@ class OrderDesk(
     internal fun sent(clientOrderId: String): WireSubmit? = journal.submitted(clientOrderId)
 
     /**
-     * `PATCH /v1/orders/{id}`: [change] applied at the venue and journaled. While a kill scope covers
-     * the order's symbol only a pure size reduction passes.
+     * `PATCH /v1/orders/{id}`: [change] applied at the venue, the order read back by label and journaled. While a
+     * kill scope covers the order's symbol only a pure size reduction passes.
      */
     fun modify(
         clientOrderId: String,
@@ -90,7 +90,8 @@ class OrderDesk(
             }
             if (!venueUp()) return@locked unavailable("the venue link is down")
             try {
-                venue.modify(clientOrderId, parsed)?.let { DeskResult.Ok(appended(it)) }
+                val changed = venue.modify(clientOrderId, parsed)
+                (if (changed) venue.orderByLabel(clientOrderId) else null)?.let { DeskResult.Ok(appended(it)) }
                     ?: DeskResult.Refused(404, "not_found", "no order $clientOrderId")
             } catch (e: VenueRefusedException) {
                 DeskResult.Refused(422, "venue_rejected", e.reason)
@@ -162,12 +163,13 @@ class OrderDesk(
     /** Resolves write-ahead [body] for the reconciler, under its lock: found, rejected, or left while in flight. */
     internal fun resolve(body: WireSubmit) = locked(body.clientOrderId) { writeAheads.resolve(body) }
 
-    /** `DELETE /v1/orders/{id}`: the order as it ended; cancels pass the kill switch. */
+    /** `DELETE /v1/orders/{id}`: the order as it ended, read back by label after the cancel; cancels pass the kill switch. */
     fun cancel(clientOrderId: String): DeskResult =
         locked(clientOrderId) {
             if (!venueUp()) return@locked unavailable("the venue link is down")
+            venue.cancel(clientOrderId)
             val ended =
-                venue.cancel(clientOrderId)
+                venue.orderByLabel(clientOrderId)
                     // The venue may have forgotten an order that ended long ago; the journal has not.
                     ?: return@locked journal.order(clientOrderId)?.order?.let { DeskResult.Ok(it) }
                         ?: DeskResult.Refused(404, "not_found", "no order $clientOrderId")

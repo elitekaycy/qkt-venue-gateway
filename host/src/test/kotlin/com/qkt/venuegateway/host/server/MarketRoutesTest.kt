@@ -81,7 +81,7 @@ class MarketRoutesTest {
         start()
         val received = quotes("roots=BTC_USDC")
         val deadline = System.currentTimeMillis() + 5_000
-        while (venue.subscriptions.none { it.second == setOf("BTC_USDC") }) {
+        while (venue.subscriptions.none { it == setOf("BTC_USDC-9OCT26-82000-P") }) {
             check(System.currentTimeMillis() < deadline) { "never subscribed" }
             Thread.sleep(10)
         }

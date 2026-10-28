@@ -49,26 +49,26 @@ internal class BybitOrderDesk(
         throw VenueUnavailableException("bybit took order ${order.clientOrderId} but does not list it yet")
     }
 
-    /** Cancels the order labelled [clientOrderId] and returns it as it now stands (filled, if it filled first). */
-    fun cancel(clientOrderId: String): VenueOrder? {
-        val current = byLabel(clientOrderId) ?: return null
-        if (current.status != OrderStatus.WORKING) return current
+    /** Cancels the order labelled [clientOrderId] while Bybit works it (one that ended first is left as it is). */
+    fun cancel(clientOrderId: String) {
+        val current = byLabel(clientOrderId) ?: return
+        if (current.status != OrderStatus.WORKING) return
         try {
             venue { account.cancel(current.symbol, clientOrderId) }
         } catch (e: VenueRefusedException) {
             // The order ended between the read and the cancel (Bybit: order not exists or too late to cancel).
             if (!e.reason.startsWith("bybit $ORDER_GONE:")) throw e
         }
-        return byLabel(clientOrderId)
     }
 
+    /** Amends the order labelled [clientOrderId]; false when Bybit has none. */
     fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? {
-        val current = byLabel(clientOrderId) ?: return null
+    ): Boolean {
+        val current = byLabel(clientOrderId) ?: return false
         venue { account.amend(current.symbol, clientOrderId, change.quantity, change.limitPrice, change.stopPrice) }
-        return byLabel(clientOrderId)
+        return true
     }
 
     fun byLabel(clientOrderId: String): VenueOrder? =

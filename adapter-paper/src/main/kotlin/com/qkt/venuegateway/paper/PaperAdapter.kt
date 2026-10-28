@@ -61,7 +61,7 @@ class PaperAdapter(
             recordings::prune,
             events::execute,
         ) { listener }
-    private val feed = PaperFeed(listing, scheduler = context.scheduler) { synchronized(book) { book.quoted() } }
+    private val feed = PaperFeed(scheduler = context.scheduler) { synchronized(book) { book.quoted() } }
 
     // Set by connect on the host's thread, read on the event and feed threads.
     @Volatile private var listener: AdapterListener? = null
@@ -92,13 +92,14 @@ class PaperAdapter(
 
     override fun cancel(clientOrderId: String) =
         synchronized(book) {
-            book.cancel(clientOrderId, context.clock()).also { store.save(book) }
+            book.cancel(clientOrderId, context.clock())
+            store.save(book)
         }
 
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder = throw VenueRefusedException("the paper venue does not modify orders; cancel and place again")
+    ): Boolean = throw VenueRefusedException("the paper venue does not modify orders; cancel and place again")
 
     override fun orderByLabel(clientOrderId: String) = synchronized(book) { book.state.orders[clientOrderId] }
 
@@ -164,10 +165,7 @@ class PaperAdapter(
         toMs: Long,
     ): List<VenueBar> = venue { DeribitMarketMapping.klines(market, code, resolutionMs, fromMs, toMs) }
 
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = venue { feed.want(codes, roots) }
+    override fun subscribeQuotes(codes: Set<String>) = venue { feed.want(codes) }
 
     override fun close() {
         upkeep.close()

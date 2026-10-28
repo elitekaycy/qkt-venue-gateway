@@ -82,8 +82,8 @@ interface VenueAdapter : AutoCloseable {
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>
     fun place(order: NewOrder): VenueOrder             // order carries its client_order_id as the venue label
-    fun cancel(clientOrderId: String): VenueOrder?
-    fun modify(clientOrderId: String, change: OrderChange): VenueOrder?
+    fun cancel(clientOrderId: String)                  // the host reads the order back by label after it
+    fun modify(clientOrderId: String, change: OrderChange): Boolean   // false: no such order; the host reads it back
     fun orderByLabel(clientOrderId: String): VenueOrder?   // venue lookup by our id; null = venue never saw it
     fun fills(fromMs: Long, toMs: Long): List<VenueFill>   // executions with venue fill ids and costs
     fun settlements(fromMs: Long, toMs: Long): List<VenueSettlement>
@@ -96,7 +96,7 @@ interface VenueAdapter : AutoCloseable {
     fun depth(code: String, fromMs: Long, toMs: Long): List<VenueDepth>  // only with DEPTH
     val klineResolutions: Set<Long>                    // the kline lengths the venue serves (ms), a minute among them
     fun klines(code: String, resolutionMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // raw klines; the host builds closed bars
-    fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
+    fun subscribeQuotes(codes: Set<String>)            // the host has expanded roots to options; pushes on the listener
 }
 
 interface AdapterListener {

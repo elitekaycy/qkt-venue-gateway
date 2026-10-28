@@ -1,7 +1,9 @@
 package com.qkt.venuegateway.testkit
 
 import com.qkt.venuegateway.adapter.NewOrder
+import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.OrderStatus
+import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueOrder
 import java.math.BigDecimal
@@ -47,6 +49,24 @@ internal class KitOrders(
         val filled = adapter.orderByLabel(id)
         assertThat(filled?.status).describedAs("status of $id").isEqualTo(OrderStatus.FILLED)
         assertThat(filled?.filledQuantity).describedAs("filled quantity of $id").isEqualByComparingTo(order.quantity)
+    }
+
+    /**
+     * Moves resting [order]'s limit one tick further from the market and checks the change reads back by label at
+     * once, as the host reads an order back after every change.
+     */
+    fun moveAndReadBack(
+        adapter: VenueAdapter,
+        order: NewOrder,
+    ) {
+        val tick = adapter.instruments().first { it.code == order.symbol }.tickSize
+        val moved = if (order.side == Side.BUY) order.limitPrice!! - tick else order.limitPrice!! + tick
+        assertThat(adapter.modify(order.clientOrderId, OrderChange(limitPrice = moved))).isTrue
+        val read = adapter.orderByLabel(order.clientOrderId)
+        assertThat(
+            read?.limitPrice,
+        ).describedAs("limit of ${order.clientOrderId} read back").isEqualByComparingTo(moved)
+        assertThat(read?.status).isEqualTo(OrderStatus.WORKING)
     }
 
     /** Cancels every order this run placed that [adapter] still reports working. */

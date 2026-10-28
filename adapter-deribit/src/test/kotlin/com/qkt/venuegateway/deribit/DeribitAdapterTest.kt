@@ -48,15 +48,19 @@ class DeribitAdapterTest {
     }
 
     @Test
-    fun `a cancel answers the order as it now stands, and an order Deribit never saw is null`(
+    fun `a cancel goes out by label, the order read back as it now stands, and one Deribit never saw is null`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = adapter(dir)
         deribit.byLabel["kit-probe-1790866831"] =
             listOf(open.copy(state = "filled", filledAmount = open.amount, averagePrice = BigDecimal("1")))
 
-        assertThat(adapter.cancel("kit-probe-1790866831")?.status).isEqualTo(OrderStatus.FILLED)
-        assertThat(adapter.cancel("never-sent")).isNull()
+        adapter.cancel("kit-probe-1790866831")
+        adapter.cancel("never-sent")
+
+        assertThat(deribit.labelCancels).containsExactly("kit-probe-1790866831", "never-sent")
+        assertThat(adapter.orderByLabel("kit-probe-1790866831")?.status).isEqualTo(OrderStatus.FILLED)
+        assertThat(adapter.orderByLabel("never-sent")).isNull()
         adapter.close()
     }
 
@@ -72,7 +76,7 @@ class DeribitAdapterTest {
     }
 
     @Test
-    fun `a modify edits by label keeping the quantity it does not change, and an unknown order is null`(
+    fun `a modify edits by label keeping the quantity it does not change, and an unknown order is none`(
         @TempDir dir: Path,
     ) {
         val (adapter, _) = adapter(dir)
@@ -81,8 +85,9 @@ class DeribitAdapterTest {
         val edited = adapter.modify("kit-probe-1790866831", OrderChange(limitPrice = BigDecimal("50000")))
 
         assertThat(deribit.edits).containsExactly("kit-probe-1790866831 BTC_USDC-PERPETUAL 0.0001 50000")
-        assertThat(edited?.limitPrice).isEqualByComparingTo("50000")
-        assertThat(adapter.modify("never-sent", OrderChange(limitPrice = BigDecimal.ONE))).isNull()
+        assertThat(edited).isTrue
+        assertThat(adapter.modify("never-sent", OrderChange(limitPrice = BigDecimal.ONE))).isFalse
+        assertThat(deribit.edits).hasSize(1)
         adapter.close()
     }
 

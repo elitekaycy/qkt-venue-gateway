@@ -33,7 +33,7 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * stop that fires (a new Deribit order) is still found. The account's link ([trading]) is the venue
  * connection the host watches; the public ticker link ([tickers]) only feeds quotes, so its drops are
  * reported as the quote feed going down, not the venue. An order on a code the account's listing does not
- * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). Root subscriptions re-expand every [refreshMs].
+ * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). The listing is read again every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
  * in force; a remainder Deribit leaves working is cancelled instead ([DeribitOrderDesk]). Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
@@ -74,7 +74,6 @@ class DeribitAdapter(
     private val orders: DeribitOrderDesk = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
     private val feed =
         DeribitQuoteFeed(
-            listing,
             tickers({
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
@@ -176,10 +175,7 @@ class DeribitAdapter(
         toMs: Long,
     ): List<VenueBar> = venue { DeribitMarketMapping.klines(market, code, resolutionMs, fromMs, toMs) }
 
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = venue { feed.want(codes, roots) }
+    override fun subscribeQuotes(codes: Set<String>) = venue { feed.want(codes) }
 
     /** Prunes the recordings past their retention, at most once a UTC day. */
     private fun prune() {
