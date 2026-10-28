@@ -1,6 +1,6 @@
 rootProject.name = "qkt-venue-gateway"
 
-include("vgp-wire", "adapter-api", "adapter-testkit", "host", "app")
+include("vgp-wire", "adapter-api", "adapter-testkit", "venue-support", "host", "app")
 
 // Every venue adapter is a directory `adapter-<venue>/` with its own build file: adding one is adding the
 // directory, nothing here. The list is published for `app`, which bundles every adapter it names.

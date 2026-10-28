@@ -32,8 +32,7 @@ plugins { alias(libs.plugins.kotlin.serialization) }
 
 dependencies {
     "api"(project(":adapter-api"))
-    "implementation"(libs.okhttp)
-    "implementation"(libs.kotlinx.serialization.json)
+    "implementation"(project(":venue-support"))
     "implementation"(libs.slf4j.api)
     "testImplementation"(project(":adapter-testkit"))
     "testImplementation"(libs.okhttp.mockwebserver)
