@@ -2,9 +2,9 @@ package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueFundingRate
-import com.qkt.venuegateway.deribit.DeribitListing
-import com.qkt.venuegateway.deribit.DeribitMarketMapping
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
 import java.math.BigDecimal
 import java.math.RoundingMode
 

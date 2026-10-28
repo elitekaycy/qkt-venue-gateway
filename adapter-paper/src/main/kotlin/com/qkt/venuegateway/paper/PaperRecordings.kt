@@ -1,9 +1,9 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.AdapterContext
-import com.qkt.venuegateway.deribit.DeribitDepth
-import com.qkt.venuegateway.deribit.DeribitOpenInterest
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.deribit.market.DeribitDepth
+import com.qkt.venuegateway.deribit.market.DeribitOpenInterest
 
 /**
  * What the paper venue records of Deribit's market, which Deribit keeps no history of: open interest and the

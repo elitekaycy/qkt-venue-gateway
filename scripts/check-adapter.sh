@@ -48,6 +48,18 @@ else
   fi
 fi
 
+# Another adapter is reused only through its client/ (its venue's protocol) or market/ (its public market as
+# adapter-api types), as paper simulates on Deribit's public prices: never its adapter, account mapping or settings.
+for dir in adapter-*/; do
+  other=${dir%/}
+  other=${other#adapter-}
+  [[ $other == "$venue" || $other == api || $other == testkit ]] && continue
+  [[ -d $dir/src/main/kotlin/com/qkt/venuegateway/$other ]] || continue
+  if grep -rnE "^import com\.qkt\.venuegateway\.$other\." "$m/src" | grep -vE "venuegateway\.$other\.(client|market)\."; then
+    err "imports adapter-$other outside its client/ and market/ packages"
+  fi
+done
+
 # Nothing outside the module names it: settings.gradle.kts discovers it, app bundles it, the README table is
 # generated from its README's Venue line (scripts/adapter-index.sh) and CI reads its <VENUE>_CLIENT_* secrets by name.
 grep -qE '^> Venue: .+ · Status: .+$' "$m/README.md" || err "README.md needs a '> Venue: <what it trades> · Status: <status>' line"

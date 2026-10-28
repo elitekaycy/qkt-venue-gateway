@@ -27,6 +27,7 @@ adapter-<venue>/
   CLAUDE.md                   @README.md and @../docs/adapters.md, nothing else
   src/main/kotlin/com/qkt/venuegateway/<venue>/
     client/                   the venue's protocol in its own words; no adapter-api types
+    market/                   only when another adapter reuses it: the public market as adapter-api types
     <Venue>Mapping*.kt        the only place venue words become adapter-api types
     <Venue>Adapter.kt         implements VenueAdapter
     <Venue>AdapterFactory.kt  type = "<venue>"; reads settings and credentials, fails naming the key
@@ -36,8 +37,12 @@ adapter-<venue>/
   src/test/resources/fixtures/ responses recorded from the venue, account ids removed
 ```
 
-- Depends on `adapter-api` and `venue-support` (another adapter's `client` package at most, as `paper` reuses
-  Deribit's public client). Never `host`, `vgp-wire` or `app`.
+- Depends on `adapter-api` and `venue-support`, and on another adapter only through that adapter's `client/` and
+  `market/` packages. `paper` simulates trading on Deribit's public prices, so it reads Deribit's protocol
+  (`deribit.client`) and Deribit's public market as adapter-api types (`deribit.market`: the listing, quote and
+  instrument mapping, marks, tape, recorded depth and open interest) rather than copying either; Deribit's own
+  adapter uses the same `market/` classes. Another adapter's adapter, account mapping and settings stay its own
+  (`scripts/check-adapter.sh` refuses any other import). Never `host`, `vgp-wire` or `app`.
 - Translates, nothing more. What no venue decides is written once in `venue-support` and used, never copied:
   `ReconnectingSocket` (backoff, a replaced socket's events ignored, keepalive and silence), `SubscriptionSet`
   (replayed on reconnect), `JsonHttp` (the venue's status and body back, transport failures as `IOException`,

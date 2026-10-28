@@ -8,6 +8,7 @@ import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitTrading
+import com.qkt.venuegateway.deribit.market.DeribitListing
 
 /**
  * One Deribit account's orders, every lookup by label: placing (only a listed instrument of [currency] in

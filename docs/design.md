@@ -43,7 +43,7 @@ consumer of VGP, and a gateway can be replaced, written in another language, or 
 | `adapter-testkit` | `AdapterContractTest`: the behaviour every adapter must pass | the host |
 | `adapter-deribit` | Deribit, whole: its JSON-RPC in the `client` package (socket, auth, public and private calls, subscriptions), the mapping onto `adapter-api`, the adapter | VGP, the host |
 | `adapter-bybit` | Bybit, whole, in the same shape: its client, the mapping onto `adapter-api`, the adapter | VGP, the host |
-| `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client`) | VGP, the host |
+| `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client` and `market`) | VGP, the host |
 | `app` | config, choosing the adapter, starting the host | — |
 
 An adapter speaks only its venue's transport; everything qkt sees (HTTP, WebSocket, JSON) is the host's.

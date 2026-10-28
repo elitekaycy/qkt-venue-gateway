@@ -4,6 +4,7 @@ import com.qkt.venuegateway.adapter.VenueFunding
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitTrading
+import com.qkt.venuegateway.deribit.market.DeribitListing
 
 /** What one Deribit account's history shows besides its fills: its expiry settlements and the funding it realized. */
 internal class DeribitAccountHistory(
