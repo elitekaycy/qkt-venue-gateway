@@ -1,5 +1,7 @@
 # Paper adapter
 
+> Venue: Simulated account on Deribit's public prices; no account needed · Status: Stable
+
 A simulated account on Deribit's live public prices. Use it to forward-test strategies through the
 real gateway, with no venue account or API key.
 

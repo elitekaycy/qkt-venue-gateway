@@ -83,9 +83,11 @@ nav:
       - Kill switch and guardrails: connect/guardrails.md
   - Adapters:
       - Overview: adapters/overview.md
-      - Paper: adapters/paper.md
-      - Deribit: adapters/deribit.md
+      # adapters:start
       - Bybit: adapters/bybit.md
+      - Deribit: adapters/deribit.md
+      - Paper: adapters/paper.md
+      # adapters:end
       - Adapter rules: adapters.md
       - Writing an adapter: writing-an-adapter.md
   - Reference:

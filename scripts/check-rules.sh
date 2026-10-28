@@ -30,5 +30,7 @@ for dir in adapter-*/; do
   [[ -f $m/CLAUDE.md ]] || err "$m has no CLAUDE.md (docs/adapters.md)"
 done
 
+scripts/adapter-index.sh --check || fail=1
+
 ((fail == 0)) && echo "rules: ok"
 exit "$fail"

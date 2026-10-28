@@ -8,15 +8,14 @@ A variable without a default is required, and the gateway won't start without it
 |---|---|---|
 | `GATEWAY_TRADER_TOKEN` | required | Bearer token qkt trades with |
 | `GATEWAY_GUARDIAN_TOKEN` | required | Bearer token for reads and the kill switch |
-| `GATEWAY_ADAPTER` | `paper` | The adapter: `paper`, `deribit`, `bybit`, or a plugin's type |
+| `GATEWAY_ADAPTER` | `paper` | The adapter's type: any [installed adapter](../adapters/overview.md), or a plugin's |
 | `GATEWAY_LISTEN` | `127.0.0.1:8443`; `0.0.0.0:8443` in the image | Address to serve on |
 | `GATEWAY_STATE_DIR` | `./state`; `/data` in the image | The journal and adapter state. Keep it on a volume |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | Venue credentials, both or neither |
 | `GATEWAY_PLUGINS_DIR` | none | Directory of extra adapter jars |
 | `GATEWAY_SETTING_<KEY>` | set by the adapter | An adapter setting, e.g. `GATEWAY_SETTING_STOP_TRIGGER` sets `stop_trigger` |
 
-Each adapter's settings are on its page: [paper](../adapters/paper.md#settings),
-[Deribit](../adapters/deribit.md#settings), [Bybit](../adapters/bybit.md#settings).
+Each adapter's settings are on its page, listed in the [adapters overview](../adapters/overview.md).
 
 ## Secrets as files
 
@@ -42,6 +41,6 @@ The gateway refuses to start, with a message that names the variable, when:
 - Only one of `GATEWAY_LOGIN` and `GATEWAY_SECRET` is set.
 - `GATEWAY_LISTEN` is not `<host>:<port>`.
 - `GATEWAY_ADAPTER` names an adapter that is not installed.
-- A required adapter setting is missing, for example the environment of a Deribit or Bybit gateway.
+- A required adapter setting is missing, for example a venue adapter's `environment`.
 
 See [Troubleshooting](../operations/troubleshooting.md) for each message and its fix.

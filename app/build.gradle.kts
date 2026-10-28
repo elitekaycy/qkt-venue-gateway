@@ -3,9 +3,9 @@ plugins { application }
 dependencies {
     "implementation"(project(":host"))
     "implementation"(project(":adapter-api"))
-    "implementation"(project(":adapter-paper"))
-    "implementation"(project(":adapter-deribit"))
-    "implementation"(project(":adapter-bybit"))
+    // Every venue adapter settings.gradle.kts found: the gateway loads the one GATEWAY_ADAPTER names.
+    @Suppress("UNCHECKED_CAST")
+    (gradle.extra["venueAdapters"] as List<String>).forEach { "implementation"(project(":$it")) }
     "implementation"(libs.slf4j.api)
     "runtimeOnly"(libs.logback.classic)
     "testImplementation"(libs.okhttp)

@@ -37,7 +37,8 @@ done
 
 if [[ $branch =~ ^adapter/([a-z0-9]+)$ ]]; then
   venue=${BASH_REMATCH[1]}
-  allowed="^(adapter-$venue/|settings\.gradle\.kts$|app/build\.gradle\.kts$|README\.md$|docs/adapters\.md$|\.github/workflows/adapter\.yml$)"
+  # The adapter's directory, and the adapter lists generated from it (scripts/adapter-index.sh).
+  allowed="^(adapter-$venue/|README\.md$|docs/index\.md$|mkdocs\.yml$|docs/adapters/($venue|overview)\.md$)"
   while IFS= read -r f; do
     [[ -z $f || $f =~ $allowed ]] || err "$f is outside an adapter branch's scope (docs/adapters.md, 'The branch')"
   done <<<"$changed"
