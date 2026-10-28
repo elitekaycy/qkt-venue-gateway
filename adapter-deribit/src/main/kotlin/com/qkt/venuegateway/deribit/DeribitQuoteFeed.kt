@@ -1,8 +1,10 @@
 package com.qkt.venuegateway.deribit
 
+import com.qkt.venuegateway.adapter.daemon
 import com.qkt.venuegateway.deribit.client.DeribitTickers
+import com.qkt.venuegateway.support.Strand
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ScheduledExecutorService
 import org.slf4j.LoggerFactory
 
 /**
@@ -16,23 +18,18 @@ class DeribitQuoteFeed(
     private val listing: DeribitListing,
     private val tickers: DeribitTickers,
     private val upkeep: () -> Unit = {},
+    scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(daemon("deribit-refresh")),
 ) : AutoCloseable {
     private var codes = emptySet<String>()
     private var roots = emptySet<String>()
     private val log = LoggerFactory.getLogger(DeribitQuoteFeed::class.java)
-    private val timer =
-        Executors.newSingleThreadScheduledExecutor {
-            Thread(it, "deribit-refresh").apply {
-                isDaemon =
-                    true
-            }
-        }
+    private val timer = Strand(scheduler, "deribit-refresh")
 
     /** Opens the ticker link and refreshes what is wanted every [refreshMs]; runs [upkeep] now and as often. */
     fun start(refreshMs: Long) {
         tickers.start()
-        timer.scheduleWithFixedDelay(::refreshLogged, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
-        timer.scheduleWithFixedDelay(::upkeepLogged, 0, refreshMs, TimeUnit.MILLISECONDS)
+        timer.every(refreshMs, refreshMs, ::refreshLogged)
+        timer.every(0, refreshMs, ::upkeepLogged)
     }
 
     /** Clients want [codes] and the options of [roots] from now on. */
@@ -62,7 +59,7 @@ class DeribitQuoteFeed(
     }
 
     override fun close() {
-        timer.shutdownNow()
+        timer.close()
         tickers.close()
     }
 }

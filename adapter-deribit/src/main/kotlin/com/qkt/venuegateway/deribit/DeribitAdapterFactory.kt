@@ -17,7 +17,7 @@ class DeribitAdapterFactory : VenueAdapterFactory {
         val environment = settings.environment
         return DeribitAdapter(
             context,
-            DeribitPublicClient(environment.httpUrl),
+            DeribitPublicClient(environment.httpUrl, client = context.http),
             { onOrder, onTrade, onConnection ->
                 DeribitPrivateClient(
                     environment.socketUrl,
@@ -27,10 +27,16 @@ class DeribitAdapterFactory : VenueAdapterFactory {
                     onOrder,
                     onTrade,
                     onConnection,
+                    http = context.http,
                 )
             },
-            { onTicker, onConnection -> DeribitTickerStream(environment.socketUrl, onTicker, onConnection) },
-            history = DeribitPublicClient(environment.historyUrl),
+            {
+                onTicker,
+                onConnection,
+                ->
+                DeribitTickerStream(environment.socketUrl, onTicker, onConnection, http = context.http)
+            },
+            history = DeribitPublicClient(environment.historyUrl, client = context.http),
         )
     }
 }

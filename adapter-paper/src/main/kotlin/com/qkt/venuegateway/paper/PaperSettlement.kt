@@ -1,14 +1,16 @@
 package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.VenueSettlement
+import com.qkt.venuegateway.adapter.daemon
 import com.qkt.venuegateway.deribit.DeribitListing
 import com.qkt.venuegateway.deribit.client.DeribitInstrument
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
+import com.qkt.venuegateway.support.Strand
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ScheduledExecutorService
 import org.slf4j.LoggerFactory
 
 /**
@@ -22,23 +24,18 @@ class PaperSettlement(
     private val listing: DeribitListing,
     private val clock: () -> Long,
     private val periodMs: Long = 60_000,
+    scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(daemon("paper-settlement")),
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(PaperSettlement::class.java)
-    private val timer =
-        Executors.newSingleThreadScheduledExecutor { r ->
-            Thread(r, "paper-settlement").apply {
-                isDaemon =
-                    true
-            }
-        }
+    private val timer = Strand(scheduler, "paper-settlement")
 
     /** Runs [check] now and every [periodMs]. */
     fun start(check: () -> Unit) {
-        timer.scheduleWithFixedDelay({
+        timer.every(0, periodMs) {
             runCatching(check).onFailure {
                 log.warn("paper settlement check failed: {}", it.message)
             }
-        }, 0, periodMs, TimeUnit.MILLISECONDS)
+        }
     }
 
     /** Settles every held contract of [book] that expired by now; returns the settlements made. */
@@ -53,7 +50,7 @@ class PaperSettlement(
     }
 
     override fun close() {
-        timer.shutdownNow()
+        timer.close()
     }
 
     private fun deliveryPrice(

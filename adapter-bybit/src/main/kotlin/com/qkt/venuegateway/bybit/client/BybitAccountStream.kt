@@ -4,6 +4,7 @@ import com.qkt.venuegateway.support.Hmac
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import okhttp3.OkHttpClient
 
 /**
  * One account's private socket at [url] for [category]: authenticated with [key] (signed with [secret], the
@@ -19,12 +20,13 @@ class BybitAccountStream(
     category: String,
     private val onOrder: (BybitOrder) -> Unit,
     private val onExecution: (BybitExecution) -> Unit,
+    http: OkHttpClient = OkHttpClient(),
     onConnection: (Boolean, String) -> Unit,
 ) : AutoCloseable {
     private val orderTopic = "order.$category"
     private val executionTopic = "execution.$category"
     private val socket =
-        BybitSocket(url, "account", { listOf(orderTopic, executionTopic) }, ::push, onConnection, ::auth)
+        BybitSocket(url, "account", { listOf(orderTopic, executionTopic) }, ::push, onConnection, ::auth, http = http)
 
     fun start() = socket.start()
 

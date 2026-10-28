@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import okhttp3.OkHttpClient
 
 /**
  * Bybit's public socket of one category at [url]. A quoted symbol is subscribed to `tickers.<s>` (last, mark,
@@ -23,11 +24,12 @@ class BybitMarketStream(
     private val onTicker: (BybitTicker) -> Unit,
     private val onTrades: (symbol: String, List<BybitPrint>) -> Unit,
     private val onLiquidations: (symbol: String, List<BybitPrint>) -> Unit,
+    http: OkHttpClient = OkHttpClient(),
     onConnection: (Boolean, String) -> Unit,
 ) : AutoCloseable {
     private val wanted = SubscriptionSet<String>()
     private val tickers = ConcurrentHashMap<String, BybitTicker>()
-    private val socket = BybitSocket(url, "market", wanted::all, ::push, onConnection)
+    private val socket = BybitSocket(url, "market", wanted::all, ::push, onConnection, http = http)
 
     fun start() = socket.start()
 

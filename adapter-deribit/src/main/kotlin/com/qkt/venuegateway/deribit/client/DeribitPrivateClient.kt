@@ -12,6 +12,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.OkHttpClient
 
 /**
  * Deribit's private API over one authenticated [DeribitSocket] at [url] (`wss://test.deribit.com/ws/api/v2`
@@ -30,13 +31,14 @@ class DeribitPrivateClient(
     private val onTrade: (DeribitTrade) -> Unit,
     onConnection: (Boolean, String) -> Unit,
     requestTimeoutMs: Long = 10_000,
+    http: OkHttpClient = OkHttpClient(),
 ) : DeribitTrading {
     private val channels =
         currencies.flatMap { c ->
             KINDS.flatMap { k -> listOf("user.orders.$k.$c.raw", "user.trades.$k.$c.raw") }
         }
     private val socket =
-        DeribitSocket(url, "private", HEARTBEAT_SECONDS, requestTimeoutMs, ::onNotification, onConnection, ::open)
+        DeribitSocket(url, "private", HEARTBEAT_SECONDS, requestTimeoutMs, ::onNotification, onConnection, ::open, http)
     private val histories = DeribitHistories(socket::request)
 
     override fun start() = socket.start()

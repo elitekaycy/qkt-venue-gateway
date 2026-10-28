@@ -22,7 +22,7 @@ import com.qkt.venuegateway.deribit.DeribitTape
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
-import java.util.concurrent.Executors
+import com.qkt.venuegateway.support.Strand
 
 /**
  * A venue-free account trading against Deribit's live public prices: listings from [market], tickers
@@ -49,7 +49,7 @@ class PaperAdapter(
     private val listing = DeribitListing(market, currency, context.clock)
     private val book = paperBook(context, currency)
     private val store = PaperStore(context.stateDir).also { it.load(book) }
-    private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
+    private val events = Strand(context.scheduler, "paper-events")
     private val funding = PaperFunding(market, listing, currency, context.clock)
     private val checkMs = context.long("settlement_check_ms", CHECK_MS)
     private val recordings = PaperRecordings(market, context)
@@ -57,12 +57,12 @@ class PaperAdapter(
         PaperUpkeep(
             book,
             store,
-            PaperSettlement(market, listing, context.clock, checkMs),
+            PaperSettlement(market, listing, context.clock, checkMs, context.scheduler),
             funding,
             recordings::prune,
             events::execute,
         ) { listener }
-    private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
+    private val feed = PaperFeed(listing, scheduler = context.scheduler) { synchronized(book) { book.quoted() } }
 
     // Set by connect on the host's thread, read on the event and feed threads.
     @Volatile private var listener: AdapterListener? = null
@@ -171,7 +171,7 @@ class PaperAdapter(
     override fun close() {
         upkeep.close()
         feed.close()
-        events.shutdown()
+        events.close(drain = true)
     }
 
     private fun onTicker(ticker: DeribitTicker) {

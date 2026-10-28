@@ -79,6 +79,7 @@ class DeribitAdapter(
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
             ::prune,
+            context.scheduler,
         )
     private val retention = settings.retention
     private val openInterest =

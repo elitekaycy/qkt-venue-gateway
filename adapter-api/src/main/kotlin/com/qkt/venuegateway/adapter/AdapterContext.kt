@@ -1,6 +1,11 @@
 package com.qkt.venuegateway.adapter
 
 import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.atomic.AtomicInteger
+import okhttp3.OkHttpClient
 
 /**
  * The venue login every adapter receives in one shape, whatever its venue calls the two halves: an
@@ -16,13 +21,18 @@ data class Credentials(
 
 /**
  * What the host hands an adapter: its config [settings], its venue [credentials] (null when the
- * gateway was given none, as for the paper venue), a [clock] and a private [stateDir].
+ * gateway was given none, as for the paper venue), a [clock], a private [stateDir], the [http] client every venue
+ * call goes through (an adapter derives what it needs with `newBuilder()`, which shares its connections and
+ * dispatcher, and never shuts it down) and the [scheduler] its timers and ordered work run on (through a
+ * `venue-support` `Strand`; the pool is the host's). Both default to private ones, for tests and plugins run alone.
  */
 class AdapterContext(
     val settings: Map<String, String>,
     val clock: () -> Long,
     val stateDir: Path,
     val credentials: Credentials? = null,
+    val http: OkHttpClient = OkHttpClient(),
+    val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(2, daemon("adapter")),
 ) {
     /** Setting [key], or a failure naming it. */
     fun required(key: String): String =
@@ -87,4 +97,10 @@ interface VenueAdapterFactory {
     val type: String
 
     fun create(context: AdapterContext): VenueAdapter
+}
+
+/** Daemon threads named `<prefix>-<n>`, so the scheduler never keeps the gateway's JVM up. */
+fun daemon(prefix: String): ThreadFactory {
+    val n = AtomicInteger()
+    return ThreadFactory { r -> Thread(r, "$prefix-${n.incrementAndGet()}").apply { isDaemon = true } }
 }
