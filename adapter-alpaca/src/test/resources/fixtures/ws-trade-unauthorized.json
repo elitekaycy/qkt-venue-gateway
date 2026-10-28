@@ -1,0 +1,6 @@
+[
+ {
+  "opcode": 2,
+  "text": "{\"stream\":\"authorization\",\"data\":{\"action\":\"auth\",\"message\":\"code=401, message=Unauthorized\",\"status\":\"unauthorized\"}}"
+ }
+]

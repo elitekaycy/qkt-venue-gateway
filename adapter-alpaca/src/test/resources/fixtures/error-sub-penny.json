@@ -1,0 +1,4 @@
+{
+ "code": 42210000,
+ "message": "invalid limit_price 1.005. sub-penny increment does not fulfill minimum pricing criteria"
+}

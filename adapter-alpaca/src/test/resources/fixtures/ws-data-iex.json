@@ -1,0 +1,14 @@
+[
+ {
+  "opcode": 1,
+  "text": "[{\"T\":\"success\",\"msg\":\"connected\"}]"
+ },
+ {
+  "opcode": 1,
+  "text": "[{\"T\":\"success\",\"msg\":\"authenticated\"}]"
+ },
+ {
+  "opcode": 1,
+  "text": "[{\"T\":\"subscription\",\"quotes\":[\"AAPL\"]}]"
+ }
+]

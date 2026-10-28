@@ -84,6 +84,7 @@ nav:
   - Adapters:
       - Overview: adapters/overview.md
       # adapters:start
+      - Alpaca: adapters/alpaca.md
       - Bybit: adapters/bybit.md
       - Deribit: adapters/deribit.md
       - Paper: adapters/paper.md
