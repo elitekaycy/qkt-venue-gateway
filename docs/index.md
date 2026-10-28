@@ -12,9 +12,12 @@ hide:
 <div class="vgw-hero__pills" markdown="0">
   <span class="pill pill--accent">Apache 2.0</span>
   <span class="pill">VGP v1</span>
-  <span class="pill">paper</span>
-  <span class="pill">Deribit</span>
+  <!-- pills:start -->
+  <span class="pill">Alpaca</span>
   <span class="pill">Bybit</span>
+  <span class="pill">Deribit</span>
+  <span class="pill">Paper</span>
+  <!-- pills:end -->
 </div>
 
 # One small protocol between qkt and a trading venue — <em>one container per account.</em> { .vgw-hero__lede }
@@ -109,11 +112,14 @@ either side.</p>
   <h2>Adapters</h2>
 </div>
 
+<!-- adapters:start -->
 | Adapter | Venue | Status |
 |---|---|---|
-| [`paper`](adapters/paper.md) | Simulated account on Deribit's public prices; no account needed | Stable |
-| [`deribit`](adapters/deribit.md) | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable |
+| [`alpaca`](adapters/alpaca.md) | Alpaca paper and live: US shares (whole shares, regular, extended and overnight sessions) and USD coin pairs | New |
 | [`bybit`](adapters/bybit.md) | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New |
+| [`deribit`](adapters/deribit.md) | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable |
+| [`paper`](adapters/paper.md) | Simulated account on Deribit's public prices; no account needed | Stable |
+<!-- adapters:end -->
 
 Another venue is one adapter module. See [writing an adapter](writing-an-adapter.md) and the
 [adapter rules](adapters.md).

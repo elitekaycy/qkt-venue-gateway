@@ -137,21 +137,23 @@ internal open class FakeAdapter : VenueAdapter {
         return placedOrder
     }
 
-    override fun cancel(clientOrderId: String): VenueOrder? =
+    override fun cancel(clientOrderId: String) {
         orders.computeIfPresent(clientOrderId) { _, o -> o.copy(status = OrderStatus.CANCELLED, updatedAtMs = 2) }
+    }
 
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? =
-        orders.computeIfPresent(clientOrderId) { _, o ->
-            o.copy(
-                quantity = change.quantity ?: o.quantity,
-                limitPrice = change.limitPrice ?: o.limitPrice,
-                stopPrice = change.stopPrice ?: o.stopPrice,
-                updatedAtMs = o.updatedAtMs + 1,
-            )
-        }
+    ): Boolean =
+        null !=
+            orders.computeIfPresent(clientOrderId) { _, o ->
+                o.copy(
+                    quantity = change.quantity ?: o.quantity,
+                    limitPrice = change.limitPrice ?: o.limitPrice,
+                    stopPrice = change.stopPrice ?: o.stopPrice,
+                    updatedAtMs = o.updatedAtMs + 1,
+                )
+            }
 
     override fun orderByLabel(clientOrderId: String): VenueOrder? = orders[clientOrderId]
 
@@ -191,20 +193,20 @@ internal open class FakeAdapter : VenueAdapter {
 
     val bars = CopyOnWriteArrayList<VenueBar>()
     val barCalls = CopyOnWriteArrayList<Pair<Long, Long>>()
-    val subscriptions = CopyOnWriteArrayList<Pair<Set<String>, Set<String>>>()
+    val subscriptions = CopyOnWriteArrayList<Set<String>>()
 
-    override fun bars(
+    override val klineResolutions = setOf(60_000L)
+
+    /** The one-minute klines in [bars] starting in the asked range, as a venue answers. */
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = bars.toList().also { barCalls += fromMs to toMs }
+    ) = bars.filter { it.startMs in fromMs until toMs }.also { barCalls += fromMs to toMs }
 
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) {
-        subscriptions += codes to roots
+    override fun subscribeQuotes(codes: Set<String>) {
+        subscriptions += codes
     }
 
     override fun close() {}

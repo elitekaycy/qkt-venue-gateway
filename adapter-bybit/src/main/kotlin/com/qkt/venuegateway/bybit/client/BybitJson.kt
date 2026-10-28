@@ -1,6 +1,6 @@
 package com.qkt.venuegateway.bybit.client
 
-import java.math.BigDecimal
+import com.qkt.venuegateway.support.JsonReads.text
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -9,24 +9,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Reading Bybit's JSON exactly. Bybit sends every decimal as a string (`"87717.60"`) and an absent value as
- * an empty string, so a decimal is read from its text into a [BigDecimal], never through a double, and `""`
- * reads as absent. A field the caller needs and Bybit left out fails naming it.
+ * The shapes of Bybit's JSON that are Bybit's own: a v5 `result`'s `list`, its arrays of arrays, and its page cursor.
+ * Fields are read with [com.qkt.venuegateway.support.JsonReads]: Bybit sends every decimal as a string and an
+ * absent value as `""`, which reads as absent there.
  */
 internal object BybitJson {
-    fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.content?.takeIf { it.isNotEmpty() }
-
-    fun JsonObject.need(key: String): String = text(key) ?: error("bybit field $key missing in $this")
-
-    /** The decimal at [key], null when absent or empty. */
-    fun JsonObject.dec(key: String): BigDecimal? = text(key)?.let(::BigDecimal)
-
-    fun JsonObject.req(key: String): BigDecimal = BigDecimal(need(key))
-
-    fun JsonObject.long(key: String): Long = need(key).toLong()
-
-    fun JsonObject.obj(key: String): JsonObject = this[key]?.jsonObject ?: error("bybit field $key missing in $this")
-
     /** The `list` of a v5 `result`, each item an object. */
     fun JsonObject.items(key: String = "list"): List<JsonObject> =
         (this[key] as? JsonArray ?: error("bybit field $key missing")).map { it.jsonObject }

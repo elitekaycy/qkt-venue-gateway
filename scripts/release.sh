@@ -6,7 +6,9 @@
 set -euo pipefail
 
 notes=${NOTES:-release-notes.md}
-last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
+# The newest release by version. Releases are tagged on main's promotion merge commits, which dev never reaches,
+# so `git describe` from dev would fall back to an older tag and repeat the last release's commits.
+last=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1)
 range=${last:+$last..}HEAD
 types='feat|fix|perf|refactor|test|docs|build|ci|chore'
 log=$(git log --no-merges --format='%h%x09%s%x09%b%x1e' "$range")

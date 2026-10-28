@@ -3,6 +3,8 @@ package com.qkt.venuegateway.deribit
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.client.DeribitJson
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.market.DeribitOpenInterest
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Path

@@ -2,6 +2,7 @@ package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.deribit.client.DeribitJson
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
 import java.math.BigDecimal
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject

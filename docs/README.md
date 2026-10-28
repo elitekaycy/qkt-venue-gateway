@@ -8,7 +8,7 @@ in the order the site shows them.
 | Get started | [Quickstart](get-started/quickstart.md) · [Run a gateway](get-started/run-a-gateway.md) · [Going live](get-started/going-live.md) |
 | Concepts | [How it works](concepts/how-it-works.md) · [What it guarantees](concepts/guarantees.md) · [Design](design.md) |
 | Connect | [Connect qkt](connect/qkt.md) · [Kill switch and guardrails](connect/guardrails.md) |
-| Adapters | [Overview](adapters/overview.md) · [Paper](adapters/paper.md) · [Deribit](adapters/deribit.md) · [Bybit](adapters/bybit.md) · [Adapter rules](adapters.md) · [Writing an adapter](writing-an-adapter.md) |
+| Adapters | [Overview and every venue](adapters/overview.md) · [Adapter rules](adapters.md) · [Writing an adapter](writing-an-adapter.md) |
 | Reference | [Configuration](reference/configuration.md) · [API at a glance](reference/api.md) · [Wire protocol](vgp-v1-wire.md) · [Ports and security](reference/ports-and-security.md) |
 | Operations | [State, backups and upgrades](operations/state-backups-upgrades.md) · [Health and logs](operations/health-and-logs.md) · [Troubleshooting](operations/troubleshooting.md) |
 | Project | [Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) · [Security policy](../SECURITY.md) |

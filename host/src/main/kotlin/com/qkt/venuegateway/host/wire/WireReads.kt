@@ -3,6 +3,7 @@ package com.qkt.venuegateway.host.wire
 import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.Positions
+import com.qkt.venuegateway.adapter.Tradability
 import com.qkt.venuegateway.adapter.VenueBar
 import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenuePrint
@@ -43,6 +44,9 @@ object WireReads {
             strike = i.strike?.toPlainString(),
             right = i.right,
             underlying = i.underlying,
+            category = i.category,
+            // Absent when fully tradable, so every instrument a venue listed before reads byte for byte the same.
+            trading = i.trading.takeIf { it != Tradability.FULL }?.wire(),
         )
 
     fun positions(p: Positions): WirePositions =

@@ -32,16 +32,15 @@ plugins { alias(libs.plugins.kotlin.serialization) }
 
 dependencies {
     "api"(project(":adapter-api"))
-    "implementation"(libs.okhttp)
-    "implementation"(libs.kotlinx.serialization.json)
+    "implementation"(project(":venue-support"))
     "implementation"(libs.slf4j.api)
     "testImplementation"(project(":adapter-testkit"))
     "testImplementation"(libs.okhttp.mockwebserver)
 }
 ```
 
-Add `"adapter-acme"` to `settings.gradle.kts`, and `"implementation"(project(":adapter-acme"))` to
-`app/build.gradle.kts` so the gateway ships it.
+That is all the wiring: `settings.gradle.kts` includes every `adapter-<venue>/` directory with a
+`build.gradle.kts`, and the gateway app bundles each one it finds. No shared build file names the venue.
 
 ## 2. Probe and record (checkpoint 1)
 
@@ -164,7 +163,9 @@ class AcmeContractTest : AdapterContractTest() {
 }
 ```
 
-Declare `capabilities` honestly. The suite checks each declared one in shape (funding records unique,
+Declare `capabilities` honestly. With `BARS`, declare the venue's kline lengths (`klineResolutions`, a minute among
+them) and answer `klines` as the venue sends them; the host builds and closes every bar window from them. The suite
+checks each declared one in shape (`activeCode`'s klines in range, ascending, on their boundaries and consistent; funding records unique,
 in their window and never zero; funding rates ascending at positive prices; settlements in their window;
 `activeCode`'s marks over its last 30 bar windows, at most one a window, positive; its open interest
 ascending, never negative, and holding at least the present figure; its depth ascending, holding the
@@ -186,15 +187,12 @@ ACME_CLIENT_ID=… ACME_CLIENT_SECRET=… ./gradlew :adapter-acme:test --tests '
 - `adapter-acme/README.md`, shaped like the Deribit one: setup, connect qkt, settings (variable,
   default, meaning), venue behaviour and the contract suite.
 - `adapter-acme/CLAUDE.md`: exactly `@README.md` and `@../docs/adapters.md`.
-- Root `README.md`: a row in the Adapters table, linking to `adapter-acme/README.md`.
-- `.github/workflows/adapter.yml`, in the test step's `env`:
-
-  ```yaml
-  ACME_CLIENT_ID: ${{ matrix.venue == 'acme' && secrets.ACME_CLIENT_ID || '' }}
-  ACME_CLIENT_SECRET: ${{ matrix.venue == 'acme' && secrets.ACME_CLIENT_SECRET || '' }}
-  ```
-
-  and ask a maintainer to add the two repository secrets (a testnet key, trade scope only).
+- Under the README's title, one line the root README's Adapters table is generated from:
+  `> Venue: Acme testnet and mainnet · Status: New`. Run `scripts/adapter-index.sh`: it writes the root
+  README and docs home tables, the docs page and its navigation entry (CI fails, naming that command, when
+  they are stale).
+- Ask a maintainer to add the repository secrets `ACME_CLIENT_ID` and `ACME_CLIENT_SECRET` (a testnet key,
+  trade scope only). The adapter workflow looks them up by the venue's name; nothing in it changes.
 
 Then check locally what CI will:
 

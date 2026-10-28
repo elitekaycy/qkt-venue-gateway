@@ -14,15 +14,14 @@ import com.qkt.venuegateway.adapter.VenueMark
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.adapter.VenueRefusedException
-import com.qkt.venuegateway.deribit.DeribitBars
-import com.qkt.venuegateway.deribit.DeribitListing
-import com.qkt.venuegateway.deribit.DeribitMarketMapping
-import com.qkt.venuegateway.deribit.DeribitMarks
-import com.qkt.venuegateway.deribit.DeribitTape
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
-import java.util.concurrent.Executors
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.market.DeribitMarks
+import com.qkt.venuegateway.deribit.market.DeribitTape
+import com.qkt.venuegateway.support.Strand
 
 /**
  * A venue-free account trading against Deribit's live public prices: listings from [market], tickers
@@ -45,25 +44,27 @@ class PaperAdapter(
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
     override val capabilities = Capability.entries.toSet()
-    private val currency = context.settings["currency"] ?: "USDC"
+    private val currency = context.text("currency", "USDC")
     private val listing = DeribitListing(market, currency, context.clock)
-    private val book = paperBook(context.settings, currency)
+    private val book = paperBook(context, currency)
     private val store = PaperStore(context.stateDir).also { it.load(book) }
-    private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
+    private val events = Strand(context.scheduler, "paper-events")
     private val funding = PaperFunding(market, listing, currency, context.clock)
-    private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
+    private val checkMs = context.long("settlement_check_ms", CHECK_MS)
     private val recordings = PaperRecordings(market, context)
     private val upkeep =
         PaperUpkeep(
             book,
             store,
-            PaperSettlement(market, listing, context.clock, checkMs),
+            PaperSettlement(market, listing, context.clock, checkMs, context.scheduler),
             funding,
             recordings::prune,
             events::execute,
         ) { listener }
-    private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
-    private var listener: AdapterListener? = null
+    private val feed = PaperFeed(scheduler = context.scheduler) { synchronized(book) { book.quoted() } }
+
+    // Set by connect on the host's thread, read on the event and feed threads.
+    @Volatile private var listener: AdapterListener? = null
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -71,7 +72,7 @@ class PaperAdapter(
         upkeep.start()
     }
 
-    override fun identity() = VenueIdentity(context.settings["login"] ?: "paper", TradeMode.DEMO, currency)
+    override fun identity() = VenueIdentity(context.text("login", "paper"), TradeMode.DEMO, currency)
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 
@@ -91,13 +92,14 @@ class PaperAdapter(
 
     override fun cancel(clientOrderId: String) =
         synchronized(book) {
-            book.cancel(clientOrderId, context.clock()).also { store.save(book) }
+            book.cancel(clientOrderId, context.clock())
+            store.save(book)
         }
 
     override fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder = throw VenueRefusedException("the paper venue does not modify orders; cancel and place again")
+    ): Boolean = throw VenueRefusedException("the paper venue does not modify orders; cancel and place again")
 
     override fun orderByLabel(clientOrderId: String) = synchronized(book) { book.state.orders[clientOrderId] }
 
@@ -154,22 +156,21 @@ class PaperAdapter(
         toMs: Long,
     ) = recordings.depth.read(code, fromMs, toMs)
 
-    override fun bars(
+    override val klineResolutions = DeribitMarketMapping.klineResolutions
+
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> = venue { DeribitBars.closed(market, code, windowMs, fromMs, toMs, context.clock()) }
+    ): List<VenueBar> = venue { DeribitMarketMapping.klines(market, code, resolutionMs, fromMs, toMs) }
 
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = venue { feed.want(codes, roots) }
+    override fun subscribeQuotes(codes: Set<String>) = venue { feed.want(codes) }
 
     override fun close() {
         upkeep.close()
         feed.close()
-        events.shutdown()
+        events.close(drain = true)
     }
 
     private fun onTicker(ticker: DeribitTicker) {

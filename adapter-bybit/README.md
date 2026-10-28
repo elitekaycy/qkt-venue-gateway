@@ -1,5 +1,7 @@
 # Bybit adapter
 
+> Venue: Bybit testnet and mainnet: USDT/USDC linear contracts, or spot · Status: New
+
 Trades one category of one Bybit unified account: `linear` (USDT- or USDC-settled perpetuals and dated
 futures, sizes in the base coin) or `spot` (pairs quoted in USDT or USDC). One gateway is one account and one
 category; run two gateways for both. Inverse contracts and options are not supported.
@@ -52,8 +54,7 @@ qkt writes `-` in venue codes as `_`.
 | `GATEWAY_SETTING_CATEGORY` | required | `linear` or `spot`. Never defaulted |
 | `GATEWAY_SETTING_CURRENCY` | `USDT` | The coin a linear contract settles in, or a spot pair is quoted in: `USDT` or `USDC` |
 | `GATEWAY_SETTING_STOP_TRIGGER` | `last_price` | Price a linear stop fires on: `last_price`, `mark_price` or `index_price` (spot: `last_price` only) |
-| `GATEWAY_SETTING_TRADES_RETENTION_DAYS` | `0` | UTC days of the recorded tape and liquidations kept besides today; `0` keeps everything |
-| `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` | `0` | The same for recorded depth |
+| `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | The host's one retention: UTC days of the recorded tape, liquidations and depth kept besides today; `0` keeps everything (the retired `GATEWAY_SETTING_TRADES_RETENTION_DAYS` and `_DEPTH_` are refused, naming it) |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key and its secret |
 
 ## Capabilities
@@ -124,9 +125,10 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   only what changed, so they are merged) and `orderbook.1.<s>` (whole every push; a spot ticker carries no bid
   or ask). The public socket is reported as the quote feed. Bybit drops a socket silent for a while; the
   adapter pings every 20 s and reconnects one silent for 60 s.
-- **Bars** are Bybit's klines (1, 3, 5, 15, 30, 60, 120, 240, 360, 720 minutes and a day, UTC-aligned); other
-  whole-minute windows are built from the longest of those dividing them. The kline holding now is still
-  forming and is never served. Klines are read 1000 a call.
+- **Bars** are built by the host from Bybit's klines (1, 3, 5, 15, 30, 60, 120, 240, 360, 720 minutes and a
+  day, UTC-aligned): a window Bybit serves is its klines, another whole-minute window is built from the longest
+  of those dividing it, and the kline holding now is still forming and is never served. Klines are read 1000 a
+  call.
 - **Marks** are the closes of Bybit's mark-price and index-price klines, one per window, stamped at the
   window's last millisecond (never earlier than Bybit could have reported them).
 - **Funding rates** from `/v5/market/funding/history` (every 8 h on BTCUSDT): the rate, no price.

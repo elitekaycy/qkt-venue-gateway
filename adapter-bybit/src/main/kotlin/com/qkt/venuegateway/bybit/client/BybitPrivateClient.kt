@@ -2,6 +2,8 @@ package com.qkt.venuegateway.bybit.client
 
 import com.qkt.venuegateway.bybit.client.BybitJson.cursor
 import com.qkt.venuegateway.bybit.client.BybitJson.items
+import com.qkt.venuegateway.support.JsonReads
+import com.qkt.venuegateway.support.Paging
 import java.math.BigDecimal
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -19,7 +21,7 @@ class BybitPrivateClient(
     /** Sends [order]; Bybit answers only its ids, so the order as it then stands is read back by [orderByLink]. */
     fun place(order: BybitNewOrder): String =
         rest.post("/v5/order/create", BybitPrivateJson.create(order)).result.let {
-            BybitJson.run { it.need("orderId") }
+            JsonReads.run { it.need("orderId") }
         }
 
     /** Cancels [symbol]'s order [orderLinkId]; a [BybitException] when Bybit holds no open order of it. */
@@ -122,9 +124,9 @@ class BybitPrivateClient(
         val result = rest.get("/v5/account/wallet-balance", listOf("accountType" to "UNIFIED"), signed = true).result
         val account = result.items().firstOrNull() ?: error("bybit answered no unified wallet")
         return account.items("coin").associate {
-            BybitJson.run {
+            JsonReads.run {
                 it.need("coin") to
-                    (it.dec("walletBalance") ?: BigDecimal.ZERO)
+                    (it.decimal("walletBalance") ?: BigDecimal.ZERO)
             }
         }
     }
@@ -144,21 +146,12 @@ class BybitPrivateClient(
         params: List<Pair<String, String>>,
     ): List<kotlinx.serialization.json.JsonObject> {
         val scope = listOf("category" to category) + listOfNotNull(settleCoin?.let { "settleCoin" to it })
-        val all = mutableListOf<kotlinx.serialization.json.JsonObject>()
-        var cursor: String? = null
-        do {
-            val result =
-                rest
-                    .get(
-                        path,
-                        scope + params + listOfNotNull(cursor?.let { "cursor" to it }),
-                        signed = true,
-                    ).result
-            val items = result.items()
-            all += items
-            cursor = result.cursor()?.takeIf { items.isNotEmpty() }
-        } while (cursor != null && all.size < MAX_ITEMS)
-        return all
+        val page = { cursor: String? ->
+            val query = scope + params + listOfNotNull(cursor?.let { "cursor" to it })
+            val result = rest.get(path, query, signed = true).result
+            result.items() to result.cursor()
+        }
+        return Paging.continuation(page, maxItems = MAX_ITEMS)
     }
 
     private companion object {

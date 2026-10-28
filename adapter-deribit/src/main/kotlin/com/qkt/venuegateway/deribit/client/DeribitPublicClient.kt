@@ -1,11 +1,12 @@
 package com.qkt.venuegateway.deribit.client
 
 import com.qkt.venuegateway.deribit.client.DeribitJson.obj
+import com.qkt.venuegateway.support.JsonHttp
+import com.qkt.venuegateway.support.Paging
 import java.io.IOException
 import java.math.BigDecimal
-import java.time.Duration
+import java.net.URLEncoder
 import java.time.LocalDate
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -13,9 +14,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * Deribit's public JSON-RPC over HTTPS at [baseUrl] (`https://www.deribit.com`, or
@@ -26,9 +25,9 @@ import okhttp3.Request
 class DeribitPublicClient(
     private val baseUrl: String = "https://www.deribit.com",
     timeoutMs: Long = 10_000,
+    client: OkHttpClient = OkHttpClient(),
 ) : DeribitMarketData {
-    private val http = OkHttpClient.Builder().callTimeout(Duration.ofMillis(timeoutMs)).build()
-    private val json = Json { ignoreUnknownKeys = true }
+    private val http = JsonHttp(baseUrl, timeoutMs, client)
 
     /** The live instruments of [currency] (`USDC`) of [kind] (`future`, `option`). */
     override fun instruments(
@@ -62,23 +61,17 @@ class DeribitPublicClient(
         toMs: Long,
     ): List<DeribitKline> {
         val resolution = klineResolution(minutes)
-        val span = minutes * MINUTE_MS * KLINES_PER_CALL
-        val byStart = sortedMapOf<Long, DeribitKline>()
-        var start = fromMs
-        while (start <= toMs) {
-            val end = minOf(toMs, start + span - 1)
+        return Paging.spans(fromMs, toMs + 1, minutes * MINUTE_MS * KLINES_PER_CALL, { start, end ->
             val answer =
                 call(
                     "get_tradingview_chart_data",
                     "instrument_name" to name,
                     "resolution" to resolution,
                     "start_timestamp" to start.toString(),
-                    "end_timestamp" to end.toString(),
+                    "end_timestamp" to (end - 1).toString(),
                 )
-            DeribitJson.klines(answer.obj()).forEach { byStart.putIfAbsent(it.startMs, it) }
-            start = end + 1
-        }
-        return byStart.values.toList()
+            DeribitJson.klines(answer.obj())
+        }, DeribitKline::startMs, DeribitKline::startMs)
     }
 
     /**
@@ -89,24 +82,17 @@ class DeribitPublicClient(
         name: String,
         fromMs: Long,
         toMs: Long,
-    ): List<DeribitFundingRate> {
-        val byTime = sortedMapOf<Long, DeribitFundingRate>()
-        var start = fromMs
-        while (start <= toMs) {
-            val end = minOf(toMs, start + FUNDING_HOURS_PER_CALL * HOUR_MS - 1)
+    ): List<DeribitFundingRate> =
+        Paging.spans(fromMs, toMs + 1, FUNDING_HOURS_PER_CALL * HOUR_MS, { start, end ->
             call(
                 "get_funding_rate_history",
                 "instrument_name" to name,
                 "start_timestamp" to start.toString(),
-                "end_timestamp" to end.toString(),
+                "end_timestamp" to (end - 1).toString(),
             ).jsonArray
                 .map { DeribitJson.fundingRate(it.jsonObject) }
-                .filter { it.timestampMs in start..end }
-                .forEach { byTime.putIfAbsent(it.timestampMs, it) }
-            start = end + 1
-        }
-        return byTime.values.toList()
-    }
+                .filter { it.timestampMs in start until end }
+        }, DeribitFundingRate::timestampMs, DeribitFundingRate::timestampMs)
 
     override fun edgeTrade(
         name: String,
@@ -178,16 +164,10 @@ class DeribitPublicClient(
         method: String,
         vararg params: Pair<String, String>,
     ): JsonElement {
-        val url =
-            "$baseUrl/api/v2/public/$method"
-                .toHttpUrl()
-                .newBuilder()
-                .apply { params.forEach { (k, v) -> addQueryParameter(k, v) } }
-                .build()
-        val text = http.newCall(Request.Builder().url(url).build()).execute().use { it.body?.string().orEmpty() }
+        val query = params.map { (k, v) -> k to URLEncoder.encode(v, Charsets.UTF_8) }
         val envelope =
-            json.parseToJsonElement(text) as? JsonObject
-                ?: throw IOException("deribit $method: not JSON: ${text.take(200)}")
+            http.get("/api/v2/public/$method", query).json() as? JsonObject
+                ?: throw IOException("deribit $method: not a JSON-RPC envelope")
         envelope["error"]?.jsonObject?.let { e ->
             throw DeribitException(
                 e["code"]?.jsonPrimitive?.int ?: 0,

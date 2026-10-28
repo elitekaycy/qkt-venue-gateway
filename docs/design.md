@@ -38,12 +38,12 @@ consumer of VGP, and a gateway can be replaced, written in another language, or 
 | Module | Owns | Never touches |
 |---|---|---|
 | `vgp-wire` | the qkt-facing DTOs (decimal strings, error envelope) | venues |
-| `adapter-api` | `VenueAdapter` and the neutral types adapters hand the host | HTTP to qkt, the journal |
+| `adapter-api` | `VenueAdapter`, the neutral types adapters hand the host, and the recordings of what venues keep no history of (depth, open interest, the tape; one retention, the host's) | HTTP to qkt, the journal |
 | `host` | the VGP server: auth, journal, orders, stream, reconciler, kill switch, quotes, bars | any venue API |
 | `adapter-testkit` | `AdapterContractTest`: the behaviour every adapter must pass | the host |
 | `adapter-deribit` | Deribit, whole: its JSON-RPC in the `client` package (socket, auth, public and private calls, subscriptions), the mapping onto `adapter-api`, the adapter | VGP, the host |
 | `adapter-bybit` | Bybit, whole, in the same shape: its client, the mapping onto `adapter-api`, the adapter | VGP, the host |
-| `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client`) | VGP, the host |
+| `adapter-paper` | venue-free matching on Deribit's public prices (from `adapter-deribit`'s `client` and `market`) | VGP, the host |
 | `app` | config, choosing the adapter, starting the host | — |
 
 An adapter speaks only its venue's transport; everything qkt sees (HTTP, WebSocket, JSON) is the host's.
@@ -82,8 +82,8 @@ interface VenueAdapter : AutoCloseable {
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>
     fun place(order: NewOrder): VenueOrder             // order carries its client_order_id as the venue label
-    fun cancel(clientOrderId: String): VenueOrder?
-    fun modify(clientOrderId: String, change: OrderChange): VenueOrder?
+    fun cancel(clientOrderId: String)                  // the host reads the order back by label after it
+    fun modify(clientOrderId: String, change: OrderChange): Boolean   // false: no such order; the host reads it back
     fun orderByLabel(clientOrderId: String): VenueOrder?   // venue lookup by our id; null = venue never saw it
     fun fills(fromMs: Long, toMs: Long): List<VenueFill>   // executions with venue fill ids and costs
     fun settlements(fromMs: Long, toMs: Long): List<VenueSettlement>
@@ -94,8 +94,9 @@ interface VenueAdapter : AutoCloseable {
     fun trades(code: String, fromMs: Long, toMs: Long, limit: Int): List<VenuePrint>  // only with TRADES
     fun liquidations(code: String, fromMs: Long, toMs: Long): List<VenuePrint>  // only with LIQUIDATIONS
     fun depth(code: String, fromMs: Long, toMs: Long): List<VenueDepth>  // only with DEPTH
-    fun bars(code: String, windowMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // closed bars (venue klines)
-    fun subscribeQuotes(codes: Set<String>, roots: Set<String>)  // pushes arrive on the listener
+    val klineResolutions: Set<Long>                    // the kline lengths the venue serves (ms), a minute among them
+    fun klines(code: String, resolutionMs: Long, fromMs: Long, toMs: Long): List<VenueBar>  // raw klines; the host builds closed bars
+    fun subscribeQuotes(codes: Set<String>)            // the host has expanded roots to options; pushes on the listener
 }
 
 interface AdapterListener {
@@ -124,6 +125,11 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   one reading an option's implied volatility or Greeks only on one declaring `OPTION_MARKS`, one reading
   a contract's traded or liquidated volume only on one declaring `TRADES` or `LIQUIDATIONS`, and one
   reading a contract's book depth only on one declaring `DEPTH`.
+- **Bars are built by the host.** An adapter declares the kline lengths its venue serves
+  (`klineResolutions`, a minute among them) and answers `klines` as the venue reports them, the newest
+  perhaps still forming. The host builds every window once for all venues: from the largest native length
+  dividing it (first open, highest high, lowest low, last close, summed volume), closed windows only, and asks
+  the adapter for those windows' klines alone.
 - **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
   triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
   turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order

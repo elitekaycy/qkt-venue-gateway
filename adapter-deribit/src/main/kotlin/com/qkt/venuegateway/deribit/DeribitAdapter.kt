@@ -26,6 +26,12 @@ import com.qkt.venuegateway.deribit.client.DeribitTicker
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import com.qkt.venuegateway.deribit.client.DeribitTrade
 import com.qkt.venuegateway.deribit.client.DeribitTrading
+import com.qkt.venuegateway.deribit.market.DeribitDepth
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
+import com.qkt.venuegateway.deribit.market.DeribitMarks
+import com.qkt.venuegateway.deribit.market.DeribitOpenInterest
+import com.qkt.venuegateway.deribit.market.DeribitTape
 
 /**
  * One Deribit account (settings: [DeribitSettings]; credentials: the API key's client id as login and
@@ -33,7 +39,7 @@ import com.qkt.venuegateway.deribit.client.DeribitTrading
  * stop that fires (a new Deribit order) is still found. The account's link ([trading]) is the venue
  * connection the host watches; the public ticker link ([tickers]) only feeds quotes, so its drops are
  * reported as the quote feed going down, not the venue. An order on a code the account's listing does not
- * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). Root subscriptions re-expand every [refreshMs].
+ * hold (another currency's contract, a spot pair) is refused before it reaches Deribit ([DeribitOrderDesk]). The listing is read again every [refreshMs].
  * Deribit holds one net position per instrument. Deribit refuses IOC and FOK on market and stop orders
  * (only limit types take them); that refusal is passed back as it is, never remapped to another time
  * in force; a remainder Deribit leaves working is cancelled instead ([DeribitOrderDesk]). Marks, the tape and liquidations come from the trade history on [history] ([DeribitMarks],
@@ -59,7 +65,7 @@ class DeribitAdapter(
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
             .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH))
-    private val settings = DeribitSettings.of(context.settings)
+    private val settings = DeribitSettings.of(context)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
     private val listing = DeribitListing(market, currency, context.clock, refreshMs)
@@ -74,21 +80,16 @@ class DeribitAdapter(
     private val orders: DeribitOrderDesk = DeribitOrderDesk(account, currency, listing, settings.stopTrigger)
     private val feed =
         DeribitQuoteFeed(
-            listing,
             tickers({
                 listener?.quote(DeribitMarketMapping.quote(it))
             }) { up, reason -> listener?.quoteFeed(up, reason) },
             ::prune,
+            context.scheduler,
         )
-    private val retention = settings.retention
+    private val retentionDays = context.recordingRetentionDays
     private val openInterest =
-        DeribitOpenInterest(
-            { venue { market.ticker(it) } },
-            context.stateDir,
-            context.clock,
-            retention.openInterestDays,
-        )
-    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retention.depthDays)
+        DeribitOpenInterest({ venue { market.ticker(it) } }, context.stateDir, context.clock, retentionDays)
+    private val depth = DeribitDepth(market::orderBook, context.stateDir, context.clock, retentionDays)
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -171,17 +172,16 @@ class DeribitAdapter(
         toMs: Long,
     ): List<VenueDepth> = depth.read(code, fromMs, toMs)
 
-    override fun bars(
+    override val klineResolutions = DeribitMarketMapping.klineResolutions
+
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ): List<VenueBar> = venue { DeribitBars.closed(market, code, windowMs, fromMs, toMs, context.clock()) }
+    ): List<VenueBar> = venue { DeribitMarketMapping.klines(market, code, resolutionMs, fromMs, toMs) }
 
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = venue { feed.want(codes, roots) }
+    override fun subscribeQuotes(codes: Set<String>) = venue { feed.want(codes) }
 
     /** Prunes the recordings past their retention, at most once a UTC day. */
     private fun prune() {

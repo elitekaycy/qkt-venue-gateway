@@ -11,7 +11,9 @@ data class VenueIdentity(
 
 /**
  * One instrument the venue lists, by its venue [code]. [expiryMs] only for dated contracts; [strike],
- * [right] (`call`/`put`) and [underlying] only for options.
+ * [right] (`call`/`put`) and [underlying] only for options. [category] is the venue's own grouping of the
+ * instrument, when it has one (`us_equity`, `Stocks`): qkt picks session calendars by it. [trading] is what the
+ * account may do with it.
  */
 data class Instrument(
     val code: String,
@@ -25,6 +27,8 @@ data class Instrument(
     val strike: BigDecimal? = null,
     val right: String? = null,
     val underlying: String? = null,
+    val category: String? = null,
+    val trading: Tradability = Tradability.FULL,
 )
 
 /** The account's money in [currency]: what it holds, what it is worth, and its margin. */

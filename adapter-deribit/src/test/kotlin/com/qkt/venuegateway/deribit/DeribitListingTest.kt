@@ -6,6 +6,8 @@ import com.qkt.venuegateway.deribit.client.DeribitJson
 import com.qkt.venuegateway.deribit.client.DeribitKline
 import com.qkt.venuegateway.deribit.client.DeribitMarketData
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitListing
+import com.qkt.venuegateway.deribit.market.DeribitMarketMapping
 import java.math.BigDecimal
 import java.time.LocalDate
 import kotlinx.serialization.json.Json
@@ -107,7 +109,8 @@ class DeribitListingTest {
         assertThat(
             listing.all().map { it.name },
         ).doesNotContain("AVAX_USDC-6OCT26-12-C").contains("AVAX_USDC-2OCT26-5-C")
-        assertThat(listing.optionsOf("AVAX_USDC")).containsExactly("AVAX_USDC-2OCT26-5-C")
+        val offered = listing.all().filter { it.kind == "option" && DeribitMarketMapping.root(it.name) == "AVAX_USDC" }
+        assertThat(offered.map { it.name }).containsExactly("AVAX_USDC-2OCT26-5-C")
         assertThat(listing.find("AVAX_USDC-6OCT26-12-C")).isEqualTo(inactive)
     }
 }

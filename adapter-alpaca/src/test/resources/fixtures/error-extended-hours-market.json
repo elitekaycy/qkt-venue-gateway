@@ -1,0 +1,4 @@
+{
+ "code": 42210000,
+ "message": "extended hours order must be DAY or GTC limit orders"
+}

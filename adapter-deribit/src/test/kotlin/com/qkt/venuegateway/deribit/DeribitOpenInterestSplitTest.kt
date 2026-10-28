@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.deribit
 
 import com.qkt.venuegateway.deribit.client.DeribitTicker
+import com.qkt.venuegateway.deribit.market.DeribitOpenInterest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate

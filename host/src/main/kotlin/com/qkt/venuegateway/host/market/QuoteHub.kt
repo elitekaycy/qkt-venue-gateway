@@ -6,18 +6,21 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory
 
 /**
- * Every client's quote subscription on one account (wire spec §4a): their codes and roots merged into
- * one adapter subscription, each venue quote delivered to the clients that want it (a root's options by
- * the listing's `underlying`, refreshed at most every [listingRecheckMs] when an unknown code arrives),
- * and every quote a client holds sent again with its time advanced every [refreshMs] while the venue
+ * Every client's quote subscription on one account (wire spec §4a): their codes, and every listed option of their
+ * roots (by the listing's `underlying`), merged into one adapter subscription of codes; each venue quote delivered
+ * to the clients that want it. The listing is read again at most every [listingRecheckMs] when an unknown code
+ * arrives, and every [rootRefreshMs] while a root is wanted, so options the venue lists later (new expiries) are
+ * subscribed too. Every quote a client holds is sent again with its time advanced every [refreshMs] while the venue
  * link is up, so a quiet book stays fresh and a dead link goes stale.
  */
 class QuoteHub(
     private val gateway: Gateway,
     private val refreshMs: Long = 5_000,
     private val listingRecheckMs: Long = 60_000,
+    private val rootRefreshMs: Long = 600_000,
 ) : AutoCloseable {
     /** One client's subscription; [send] must not block. */
     class Subscriber internal constructor(
@@ -26,6 +29,7 @@ class QuoteHub(
         internal val send: (VenueQuote) -> Unit,
     )
 
+    private val log = LoggerFactory.getLogger(QuoteHub::class.java)
     private val subscribers = CopyOnWriteArrayList<Subscriber>()
     private val latest = ConcurrentHashMap<String, VenueQuote>()
 
@@ -33,7 +37,7 @@ class QuoteHub(
 
     @Volatile private var listedAt: Long? = null
 
-    @Volatile private var subscribed: Pair<Set<String>, Set<String>> = emptySet<String>() to emptySet()
+    @Volatile private var subscribed: Set<String>? = null
     private val timer =
         Executors.newSingleThreadScheduledExecutor { r ->
             Thread(r, "gateway-quotes").apply {
@@ -46,6 +50,7 @@ class QuoteHub(
     fun start() {
         gateway.onQuote = ::onQuote
         timer.scheduleWithFixedDelay(::refresh, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
+        timer.scheduleWithFixedDelay(::expandRoots, rootRefreshMs, rootRefreshMs, TimeUnit.MILLISECONDS)
     }
 
     /** Subscribes [codes] and [roots] for [send]; closing the result ends the subscription. */
@@ -91,17 +96,28 @@ class QuoteHub(
 
     @Synchronized
     private fun resubscribe() {
-        val wanted = subscribers.flatMap { it.codes }.toSet() to subscribers.flatMap { it.roots }.toSet()
+        val roots = subscribers.flatMap { it.roots }.toSet()
+        val options = underlyingOf.filterValues { it in roots }.keys
+        val wanted = subscribers.flatMap { it.codes }.toSet() + options
         if (wanted == subscribed) return
         subscribed = wanted
-        gateway.adapter.subscribeQuotes(wanted.first, wanted.second)
+        gateway.adapter.subscribeQuotes(wanted)
+    }
+
+    /** Reads the listing again and subscribes the options it now lists of every wanted root; a failure waits for the next. */
+    private fun expandRoots() {
+        if (subscribers.none { it.roots.isNotEmpty() }) return
+        runCatching {
+            relist(force = true)
+            resubscribe()
+        }.onFailure { log.warn("quote roots not expanded: {}", it.message) }
     }
 
     @Synchronized
-    private fun relist() {
+    private fun relist(force: Boolean = false) {
         val now = gateway.clock()
         val last = listedAt
-        if (last != null && now - last < listingRecheckMs) return
+        if (!force && last != null && now - last < listingRecheckMs) return
         listedAt = now
         underlyingOf =
             gateway.adapter

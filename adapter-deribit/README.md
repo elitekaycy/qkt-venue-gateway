@@ -1,5 +1,7 @@
 # Deribit adapter
 
+> Venue: Deribit testnet and mainnet: USDC-linear perpetuals, futures and options · Status: Stable
+
 Trades one Deribit account: perpetuals, futures and options on USDC-linear contracts (sizes in
 coins). Coin-margined contracts are not supported. It passes the adapter contract suite on testnet.
 
@@ -66,8 +68,7 @@ qkt writes `-` in venue codes as `_`.
 | `GATEWAY_SETTING_ENVIRONMENT` | required | `testnet`, or `mainnet` for real money. Never defaulted |
 | `GATEWAY_SETTING_CURRENCY` | `USDC` | The only supported currency |
 | `GATEWAY_SETTING_STOP_TRIGGER` | `last_price` | Price a stop fires on: `last_price`, `mark_price` or `index_price` |
-| `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` | `0` | UTC days of recorded depth kept besides today (see Depth); `0` keeps everything |
-| `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` | `0` | The same for recorded open interest (see Open interest) |
+| `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | The host's one retention: UTC days of recorded depth and open interest kept besides today (see Retention); `0` keeps everything |
 | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | required | The API key's client id and secret |
 
 ## Venue behaviour
@@ -90,7 +91,8 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   the remainder filled first (wire spec: a market order never rests). A pushed remainder is not reported;
   its cancel goes out without waiting and Deribit's next push carries the result, and a lost cancel is
   retried by the next read (the host reconciles every minute).
-- **Klines.** Responses are silently cut at 5001 rows, so bars are fetched in chunks.
+- **Klines.** Responses are silently cut at 5001 rows, so klines are fetched in chunks. The host builds bars
+  from them (1, 3, 5, 10, 15, 30, 60, 120, 180, 360 and 720 minutes and a day).
 - **Settlements.** Expiries are read from `private/get_settlement_history_by_currency`: a `delivery` row
   when a future expires, an `exercise` row when an option does (out of the money too), both at 08:00 UTC
   and carrying the delivery price as `index_price` (the same figure `public/get_delivery_prices` publishes
@@ -175,12 +177,14 @@ Measured on testnet; recorded responses are in `src/test/resources/fixtures`.
   every 10 seconds, and would need its own staleness guard for a dropped socket.
 - **Retention of the recordings.** Depth and open interest are recorded only by this gateway, so what it
   deletes is lost for good unless `qkt fetch --depth` / `qkt fetch --open-interest` copied it first. By
-  default (`0`) nothing is deleted. With `GATEWAY_SETTING_DEPTH_RETENTION_DAYS` or
-  `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS` set to N, the gateway keeps today's file and the N days
+  default (`0`) nothing is deleted. With the host's one retention, `GATEWAY_RECORDING_RETENTION_DAYS`, set to N,
+  the gateway keeps today's file and the N days
   before it, and deletes every older day file, of every contract, when it connects and then once a UTC day
   (on the 10-minute refresh timer; each deletion is logged). A read of a range that reaches before the
   window answers what remains. Fetch into qkt more often than every N days. A value that is not a whole
-  number of days fails the start, naming the setting.
+  number of days fails the start, naming the variable, as does a retired `GATEWAY_SETTING_DEPTH_RETENTION_DAYS`
+  or `GATEWAY_SETTING_OPEN_INTEREST_RETENTION_DAYS`. Each day file starts with its header line (`time,bids,asks`,
+  `time,open_interest`), as Deribit's always have; the Bybit adapter's files have none, as theirs never had.
 
 - **Tape and liquidations.** `/v1/trades` and `/v1/liquidations` read the same
   `get_last_trades_by_instrument_and_time` pages as marks, on the same hosts (mainnet's history host; testnet's

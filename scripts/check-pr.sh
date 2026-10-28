@@ -14,6 +14,9 @@ subject_ok() { [[ ${#1} -le 72 && $1 =~ $subject_re ]]; }
 
 case $branch in
   dependabot/*) exit 0 ;;
+  # A promotion of dev to main: every commit on dev came from a pull request that passed these rules, with
+  # GitHub's " (#NN)" added to its subject, which can carry a 72-character title past the limit.
+  dev) exit 0 ;;
   adapter/*) [[ $branch =~ ^adapter/[a-z][a-z0-9]*$ ]] || err "adapter branch must be adapter/<venue>: $branch" ;;
   claude/*) [[ $branch =~ ^claude/[A-Za-z0-9._-]+$ ]] || err "bad session branch name: $branch" ;;
   *) [[ $branch =~ ^($types)/[a-z0-9][a-z0-9._-]*$ ]] || err "branch must be <type>/<topic> or adapter/<venue>: $branch" ;;
@@ -37,7 +40,8 @@ done
 
 if [[ $branch =~ ^adapter/([a-z0-9]+)$ ]]; then
   venue=${BASH_REMATCH[1]}
-  allowed="^(adapter-$venue/|settings\.gradle\.kts$|app/build\.gradle\.kts$|README\.md$|docs/adapters\.md$|\.github/workflows/adapter\.yml$)"
+  # The adapter's directory, and the adapter lists generated from it (scripts/adapter-index.sh).
+  allowed="^(adapter-$venue/|README\.md$|docs/index\.md$|mkdocs\.yml$|docs/adapters/($venue|overview)\.md$)"
   while IFS= read -r f; do
     [[ -z $f || $f =~ $allowed ]] || err "$f is outside an adapter branch's scope (docs/adapters.md, 'The branch')"
   done <<<"$changed"

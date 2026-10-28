@@ -40,14 +40,20 @@ interface VenueAdapter : AutoCloseable {
 
     fun place(order: NewOrder): VenueOrder
 
-    /** Cancels the order labelled [clientOrderId]; null when the venue has no such order. */
-    fun cancel(clientOrderId: String): VenueOrder?
+    /**
+     * Cancels the order labelled [clientOrderId] if the venue still works it; a label the venue does not hold, or an
+     * order that already ended, is no error. The host then reads the order as it stands ([orderByLabel]).
+     */
+    fun cancel(clientOrderId: String)
 
-    /** Changes the order labelled [clientOrderId]; null when the venue has no such order. */
+    /**
+     * Changes the order labelled [clientOrderId]; false when the venue has no such order. The host then reads the
+     * order as it stands ([orderByLabel]).
+     */
     fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder?
+    ): Boolean
 
     /** The order labelled [clientOrderId], or null when the venue never saw it. */
     fun orderByLabel(clientOrderId: String): VenueOrder?
@@ -121,19 +127,29 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueDepth> = throw VenueUnsupportedException("depth")
 
-    /** Closed bars of [code], [windowMs] long, starting in `[fromMs, toMs)`, oldest first. */
-    fun bars(
+    /**
+     * The kline lengths the venue serves, in milliseconds, each a whole number of minutes dividing a day; with
+     * [Capability.BARS] they include a minute. The host builds every bar window from the largest dividing it.
+     */
+    val klineResolutions: Set<Long>
+
+    /**
+     * [code]'s klines [resolutionMs] long (one of [klineResolutions]) starting in `[fromMs, toMs)`, oldest first,
+     * as the venue reports them: the newest may still be forming (the host serves only closed bars). An empty
+     * range still refuses a code the adapter does not serve.
+     */
+    fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
     ): List<VenueBar>
 
-    /** Subscribes the quotes of [codes] and of every listed option of [roots]; pushes go to the listener. */
-    fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    )
+    /**
+     * Subscribes the quotes of [codes], replacing the last subscription; pushes go to the listener. The host expands
+     * a client's roots into their listed options (by [Instrument.underlying]) before it asks.
+     */
+    fun subscribeQuotes(codes: Set<String>)
 }
 
 /** Where an adapter pushes what the venue reports. */

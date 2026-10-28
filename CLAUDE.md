@@ -15,8 +15,9 @@ abstractions, no dead code, no TODOs left behind, no new dependency without a re
 | `vgp-wire` | wire DTOs | nothing in the repo |
 | `adapter-api` | `VenueAdapter` and the neutral types | nothing in the repo |
 | `adapter-testkit` | `AdapterContractTest` | `adapter-api` |
+| `venue-support` | what every adapter needs and no venue decides: reconnecting socket, JSON over HTTP, exact JSON readers, paging, retry, HMAC | nothing in the repo |
 | `host` | everything qkt sees: auth, journal, orders, stream, reconciler, kill switch, quotes, bars | `vgp-wire`, `adapter-api` |
-| `adapter-<venue>` | one venue: `client/`, mapping, adapter, factory | `adapter-api` (another adapter's `client` at most) |
+| `adapter-<venue>` | one venue: `client/`, mapping, adapter, factory | `adapter-api`, `venue-support` (another adapter only through its `client/` and `market/`: paper simulates on Deribit's public prices) |
 | `app` | `GATEWAY_*` config, adapter loading, startup | everything |
 
 - `host` never imports a venue API; an adapter never imports `host`, `vgp-wire` or `app`.

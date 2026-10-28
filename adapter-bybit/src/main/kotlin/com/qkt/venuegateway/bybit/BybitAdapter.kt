@@ -12,6 +12,7 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueSettlement
 import com.qkt.venuegateway.adapter.VenueUnsupportedException
 import com.qkt.venuegateway.bybit.BybitErrors.venue
+import com.qkt.venuegateway.bybit.client.BYBIT_KLINE_INTERVALS
 import com.qkt.venuegateway.bybit.client.BybitPrivateClient
 import com.qkt.venuegateway.bybit.client.BybitPublicClient
 import org.slf4j.LoggerFactory
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory
  * tape and liquidations, so its drops are the quote feed's. Fills are `Trade` executions and funding is `Funding`
  * executions ([BybitMapping]), both read back from the execution list by the host's reconcile. Contracts declare
  * funding, funding rates, marks and open interest from Bybit's own histories; the tape, liquidations and depth
- * are recorded ([BybitTape], [BybitDepth]). Expiry settlements are not served: none has yet been recorded from
+ * are recorded ([BybitMarket]). Expiry settlements are not served: none has yet been recorded from
  * Bybit to map from.
  */
 class BybitAdapter(
@@ -36,7 +37,7 @@ class BybitAdapter(
 ) : VenueAdapter {
     override val id = "bybit"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    private val settings = BybitSettings.of(context.settings)
+    private val settings = BybitSettings.of(context)
     private val log = LoggerFactory.getLogger(BybitAdapter::class.java)
 
     override val capabilities = settings.capabilities
@@ -61,8 +62,8 @@ class BybitAdapter(
     private val marketStream =
         market(
             { listener?.quote(BybitMarketMapping.quote(it)) },
-            { code, prints -> history.tape.onTrades(code, prints) },
-            { code, prints -> history.tape.onLiquidations(code, prints) },
+            { code, prints -> history.tape.onTrades(code, prints.map(BybitMarketMapping::print)) },
+            { code, prints -> history.tape.onLiquidations(code, prints.map(BybitMarketMapping::liquidation)) },
         ) { up, reason -> listener?.quoteFeed(up, reason) }
     private val history: BybitMarket = BybitMarket(public, settings, listing, context) { marketStream.tape(it) }
 
@@ -159,18 +160,17 @@ class BybitAdapter(
         toMs: Long,
     ) = history.depth(code, fromMs, toMs)
 
-    override fun bars(
+    override val klineResolutions = BYBIT_KLINE_INTERVALS.keys
+
+    override fun klines(
         code: String,
-        windowMs: Long,
+        resolutionMs: Long,
         fromMs: Long,
         toMs: Long,
-    ) = history.bars(code, windowMs, fromMs, toMs)
+    ) = history.klines(code, resolutionMs, fromMs, toMs)
 
-    /** Quotes the listed [codes]; Bybit lists no options on these categories, so [roots] name nothing to quote. */
-    override fun subscribeQuotes(
-        codes: Set<String>,
-        roots: Set<String>,
-    ) = marketStream.quote(history.quotable(codes + roots))
+    /** Quotes the listed [codes]; any other is logged and left out. */
+    override fun subscribeQuotes(codes: Set<String>) = marketStream.quote(history.quotable(codes))
 
     override fun close() {
         marketStream.close()

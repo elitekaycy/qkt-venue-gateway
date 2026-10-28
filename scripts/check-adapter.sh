@@ -35,8 +35,11 @@ fi
 
 git grep -qlE ':\s*AdapterContractTest\(\)' -- "$m/src/test" || err "no test extends AdapterContractTest"
 
-# paper is venue-free: it reads Deribit through adapter-deribit's client and fixtures (adapter-paper/README.md).
-if [[ $venue != paper ]]; then
+# A venue-free adapter (no client/ of its own, as paper reads Deribit's) must build on the adapter whose client it
+# reuses; every other adapter speaks its venue in client/ and carries fixtures recorded from it.
+if [[ ! -d $pkg/client ]] && grep -qE 'project\(":adapter-[a-z0-9]+"\)' <(grep -vE 'adapter-(api|testkit)' "$m/build.gradle.kts"); then
+  :
+else
   need "$pkg/client"
   [[ -n $(find "$m/src/test/resources/fixtures" -type f 2>/dev/null | head -1) ]] ||
     err "no recorded fixtures in $m/src/test/resources/fixtures"
@@ -45,9 +48,21 @@ if [[ $venue != paper ]]; then
   fi
 fi
 
-grep -q "\"$m\"" settings.gradle.kts || err "not included in settings.gradle.kts"
-grep -q "project(\":$m\")" app/build.gradle.kts || err "not bundled in app/build.gradle.kts"
-grep -qE "^\| \`$venue\` \|" README.md || err "no row in the README adapter table"
+# Another adapter is reused only through its client/ (its venue's protocol) or market/ (its public market as
+# adapter-api types), as paper simulates on Deribit's public prices: never its adapter, account mapping or settings.
+for dir in adapter-*/; do
+  other=${dir%/}
+  other=${other#adapter-}
+  [[ $other == "$venue" || $other == api || $other == testkit ]] && continue
+  [[ -d $dir/src/main/kotlin/com/qkt/venuegateway/$other ]] || continue
+  if grep -rnE "^import com\.qkt\.venuegateway\.$other\." "$m/src" | grep -vE "venuegateway\.$other\.(client|market)\."; then
+    err "imports adapter-$other outside its client/ and market/ packages"
+  fi
+done
+
+# Nothing outside the module names it: settings.gradle.kts discovers it, app bundles it, the README table is
+# generated from its README's Venue line (scripts/adapter-index.sh) and CI reads its <VENUE>_CLIENT_* secrets by name.
+grep -qE '^> Venue: .+ · Status: .+$' "$m/README.md" || err "README.md needs a '> Venue: <what it trades> · Status: <status>' line"
 
 ((fail == 0)) && echo "$m: complete"
 exit "$fail"

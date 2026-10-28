@@ -1,18 +1,20 @@
 # Adapters: rules and the path to a new venue
 
 An adapter translates one venue's API into `adapter-api` and nothing more. Everything a venue does not
-decide (journal, idempotency, recovery from fills, kill switch, quote refresh) is the host's, written
-once. The interface and its rules are in [design.md](design.md) §3; this page is how an adapter is built,
+decide (journal, idempotency, recovery from fills, kill switch, quote refresh, building bars from klines) is the
+host's, written once. The interface and its rules are in [design.md](design.md) §3; this page is how an adapter is built,
 tested and merged. It is strict on purpose: an adapter that passes it works with qkt as it is.
 For a walk-through with code, see [writing-an-adapter.md](writing-an-adapter.md).
 
 ## The branch
 
 - One venue, one branch: `adapter/<venue>`, lowercase letters and digits only (`adapter/bybit`).
-- The branch carries the whole adapter, nothing else. It may change only:
-  `adapter-<venue>/**`, `settings.gradle.kts`, `app/build.gradle.kts`, `README.md`, `docs/adapters.md`
-  and `.github/workflows/adapter.yml` (to pass the venue's secrets). It is cut from `dev` and merges
-  into `dev`. A host or API change it needs is
+- The branch carries the whole adapter, nothing else. It may change only `adapter-<venue>/**` and the
+  adapter lists `scripts/adapter-index.sh` generates from it (the root README and docs home tables, the docs
+  page and navigation entry). Nothing else names a venue:
+  `settings.gradle.kts` includes every `adapter-<venue>/` with a build file, the app bundles each one, and
+  the adapter workflow reads the venue's `<VENUE>_CLIENT_ID` / `<VENUE>_CLIENT_SECRET` secrets by name. It
+  is cut from `dev` and merges into `dev`. A host or API change it needs is
   its own `feat/…` PR, merged first.
 - CI enforces both (`pr` workflow). Fixes to an existing adapter use the same branch name.
 
@@ -25,6 +27,7 @@ adapter-<venue>/
   CLAUDE.md                   @README.md and @../docs/adapters.md, nothing else
   src/main/kotlin/com/qkt/venuegateway/<venue>/
     client/                   the venue's protocol in its own words; no adapter-api types
+    market/                   only when another adapter reuses it: the public market as adapter-api types
     <Venue>Mapping*.kt        the only place venue words become adapter-api types
     <Venue>Adapter.kt         implements VenueAdapter
     <Venue>AdapterFactory.kt  type = "<venue>"; reads settings and credentials, fails naming the key
@@ -34,8 +37,23 @@ adapter-<venue>/
   src/test/resources/fixtures/ responses recorded from the venue, account ids removed
 ```
 
-- Depends on `adapter-api` only (another adapter's `client` package at most, as `paper` reuses
-  Deribit's public client). Never `host`, `vgp-wire` or `app`.
+- Depends on `adapter-api` and `venue-support`, and on another adapter only through that adapter's `client/` and
+  `market/` packages. `paper` simulates trading on Deribit's public prices, so it reads Deribit's protocol
+  (`deribit.client`) and Deribit's public market as adapter-api types (`deribit.market`: the listing, quote and
+  instrument mapping, marks, tape, recorded depth and open interest) rather than copying either; Deribit's own
+  adapter uses the same `market/` classes. Another adapter's adapter, account mapping and settings stay its own
+  (`scripts/check-adapter.sh` refuses any other import). Never `host`, `vgp-wire` or `app`.
+- Translates, nothing more. What no venue decides is written once in `venue-support` and used, never copied:
+  `ReconnectingSocket` (backoff, a replaced socket's events ignored, keepalive and silence), `SubscriptionSet`
+  (replayed on reconnect), `JsonHttp` (the venue's status and body back, transport failures as `IOException`,
+  signing from the exact payload, query values encoded when the venue needs it), `JsonReads` (exact decimals, absent for `null` and `""`, RFC 3339 times), `Paging` (spans,
+  cursors, by time), `Retry.until` (reads only), `Hmac`, `Listing` (a venue's listing, read again when due and on
+  a miss); and typed settings on `AdapterContext` (`enum`, `int`,
+  `decimal`, `bool`, each failing naming its key). What a venue keeps no history of is recorded by `adapter-api`'s
+  `recording` package, kept for the host's one retention (`AdapterContext.recordingRetentionDays`): `RecordedDepth`
+  (the adapter hands it the book as it stands), `RecordedOpenInterest` (the figure as it stands) and `RecordedTape`
+  (the prints it hears), all over `DayFiles` (a CSV a code a UTC day, a torn last line cut). A helper an adapter
+  needs that is not venue-specific goes there first, in its own `feat/…` PR.
 - Settings are `GATEWAY_SETTING_<KEY>` at run time; credentials are `GATEWAY_LOGIN`/`GATEWAY_SECRET`.
   A setting that chooses real money over a test environment has no default.
 - No threads, clocks or env reads of its own beyond what `AdapterContext` hands in.
@@ -54,8 +72,8 @@ Each checkpoint is one or more commits on the branch; do not start the next with
 4. **Adapter and factory.** Registered under `META-INF/services`; refuses bad settings naming the key.
 5. **Contract.** `<Venue>ContractTest extends AdapterContractTest` passes against the test environment.
    It reads its key from `<VENUE>_CLIENT_ID` / `<VENUE>_CLIENT_SECRET` and skips locally without them.
-6. **Wire-up.** `settings.gradle.kts` includes the module; `app/build.gradle.kts` bundles it; the root
-   README's Adapters table has a row linking to the module README; `adapter.yml` passes its secrets.
+6. **Wire-up.** The module README's `> Venue: … · Status: …` line, and `scripts/adapter-index.sh` run;
+   the build discovers and bundles the module by itself.
 7. **End to end.** qkt trades through a gateway running the adapter on the test environment: an order
    placed, filled, seen on the stream, and closed. Note the run in the PR.
 
@@ -73,7 +91,7 @@ Each checkpoint is one or more commits on the branch; do not start the next with
 The `adapter` workflow runs for every PR touching an adapter, and nightly for all of them:
 
 1. `scripts/check-adapter.sh <venue>`: the layout above is complete (module, README, CLAUDE.md, service
-   registration, contract test, fixtures, settings and app inclusion, README row).
+   registration, contract test, fixtures, the README's Venue line).
 2. `./gradlew :adapter-<venue>:test` with the venue's secrets, then a check that the contract suite
    **ran**: when the venue's secrets are configured (repository secrets `<VENUE>_CLIENT_ID` and
    `<VENUE>_CLIENT_SECRET`, test-environment keys with trade scope only), a skipped contract test is a

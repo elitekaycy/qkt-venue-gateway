@@ -63,12 +63,42 @@ data class DeribitKline(
     val volume: BigDecimal,
 )
 
-/** Deribit answered a JSON-RPC error [code], with the offending parameter's [reason] when it names one. */
+/**
+ * Deribit answered a JSON-RPC error [code], with the offending parameter's [reason] when it names one. [unavailable]
+ * is a code Deribit documents as throttling, retry, maintenance, internal failure, timeout or an expired session
+ * (docs.deribit.com/articles/errors, read 2026-10-01): the outcome is unknown or Deribit is not serving. Every other
+ * code is an answer: the request did nothing.
+ */
 class DeribitException(
     val code: Int,
     message: String,
     val reason: String? = null,
-) : RuntimeException("deribit error $code: $message" + (reason?.let { " ($it)" } ?: ""))
+) : RuntimeException("deribit error $code: $message" + (reason?.let { " ($it)" } ?: "")) {
+    val unavailable: Boolean get() = unavailable(code)
+
+    companion object {
+        /** Whether Deribit documents [code] as not serving. */
+        fun unavailable(code: Int): Boolean = code in UNAVAILABLE
+
+        private val UNAVAILABLE =
+            setOf(
+                10000, // authorization_required
+                10001, // error: a general failure, outcome unknown
+                10028, // too_many_requests
+                10040, // retry
+                10041, // settlement_in_progress
+                10047, // matching_engine_queue_full
+                10066, // too_many_concurrent_requests
+                11051, // system_maintenance
+                11094, // internal_server_error
+                13009, // unauthorized: an expired or wrong token
+                13025, // method_switched_off_by_admin
+                13028, // temporarily_unavailable
+                13503, // unavailable
+                13888, // timed_out
+            )
+    }
+}
 
 /**
  * One hour of a perpetual's funding as `public/get_funding_rate_history` reports it: [interest1h], the

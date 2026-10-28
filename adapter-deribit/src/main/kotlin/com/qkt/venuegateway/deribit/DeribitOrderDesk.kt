@@ -8,6 +8,7 @@ import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.deribit.DeribitErrors.venue
 import com.qkt.venuegateway.deribit.client.DeribitOrder
 import com.qkt.venuegateway.deribit.client.DeribitTrading
+import com.qkt.venuegateway.deribit.market.DeribitListing
 
 /**
  * One Deribit account's orders, every lookup by label: placing (only a listed instrument of [currency] in
@@ -40,21 +41,20 @@ internal class DeribitOrderDesk(
         return DeribitMapping.order(placed) ?: error("deribit answered order ${order.clientOrderId} without its label")
     }
 
-    /** Cancels the order labelled [clientOrderId] and returns it as it now stands (filled, if it filled first). */
-    fun cancel(clientOrderId: String): VenueOrder? {
+    /** Cancels whatever Deribit still works under [clientOrderId]'s label. */
+    fun cancel(clientOrderId: String) {
         venue { account.cancelByLabel(currency, clientOrderId) }
-        return byLabel(clientOrderId)
     }
 
+    /** Edits the order labelled [clientOrderId], keeping the quantity [change] leaves out; false when there is none. */
     fun modify(
         clientOrderId: String,
         change: OrderChange,
-    ): VenueOrder? {
-        val current = byLabel(clientOrderId) ?: return null
+    ): Boolean {
+        val current = byLabel(clientOrderId) ?: return false
         val quantity = change.quantity ?: current.quantity
-        val edited =
-            venue { account.editByLabel(clientOrderId, current.symbol, quantity, change.limitPrice, change.stopPrice) }
-        return DeribitMapping.order(edited)
+        venue { account.editByLabel(clientOrderId, current.symbol, quantity, change.limitPrice, change.stopPrice) }
+        return true
     }
 
     fun byLabel(clientOrderId: String): VenueOrder? =

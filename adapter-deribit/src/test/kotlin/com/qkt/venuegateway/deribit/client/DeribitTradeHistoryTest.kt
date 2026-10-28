@@ -45,6 +45,6 @@ class DeribitTradeHistoryTest {
     fun `a page that cannot move past its start fails instead of looping`() {
         assertThatThrownBy {
             DeribitTradeHistory.collect(0, 100) { DeribitPage(listOf(trade("x", 0)), more = true) }
-        }.hasMessageContaining("does not advance")
+        }.hasMessageContaining("cannot be paged")
     }
 }
