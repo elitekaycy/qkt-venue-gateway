@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test
 class DeribitSettingsTest {
     @Test
     fun `testnet is a demo account on the test hosts, mainnet a real one, and the environment is never defaulted`() {
-        val testnet = DeribitSettings.of(mapOf("environment" to "testnet"))
-        val mainnet = DeribitSettings.of(mapOf("environment" to "mainnet", "stop_trigger" to "mark_price"))
+        val testnet = deribitSettings(mapOf("environment" to "testnet"))
+        val mainnet = deribitSettings(mapOf("environment" to "mainnet", "stop_trigger" to "mark_price"))
 
         assertThat(testnet.environment.socketUrl).isEqualTo("wss://test.deribit.com/ws/api/v2")
         assertThat(testnet.environment.httpUrl).isEqualTo("https://test.deribit.com")
@@ -25,16 +25,16 @@ class DeribitSettingsTest {
         assertThat(testnet.environment.historyUrl).isEqualTo("https://test.deribit.com")
         assertThat(mainnet.environment.historyUrl).isEqualTo("https://history.deribit.com")
         assertThat(mainnet.stopTrigger).isEqualTo("mark_price")
-        assertThatThrownBy { DeribitSettings.of(emptyMap()) }.hasMessageContaining("setting environment is required")
+        assertThatThrownBy { deribitSettings(emptyMap()) }.hasMessageContaining("setting environment is required")
     }
 
     @Test
     fun `coin-margined contracts, an unknown environment and an unknown stop trigger are refused by name`() {
-        assertThatThrownBy { DeribitSettings.of(mapOf("environment" to "testnet", "currency" to "BTC")) }
+        assertThatThrownBy { deribitSettings(mapOf("environment" to "testnet", "currency" to "BTC")) }
             .hasMessageContaining("BTC")
             .hasMessageContaining("USDC")
-        assertThatThrownBy { DeribitSettings.of(mapOf("environment" to "prod")) }.hasMessageContaining("prod")
-        assertThatThrownBy { DeribitSettings.of(mapOf("environment" to "testnet", "stop_trigger" to "bid")) }
+        assertThatThrownBy { deribitSettings(mapOf("environment" to "prod")) }.hasMessageContaining("prod")
+        assertThatThrownBy { deribitSettings(mapOf("environment" to "testnet", "stop_trigger" to "bid")) }
             .hasMessageContaining("bid")
     }
 

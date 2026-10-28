@@ -59,7 +59,7 @@ class DeribitAdapter(
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
             .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH))
-    private val settings = DeribitSettings.of(context.settings)
+    private val settings = DeribitSettings.of(context)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency
     private val listing = DeribitListing(market, currency, context.clock, refreshMs)
