@@ -153,7 +153,12 @@ class AlpacaAdapter(
         val target = listener ?: return
         runCatching {
             AlpacaMapping.fill(update)?.let { gross ->
-                val coin = listing.find(gross.symbol)?.crypto == true
+                val coin =
+                    listing
+                        .find(gross.symbol)
+                        ?.takeIf { it.crypto }
+                        ?.symbol
+                        ?.substringBefore('/')
                 val fill = coinFees.received(gross, update.decimal("position_qty"), coin)
                 recent.add(fill)
                 target.fill(fill)
