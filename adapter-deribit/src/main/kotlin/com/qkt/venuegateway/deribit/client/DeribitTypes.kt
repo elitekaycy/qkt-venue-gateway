@@ -74,10 +74,13 @@ class DeribitException(
     message: String,
     val reason: String? = null,
 ) : RuntimeException("deribit error $code: $message" + (reason?.let { " ($it)" } ?: "")) {
-    val unavailable: Boolean get() = code in UNAVAILABLE
+    val unavailable: Boolean get() = unavailable(code)
 
-    private companion object {
-        val UNAVAILABLE =
+    companion object {
+        /** Whether Deribit documents [code] as not serving. */
+        fun unavailable(code: Int): Boolean = code in UNAVAILABLE
+
+        private val UNAVAILABLE =
             setOf(
                 10000, // authorization_required
                 10001, // error: a general failure, outcome unknown
