@@ -22,9 +22,9 @@ else
 fi
 # An adapter built on another (paper on deribit's client) is tested whenever the one it builds on is.
 for v in $all; do
-  for dep in $(grep -oE 'project\(":adapter-[a-z0-9]+"\)' "adapter-$v/build.gradle.kts" | sed -E 's/.*adapter-([a-z0-9]+).*/\1/'); do
-    grep -qx "$dep" <<<"$venues" && venues=$(printf '%s\n%s\n' "$venues" "$v")
-  done
+  while IFS= read -r dep; do
+    [[ -n $dep ]] && grep -qx "$dep" <<<"$venues" && venues=$(printf '%s\n%s\n' "$venues" "$v")
+  done < <(grep -oE 'project\(":adapter-[a-z0-9]+"\)' "adapter-$v/build.gradle.kts" | sed -E 's/.*adapter-([a-z0-9]+).*/\1/')
 done
 venues=$(sort -u <<<"$venues")
 jq -cn --arg v "$venues" '$v | split("\n") | map(select(length > 0))'
