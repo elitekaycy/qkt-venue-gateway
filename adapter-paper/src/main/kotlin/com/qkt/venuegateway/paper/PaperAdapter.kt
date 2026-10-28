@@ -45,13 +45,13 @@ class PaperAdapter(
     override val id = "paper"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
     override val capabilities = Capability.entries.toSet()
-    private val currency = context.settings["currency"] ?: "USDC"
+    private val currency = context.text("currency", "USDC")
     private val listing = DeribitListing(market, currency, context.clock)
-    private val book = paperBook(context.settings, currency)
+    private val book = paperBook(context, currency)
     private val store = PaperStore(context.stateDir).also { it.load(book) }
     private val events = Executors.newSingleThreadExecutor { r -> Thread(r, "paper-events").apply { isDaemon = true } }
     private val funding = PaperFunding(market, listing, currency, context.clock)
-    private val checkMs = context.settings["settlement_check_ms"]?.toLong() ?: CHECK_MS
+    private val checkMs = context.long("settlement_check_ms", CHECK_MS)
     private val recordings = PaperRecordings(market, context)
     private val upkeep =
         PaperUpkeep(
@@ -63,7 +63,9 @@ class PaperAdapter(
             events::execute,
         ) { listener }
     private val feed = PaperFeed(listing) { synchronized(book) { book.quoted() } }
-    private var listener: AdapterListener? = null
+
+    // Set by connect on the host's thread, read on the event and feed threads.
+    @Volatile private var listener: AdapterListener? = null
 
     override fun connect(listener: AdapterListener) {
         this.listener = listener
@@ -71,7 +73,7 @@ class PaperAdapter(
         upkeep.start()
     }
 
-    override fun identity() = VenueIdentity(context.settings["login"] ?: "paper", TradeMode.DEMO, currency)
+    override fun identity() = VenueIdentity(context.text("login", "paper"), TradeMode.DEMO, currency)
 
     override fun instruments() = venue { listing.all().map(DeribitMarketMapping::instrument) }
 

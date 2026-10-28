@@ -2,6 +2,7 @@ package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.adapter.AccountSnapshot
 import com.qkt.venuegateway.adapter.Accounting
+import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
@@ -169,12 +170,12 @@ internal fun PaperBook.account(markOf: (String) -> BigDecimal?): AccountSnapshot
 
 /** A book as the adapter's settings open it: `starting_balance` (10000) and `fee_rate` (0), in [currency]. */
 internal fun paperBook(
-    settings: Map<String, String>,
+    context: AdapterContext,
     currency: String,
 ) = PaperBook(
-    PaperLedger(BigDecimal(settings["starting_balance"] ?: "10000")),
+    PaperLedger(context.decimal("starting_balance", BigDecimal("10000"))),
     currency,
-    BigDecimal(settings["fee_rate"] ?: "0"),
+    context.decimal("fee_rate", BigDecimal.ZERO),
 )
 
 /**
