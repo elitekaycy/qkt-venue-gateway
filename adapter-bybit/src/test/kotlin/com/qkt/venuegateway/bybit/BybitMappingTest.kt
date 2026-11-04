@@ -165,14 +165,17 @@ class BybitMappingTest {
     }
 
     @Test
-    fun `the account is the coin's balance and equity with the unified account's margin`() {
+    fun `the account is the unified account's pooled figures, all in usd, so equity over margin is its level`() {
+        // Recorded: the USDT row says 20000 (equity, in USDT); the account's pooled figures say 19993.54 (in USD).
         val root = Json.parseToJsonElement(Fixtures.text("private/wallet.json")).jsonObject["result"]!!.jsonObject
-        val account = BybitMapping.account(BybitPrivateJson.wallet(root["list"]!!.jsonArray.first().jsonObject, "USDT"))
+        val account = BybitMapping.account(BybitPrivateJson.wallet(root["list"]!!.jsonArray.first().jsonObject))
 
-        assertThat(account.currency).isEqualTo("USDT")
-        assertThat(account.balance).isEqualByComparingTo("20000")
-        assertThat(account.equity).isEqualByComparingTo("20000")
+        assertThat(account.currency).isEqualTo("USD")
+        assertThat(account.balance).isEqualByComparingTo("19993.54")
+        assertThat(account.equity).isEqualByComparingTo("19993.54")
+        assertThat(account.marginUsed).isEqualByComparingTo("0")
         assertThat(account.marginAvailable).isEqualByComparingTo("19993.54")
+        assertThat(account.equity).isEqualByComparingTo(account.marginUsed + account.marginAvailable)
     }
 
     @Test

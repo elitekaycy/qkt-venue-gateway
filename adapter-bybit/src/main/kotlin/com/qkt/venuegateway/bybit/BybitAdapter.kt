@@ -78,7 +78,7 @@ class BybitAdapter(
 
     override fun instruments() = venue { listing.all() }.map(BybitMarketMapping::instrument)
 
-    override fun account(): AccountSnapshot = BybitMapping.account(venue { private.wallet(currency) })
+    override fun account(): AccountSnapshot = BybitMapping.account(venue { private.wallet() })
 
     override fun positions(): Positions {
         val rows =
