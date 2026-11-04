@@ -75,7 +75,7 @@ class OpenInterestRoutesTest {
                     .header("Authorization", "Bearer t")
                     .build(),
             ).execute()
-            .use { it.code to it.body!!.string() }
+            .use { it.code to it.body.string() }
 
     private fun page(path: String) = wireJson.decodeFromString(WireOpenInterest.serializer(), get(path).second)
 

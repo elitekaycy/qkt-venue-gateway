@@ -3,48 +3,50 @@ package com.qkt.venuegateway.support
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import okio.ByteString.Companion.encodeUtf8
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class ReconnectingSocketTest {
-    private val server = MockWebServer()
+    private val server = MockWebServer().apply { start() }
     private val sockets = CopyOnWriteArrayList<ReconnectingSocket>()
 
     @AfterEach
     fun stop() {
         sockets.forEach(ReconnectingSocket::close)
-        server.shutdown()
+        server.close()
     }
 
     /** A venue end that answers each frame it receives with `echo:<frame>` and records what it got. */
     private fun venue(
         received: MutableList<String>,
         opened: CountDownLatch? = null,
-    ) = MockResponse().withWebSocketUpgrade(
-        object : WebSocketListener() {
-            override fun onOpen(
-                webSocket: WebSocket,
-                response: Response,
-            ) {
-                opened?.countDown()
-            }
+    ) = MockResponse
+        .Builder()
+        .webSocketUpgrade(
+            object : WebSocketListener() {
+                override fun onOpen(
+                    webSocket: WebSocket,
+                    response: Response,
+                ) {
+                    opened?.countDown()
+                }
 
-            override fun onMessage(
-                webSocket: WebSocket,
-                text: String,
-            ) {
-                received += text
-                webSocket.send("echo:$text")
-            }
-        },
-    )
+                override fun onMessage(
+                    webSocket: WebSocket,
+                    text: String,
+                ) {
+                    received += text
+                    webSocket.send("echo:$text")
+                }
+            },
+        ).build()
 
     private class Recorder(
         private val opening: (SocketLink) -> Unit = {},
@@ -144,16 +146,18 @@ class ReconnectingSocketTest {
     @Test
     fun `a binary frame reaches the protocol as its UTF-8 text`() {
         server.enqueue(
-            MockResponse().withWebSocketUpgrade(
-                object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
-                        webSocket.send("{\"stream\":\"listening\"}".encodeUtf8())
-                    }
-                },
-            ),
+            MockResponse
+                .Builder()
+                .webSocketUpgrade(
+                    object : WebSocketListener() {
+                        override fun onOpen(
+                            webSocket: WebSocket,
+                            response: Response,
+                        ) {
+                            webSocket.send("{\"stream\":\"listening\"}".encodeUtf8())
+                        }
+                    },
+                ).build(),
         )
         val protocol = Recorder()
         socket(protocol).start()

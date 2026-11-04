@@ -36,7 +36,7 @@ class BybitKlinesTest {
     @AfterEach
     fun stop() = server.close()
 
-    private fun klineRequests() = server.requests.filter { it.requestUrl!!.encodedPath == "/v5/market/kline" }
+    private fun klineRequests() = server.requests.filter { it.url.encodedPath == "/v5/market/kline" }
 
     @Test
     fun `bybit's kline lengths are served in milliseconds, from a minute to a day`() {
@@ -48,7 +48,7 @@ class BybitKlinesTest {
     fun `a kline length is asked by bybit's interval name up to the last millisecond of the range`() {
         val klines = market().klines("BTCUSDT", 300_000, from, to)
 
-        val url = klineRequests().single().requestUrl!!
+        val url = klineRequests().single().url
         assertThat(url.queryParameter("interval")).isEqualTo("5")
         assertThat(url.queryParameter("start")).isEqualTo("$from")
         assertThat(url.queryParameter("end")).isEqualTo("${to - 1}")

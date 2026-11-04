@@ -9,11 +9,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -26,7 +26,7 @@ class DeribitPrivateClientTest {
     private var confirm: (List<String>) -> List<String> = { it }
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     private fun recorded(name: String) =
         Json.parseToJsonElement(javaClass.getResource("/fixtures/private/$name")!!.readText()).jsonObject
@@ -58,25 +58,27 @@ class DeribitPrivateClientTest {
     }
 
     private fun venue() =
-        MockResponse().withWebSocketUpgrade(
-            object : WebSocketListener() {
-                override fun onOpen(
-                    webSocket: WebSocket,
-                    response: Response,
-                ) {
-                    sockets += webSocket
-                }
+        MockResponse
+            .Builder()
+            .webSocketUpgrade(
+                object : WebSocketListener() {
+                    override fun onOpen(
+                        webSocket: WebSocket,
+                        response: Response,
+                    ) {
+                        sockets += webSocket
+                    }
 
-                override fun onMessage(
-                    webSocket: WebSocket,
-                    text: String,
-                ) {
-                    val request = Json.parseToJsonElement(text).jsonObject
-                    sent += request
-                    webSocket.send(answer(request))
-                }
-            },
-        )
+                    override fun onMessage(
+                        webSocket: WebSocket,
+                        text: String,
+                    ) {
+                        val request = Json.parseToJsonElement(text).jsonObject
+                        sent += request
+                        webSocket.send(answer(request))
+                    }
+                },
+            ).build()
 
     private fun client(
         orders: MutableList<DeribitOrder> = CopyOnWriteArrayList(),

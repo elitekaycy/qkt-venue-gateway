@@ -6,8 +6,8 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -19,7 +19,7 @@ class BybitRestTest {
     private val rest = BybitRest(base, "the-key", "the-secret", { 1_791_240_000_000L })
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     private fun hmac(payload: String): String {
         val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec("the-secret".toByteArray(), "HmacSHA256")) }
@@ -28,48 +28,48 @@ class BybitRestTest {
 
     @Test
     fun `a signed get signs the exact query string it sends and answers the result with bybit's time`() {
-        server.enqueue(MockResponse().setBody(Fixtures.text("private/executions-empty.json")))
+        server.enqueue(MockResponse(body = Fixtures.text("private/executions-empty.json")))
 
         val answer = rest.get("/v5/execution/list", listOf("category" to "linear", "limit" to "5"), signed = true)
 
         val sent = server.takeRequest()
-        assertThat(sent.requestUrl!!.encodedQuery).isEqualTo("category=linear&limit=5")
-        assertThat(sent.getHeader("X-BAPI-API-KEY")).isEqualTo("the-key")
-        assertThat(sent.getHeader("X-BAPI-TIMESTAMP")).isEqualTo("1791240000000")
-        assertThat(sent.getHeader("X-BAPI-RECV-WINDOW")).isEqualTo("5000")
-        assertThat(sent.getHeader("X-BAPI-SIGN")).isEqualTo(hmac("1791240000000the-key5000category=linear&limit=5"))
+        assertThat(sent.url.encodedQuery).isEqualTo("category=linear&limit=5")
+        assertThat(sent.headers["X-BAPI-API-KEY"]).isEqualTo("the-key")
+        assertThat(sent.headers["X-BAPI-TIMESTAMP"]).isEqualTo("1791240000000")
+        assertThat(sent.headers["X-BAPI-RECV-WINDOW"]).isEqualTo("5000")
+        assertThat(sent.headers["X-BAPI-SIGN"]).isEqualTo(hmac("1791240000000the-key5000category=linear&limit=5"))
         assertThat(answer.timeMs).isEqualTo(1_791_240_179_286L)
         assertThat(answer.result["category"].toString()).isEqualTo("\"linear\"")
     }
 
     @Test
     fun `a page cursor is sent as bybit wrote it, never encoded again`() {
-        server.enqueue(MockResponse().setBody(Fixtures.text("instruments-linear-page-2.json")))
+        server.enqueue(MockResponse(body = Fixtures.text("instruments-linear-page-2.json")))
 
         rest.get("/v5/market/instruments-info", listOf("cursor" to "first%3D0GUSDT%26last%3D1000000BABYDOGEUSDT"))
 
         assertThat(
-            server.takeRequest().requestUrl!!.encodedQuery,
+            server.takeRequest().url.encodedQuery,
         ).isEqualTo("cursor=first%3D0GUSDT%26last%3D1000000BABYDOGEUSDT")
         assertThat(server.takeRequest(0, java.util.concurrent.TimeUnit.SECONDS)).isNull()
     }
 
     @Test
     fun `a post signs its body and sends it as json`() {
-        server.enqueue(MockResponse().setBody(Fixtures.text("private/cancel-unknown.json")))
+        server.enqueue(MockResponse(body = Fixtures.text("private/cancel-unknown.json")))
         val body = buildJsonObject { put("category", "linear") }
 
         assertThatThrownBy { rest.post("/v5/order/cancel", body) }.isInstanceOf(BybitException::class.java)
 
         val sent = server.takeRequest()
-        assertThat(sent.body.readUtf8()).isEqualTo("""{"category":"linear"}""")
-        assertThat(sent.getHeader("Content-Type")).startsWith("application/json")
-        assertThat(sent.getHeader("X-BAPI-SIGN")).isEqualTo(hmac("""1791240000000the-key5000{"category":"linear"}"""))
+        assertThat(sent.body?.utf8()).isEqualTo("""{"category":"linear"}""")
+        assertThat(sent.headers["Content-Type"]).startsWith("application/json")
+        assertThat(sent.headers["X-BAPI-SIGN"]).isEqualTo(hmac("""1791240000000the-key5000{"category":"linear"}"""))
     }
 
     @Test
     fun `a non-zero retCode is bybit's refusal with its code and message`() {
-        server.enqueue(MockResponse().setBody(Fixtures.text("private/error-qty-step.json")))
+        server.enqueue(MockResponse(body = Fixtures.text("private/error-qty-step.json")))
 
         assertThatThrownBy { rest.post("/v5/order/create", buildJsonObject {}) }
             .isInstanceOf(BybitException::class.java)
@@ -80,8 +80,8 @@ class BybitRestTest {
 
     @Test
     fun `a rate limit or server failure without an answer is its http status`() {
-        server.enqueue(MockResponse().setResponseCode(429))
-        server.enqueue(MockResponse().setResponseCode(502))
+        server.enqueue(MockResponse(code = 429))
+        server.enqueue(MockResponse(code = 502))
 
         assertThatThrownBy {
             rest.get("/v5/market/tickers", emptyList())
@@ -93,7 +93,7 @@ class BybitRestTest {
 
     @Test
     fun `an answer that is not bybit's json is the venue being unreachable`() {
-        server.enqueue(MockResponse().setResponseCode(404).setBody("<html>not found</html>"))
+        server.enqueue(MockResponse(code = 404, body = "<html>not found</html>"))
 
         assertThatThrownBy { rest.get("/v5/nowhere", emptyList()) }.isInstanceOf(IOException::class.java)
     }

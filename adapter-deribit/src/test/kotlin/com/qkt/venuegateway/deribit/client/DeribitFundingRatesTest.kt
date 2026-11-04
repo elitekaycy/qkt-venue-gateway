@@ -1,10 +1,10 @@
 package com.qkt.venuegateway.deribit.client
 
 import java.util.concurrent.CopyOnWriteArrayList
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -18,11 +18,12 @@ class DeribitFundingRatesTest {
             dispatcher =
                 object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        val url = request.requestUrl!!
+                        val url = request.url
                         asked += url.queryParameter("start_timestamp")!!.toLong() to
                             url.queryParameter("end_timestamp")!!.toLong()
-                        return MockResponse().setBody(
-                            javaClass.getResource("/fixtures/funding-rate-history.json")!!.readText(),
+                        return MockResponse(
+                            body =
+                                javaClass.getResource("/fixtures/funding-rate-history.json")!!.readText(),
                         )
                     }
                 }
@@ -31,7 +32,7 @@ class DeribitFundingRatesTest {
     private val client = DeribitPublicClient(server.url("/").toString().trimEnd('/'))
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `each hour's rate and index are read from their literal text, oldest first`() {

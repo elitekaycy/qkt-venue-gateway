@@ -28,7 +28,7 @@ class BybitOpenInterestTest {
 
         assertThat(figures.map { it.timeMs }).containsExactly(1_791_238_500_000L, 1_791_238_800_000L)
         assertThat(figures.first().openInterest).isEqualByComparingTo("253961.657")
-        assertThat(server.requests.map { it.requestUrl!!.encodedPath }).doesNotContain("/v5/market/tickers")
+        assertThat(server.requests.map { it.url.encodedPath }).doesNotContain("/v5/market/tickers")
     }
 
     @Test
