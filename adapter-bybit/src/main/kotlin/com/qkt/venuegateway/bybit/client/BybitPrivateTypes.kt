@@ -67,14 +67,13 @@ data class BybitPosition(
 )
 
 /**
- * A unified account's money (`/v5/account/wallet-balance`): [coin]'s own wallet balance and equity, and the
- * account's margin, which a unified account pools across its coins and values in USD: the initial and
- * maintenance margin in use and what is available to open more.
+ * A unified account's money (`/v5/account/wallet-balance`), pooled across its coins and valued in USD, as Bybit
+ * margins it: the [walletBalance], the [marginBalance] that backs margin (the wallet balance plus the perpetuals'
+ * unrealised profit), the initial and maintenance margin in use, and what is [available] to open more.
  */
 data class BybitWallet(
-    val coin: String,
     val walletBalance: BigDecimal,
-    val equity: BigDecimal,
+    val marginBalance: BigDecimal,
     val initialMargin: BigDecimal,
     val maintenanceMargin: BigDecimal,
     val available: BigDecimal,

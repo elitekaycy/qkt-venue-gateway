@@ -107,16 +107,10 @@ class BybitPrivateClient(
             .map(BybitPrivateJson::position)
     }
 
-    /** The unified account's wallet, with [coin]'s own figures. */
-    fun wallet(coin: String): BybitWallet {
-        val result =
-            rest
-                .get(
-                    "/v5/account/wallet-balance",
-                    listOf("accountType" to "UNIFIED", "coin" to coin),
-                    signed = true,
-                ).result
-        return BybitPrivateJson.wallet(result.items().firstOrNull() ?: error("bybit answered no unified wallet"), coin)
+    /** The unified account's wallet: its pooled figures, in USD. */
+    fun wallet(): BybitWallet {
+        val result = rest.get("/v5/account/wallet-balance", listOf("accountType" to "UNIFIED"), signed = true).result
+        return BybitPrivateJson.wallet(result.items().firstOrNull() ?: error("bybit answered no unified wallet"))
     }
 
     /** Every coin the unified account holds, by coin, its wallet balance (what it owns, locked in orders included). */

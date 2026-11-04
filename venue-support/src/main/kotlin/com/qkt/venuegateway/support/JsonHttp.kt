@@ -33,7 +33,8 @@ class HttpAnswer(
 /**
  * JSON over HTTPS to [baseUrl]. Every call returns the venue's [HttpAnswer] whatever its status, so the venue's own
  * envelope (an error code in a 200, a message in a 4xx) is read in its mapping, not guessed here; only the venue
- * being unreachable, or no answer within [timeoutMs], is an [IOException]. [sign] adds a venue's auth headers to
+ * being unreachable, or no answer within [timeoutMs], is an [IOException]. A connection whose ping goes unanswered for
+ * [timeoutMs] is closed, so the call after a network stall opens a new one. [sign] adds a venue's auth headers to
  * each request from the exact payload sent (the query string, or the body). With [encodeQuery] each query value is
  * URL-encoded (a venue whose times carry `:` and `+`, or whose page tokens carry `=`); without it values are sent as
  * given, for a venue that signs the exact query string. Nothing is retried: a lost answer is the caller's to resolve,
@@ -51,7 +52,14 @@ class JsonHttp(
         payload: String,
     ) -> Unit = { _, _, _, _ -> },
 ) {
-    private val http = http.newBuilder().callTimeout(Duration.ofMillis(timeoutMs)).build()
+    // A ping every timeout: an HTTP/2 connection that leaves one unanswered is closed, so a stalled socket costs the
+    // calls in flight on it, not every call until TCP gives up on it about 15 minutes later.
+    private val http =
+        http
+            .newBuilder()
+            .callTimeout(Duration.ofMillis(timeoutMs))
+            .pingInterval(Duration.ofMillis(timeoutMs))
+            .build()
 
     /** GETs [path] with [params] in their order, encoded when [encodeQuery] says so. */
     fun get(

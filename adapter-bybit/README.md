@@ -108,8 +108,11 @@ Measured on testnet 2026-10-05; recorded responses are in `src/test/resources/fi
   mode needs; the account reports `hedging` when a held position is per side or the coin's BTC perpetual is in
   hedge mode. Closing one ticket is not supported by the host, so a hedge-mode account can trade but not be
   flattened by `/v1/positions/close`.
-- **Account.** `currency` is the coin's own wallet balance and equity; margin used and available are the
-  unified account's pooled figures, which Bybit values in USD.
+- **Account.** The unified account's pooled figures, all in USD (`currency` `USD`, whatever `currency` setting
+  the gateway trades): `balance` is its wallet balance, `equity` its margin balance (the wallet balance plus the
+  perpetuals' unrealised profit), with the initial margin in use and what is available to open more. Margin used
+  over equity is the initial margin rate Bybit states for the account (`accountIMRate`), so a client's margin level
+  (equity / margin used) is the account's. A wallet holding coins other than the settlement coin counts them too.
 - **Fees.** Testnet charged 0.04% taker on linear (`feeRate` 0.0004, `feeCurrency` USDT).
 - **Spot positions.** A spot account holds coins: each coin with a listed pair against the quote coin is a
   netted position of that pair. Bybit keeps no entry price of a coin, so a holding's `avg_price` is the pair's
