@@ -2,6 +2,13 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.3.2 (2026-11-04)
+
+### Fixes
+
+- bybit: state the account's pooled figures, all in usd (6401f1b)
+- support: ping rest connections so a stalled socket is dropped (82972e4)
+
 ## v0.3.1 (2026-10-28)
 
 ### Fixes
