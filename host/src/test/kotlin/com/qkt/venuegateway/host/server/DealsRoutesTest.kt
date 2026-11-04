@@ -61,7 +61,7 @@ class DealsRoutesTest {
                     .header("Authorization", "Bearer t")
                     .build(),
             ).execute()
-            .use { it.code to it.body!!.string() }
+            .use { it.code to it.body.string() }
 
     private fun fill(
         fillId: String,

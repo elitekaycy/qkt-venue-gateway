@@ -89,7 +89,7 @@ class TapeRoutesTest {
                     .header("Authorization", "Bearer t")
                     .build(),
             ).execute()
-            .use { it.code to it.body!!.string() }
+            .use { it.code to it.body.string() }
 
     private fun trades(path: String) = wireJson.decodeFromString(WireTrades.serializer(), get(path).second)
 

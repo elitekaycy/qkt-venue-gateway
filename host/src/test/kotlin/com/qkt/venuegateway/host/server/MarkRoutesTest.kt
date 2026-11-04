@@ -60,7 +60,7 @@ class MarkRoutesTest {
                     .header("Authorization", "Bearer t")
                     .build(),
             ).execute()
-            .use { it.code to it.body!!.string() }
+            .use { it.code to it.body.string() }
 
     private fun marks(path: String) = wireJson.decodeFromString(WireMarks.serializer(), get(path).second)
 

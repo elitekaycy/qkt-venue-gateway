@@ -1,10 +1,10 @@
 package com.qkt.venuegateway.deribit.client
 
 import java.util.concurrent.CopyOnWriteArrayList
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -24,7 +24,7 @@ class DeribitKlineChunksTest {
             dispatcher =
                 object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        val url = request.requestUrl!!
+                        val url = request.url
                         val step = url.queryParameter("resolution")!!.toLong() * minute
                         val start = url.queryParameter("start_timestamp")!!.toLong()
                         val end = url.queryParameter("end_timestamp")!!.toLong()
@@ -37,8 +37,9 @@ class DeribitKlineChunksTest {
                             ).toList().takeLast(DERIBIT_CAP)
                         asked += (end - start) / step
                         if (starts.isEmpty()) {
-                            return MockResponse().setBody(
-                                javaClass.getResource("/fixtures/chart-no-data.json")!!.readText(),
+                            return MockResponse(
+                                body =
+                                    javaClass.getResource("/fixtures/chart-no-data.json")!!.readText(),
                             )
                         }
 
@@ -49,7 +50,7 @@ class DeribitKlineChunksTest {
                                     "1",
                                 )}],"high":[${col("2")}],"low":[${col("1")}],"close":[${col("2")}],""" +
                                 """"volume":[${col("1")}],"cost":[${col("1")}]}}"""
-                        return MockResponse().setBody(body)
+                        return MockResponse(body = body)
                     }
                 }
             start()
@@ -57,7 +58,7 @@ class DeribitKlineChunksTest {
     private val client = DeribitPublicClient(server.url("/").toString().trimEnd('/'))
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `a range longer than one deribit answer comes back whole, in order, each kline once`() {

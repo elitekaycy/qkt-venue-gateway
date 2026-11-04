@@ -2,10 +2,10 @@ package com.qkt.venuegateway.deribit.client
 
 import java.math.BigDecimal
 import java.time.LocalDate
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -18,7 +18,7 @@ class DeribitPublicClientTest {
             dispatcher =
                 object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        val url = request.requestUrl!!
+                        val url = request.url
                         val file =
                             when (url.encodedPath.substringAfterLast('/')) {
                                 "get_instruments" ->
@@ -43,11 +43,12 @@ class DeribitPublicClientTest {
                                 "get_tradingview_chart_data" -> "chart-1m"
                                 "get_delivery_prices" -> "delivery-prices"
                                 "get_instrument" -> "instrument-expired"
-                                else -> return MockResponse().setBody(
-                                    """{"jsonrpc":"2.0","error":{"code":13009,"message":"bad"}}""",
+                                else -> return MockResponse(
+                                    body =
+                                        """{"jsonrpc":"2.0","error":{"code":13009,"message":"bad"}}""",
                                 )
                             }
-                        return MockResponse().setBody(javaClass.getResource("/fixtures/$file.json")!!.readText())
+                        return MockResponse(body = javaClass.getResource("/fixtures/$file.json")!!.readText())
                     }
                 }
             start()
@@ -55,7 +56,7 @@ class DeribitPublicClientTest {
     private val client = DeribitPublicClient(server.url("/").toString().trimEnd('/'))
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `perpetuals are told from dated futures, and tiny tick sizes stay exact`() {

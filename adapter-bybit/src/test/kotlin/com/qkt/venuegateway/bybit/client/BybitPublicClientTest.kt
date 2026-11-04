@@ -39,7 +39,7 @@ class BybitPublicClientTest {
         assertThat(future.contractType).isEqualTo("LinearFutures")
         assertThat(future.deliveryMs).isEqualTo(1_793_347_200_000L)
         assertThat(listed.first().deliveryMs).isNull()
-        assertThat(server.requests.map { it.requestUrl!!.queryParameter("category") }).containsOnly("linear")
+        assertThat(server.requests.map { it.url.queryParameter("category") }).containsOnly("linear")
     }
 
     @Test
@@ -63,7 +63,7 @@ class BybitPublicClientTest {
         assertThat(klines.map { it.startMs }).isSorted.doesNotHaveDuplicates()
         assertThat(klines.first().startMs).isEqualTo(1_791_240_180_000L)
         assertThat(klines.all { it.volume != null }).isTrue
-        val sent = server.requests.single().requestUrl!!
+        val sent = server.requests.single().url
         assertThat(sent.queryParameter("start")).isEqualTo("1791240180000")
         assertThat(sent.queryParameter("end")).isEqualTo("1791241079999")
         assertThat(sent.queryParameter("limit")).isEqualTo("1000")

@@ -10,11 +10,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -25,22 +25,24 @@ class BybitAccountStreamTest {
     private val links = CopyOnWriteArrayList<Boolean>()
 
     private fun venue(answerAuth: String?) =
-        MockResponse().withWebSocketUpgrade(
-            object : WebSocketListener() {
-                override fun onMessage(
-                    webSocket: WebSocket,
-                    text: String,
-                ) {
-                    sent += text
-                    if (text.contains("\"auth\"") && answerAuth != null) webSocket.send(answerAuth)
-                }
+        MockResponse
+            .Builder()
+            .webSocketUpgrade(
+                object : WebSocketListener() {
+                    override fun onMessage(
+                        webSocket: WebSocket,
+                        text: String,
+                    ) {
+                        sent += text
+                        if (text.contains("\"auth\"") && answerAuth != null) webSocket.send(answerAuth)
+                    }
 
-                override fun onOpen(
-                    webSocket: WebSocket,
-                    response: Response,
-                ) = Unit
-            },
-        )
+                    override fun onOpen(
+                        webSocket: WebSocket,
+                        response: Response,
+                    ) = Unit
+                },
+            ).build()
 
     private fun stream() =
         BybitAccountStream(
@@ -54,7 +56,7 @@ class BybitAccountStreamTest {
         ) { up, _ -> links += up }
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `it signs in with the key and an expiring signature, then subscribes its category's orders and executions`() {

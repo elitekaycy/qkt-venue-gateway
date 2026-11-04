@@ -74,7 +74,7 @@ class GatewayServerTest {
                 .method(method, body?.toRequestBody("application/json".toMediaType()))
                 .apply { token?.let { header("Authorization", "Bearer $it") } }
                 .build()
-        return http.newCall(request).execute().use { it.code to it.body!!.string() }
+        return http.newCall(request).execute().use { it.code to it.body.string() }
     }
 
     private fun submit(

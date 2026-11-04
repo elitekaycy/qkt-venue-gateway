@@ -64,7 +64,7 @@ class StreamGapsTest {
                 .method(method, body?.toRequestBody("application/json".toMediaType()))
                 .header("Authorization", "Bearer t-token")
                 .build()
-        return http.newCall(request).execute().use { it.body!!.string() }
+        return http.newCall(request).execute().use { it.body.string() }
     }
 
     private fun order(id: String) {

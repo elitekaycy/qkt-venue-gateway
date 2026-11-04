@@ -3,11 +3,11 @@ package com.qkt.venuegateway.deribit.client
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -26,26 +26,28 @@ class DeribitTickerStreamTest {
             .substringBeforeLast(",\"usIn\"")
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     private fun socket() =
-        MockResponse().withWebSocketUpgrade(
-            object : WebSocketListener() {
-                override fun onOpen(
-                    webSocket: WebSocket,
-                    response: Response,
-                ) {
-                    sockets += webSocket
-                }
+        MockResponse
+            .Builder()
+            .webSocketUpgrade(
+                object : WebSocketListener() {
+                    override fun onOpen(
+                        webSocket: WebSocket,
+                        response: Response,
+                    ) {
+                        sockets += webSocket
+                    }
 
-                override fun onMessage(
-                    webSocket: WebSocket,
-                    text: String,
-                ) {
-                    requests += text
-                }
-            },
-        )
+                    override fun onMessage(
+                        webSocket: WebSocket,
+                        text: String,
+                    ) {
+                        requests += text
+                    }
+                },
+            ).build()
 
     @Test
     fun `it subscribes the wanted tickers, parses notifications, and subscribes again after a drop`() {

@@ -11,11 +11,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -30,28 +30,30 @@ class DeribitSocketTest {
     private val url = server.url("/ws").toString().replace("http", "ws")
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     private fun venue() =
-        MockResponse().withWebSocketUpgrade(
-            object : WebSocketListener() {
-                override fun onOpen(
-                    webSocket: WebSocket,
-                    response: Response,
-                ) {
-                    sockets += webSocket
-                }
+        MockResponse
+            .Builder()
+            .webSocketUpgrade(
+                object : WebSocketListener() {
+                    override fun onOpen(
+                        webSocket: WebSocket,
+                        response: Response,
+                    ) {
+                        sockets += webSocket
+                    }
 
-                override fun onMessage(
-                    webSocket: WebSocket,
-                    text: String,
-                ) {
-                    val request = Json.parseToJsonElement(text).jsonObject
-                    sent += request
-                    reply(request)?.let(webSocket::send)
-                }
-            },
-        )
+                    override fun onMessage(
+                        webSocket: WebSocket,
+                        text: String,
+                    ) {
+                        val request = Json.parseToJsonElement(text).jsonObject
+                        sent += request
+                        reply(request)?.let(webSocket::send)
+                    }
+                },
+            ).build()
 
     private fun JsonObject.method() = this["method"]!!.jsonPrimitive.content
 

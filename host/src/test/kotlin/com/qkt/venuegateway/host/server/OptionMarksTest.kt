@@ -68,7 +68,7 @@ class OptionMarksTest {
         venue.capabilities = setOf(Capability.QUOTES, Capability.OPTION_MARKS)
         start()
 
-        val body = http.newCall(request("$base/v1/health")).execute().use { it.body!!.string() }
+        val body = http.newCall(request("$base/v1/health")).execute().use { it.body.string() }
 
         assertThat(wireJson.decodeFromString(WireHealth.serializer(), body).capabilities)
             .containsExactly("quotes", "option_marks")
