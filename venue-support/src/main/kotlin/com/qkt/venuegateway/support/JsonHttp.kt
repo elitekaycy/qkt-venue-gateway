@@ -96,7 +96,7 @@ class JsonHttp(
         val request = Request.Builder().url(url.toHttpUrl()).method(method, body?.toRequestBody(JSON_TYPE))
         sign(request, method, path, body ?: query)
         return http.newCall(request.build()).execute().use { response ->
-            HttpAnswer(response.code, response.body?.string().orEmpty(), "$method $path")
+            HttpAnswer(response.code, response.body.string(), "$method $path")
         }
     }
 

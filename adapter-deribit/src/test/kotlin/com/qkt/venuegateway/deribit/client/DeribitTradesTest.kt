@@ -1,11 +1,11 @@
 package com.qkt.venuegateway.deribit.client
 
 import java.util.concurrent.CopyOnWriteArrayList
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 import okhttp3.HttpUrl
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -21,8 +21,8 @@ class DeribitTradesTest {
             dispatcher =
                 object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        asked += request.requestUrl!!
-                        return MockResponse().setBody(javaClass.getResource("/fixtures/$fixture")!!.readText())
+                        asked += request.url
+                        return MockResponse(body = javaClass.getResource("/fixtures/$fixture")!!.readText())
                     }
                 }
             start()
@@ -32,7 +32,7 @@ class DeribitTradesTest {
     private val to = 1_791_154_979_999L
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `the first trade of a range carries its sequence, time, mark and index as Deribit wrote them`() {

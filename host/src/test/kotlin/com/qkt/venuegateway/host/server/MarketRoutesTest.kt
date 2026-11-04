@@ -203,6 +203,6 @@ class MarketRoutesTest {
                     .build(),
             ).execute()
             .use {
-                it.body!!.string()
+                it.body.string()
             }
 }

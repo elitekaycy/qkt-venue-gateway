@@ -1,9 +1,9 @@
 package com.qkt.venuegateway.bybit
 
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
 
 /** Bybit's recorded answers (`src/test/resources/fixtures`), and a server that answers with them. */
 object Fixtures {
@@ -27,10 +27,10 @@ object Fixtures {
                     object : Dispatcher() {
                         override fun dispatch(request: RecordedRequest): MockResponse {
                             synchronized(requests) { requests += request }
-                            val url = request.requestUrl!!
+                            val url = request.url
                             val query = url.queryParameterNames.associateWith { url.queryParameter(it)!! }
-                            val name = route(url.encodedPath, query) ?: return MockResponse().setResponseCode(404)
-                            return MockResponse().setBody(text(name))
+                            val name = route(url.encodedPath, query) ?: return MockResponse(code = 404)
+                            return MockResponse(body = text(name))
                         }
                     }
                 start()
@@ -39,6 +39,6 @@ object Fixtures {
         /** The server's base URL, without a trailing slash. */
         val url: String get() = server.url("/").toString().removeSuffix("/")
 
-        override fun close() = server.shutdown()
+        override fun close() = server.close()
     }
 }

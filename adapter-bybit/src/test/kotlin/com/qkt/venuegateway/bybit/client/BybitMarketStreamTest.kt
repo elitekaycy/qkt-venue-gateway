@@ -5,11 +5,11 @@ import java.math.BigDecimal
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -25,23 +25,25 @@ class BybitMarketStreamTest {
 
     private fun stream(contracts: Boolean): BybitMarketStream {
         server.enqueue(
-            MockResponse().withWebSocketUpgrade(
-                object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
-                        venue = webSocket
-                    }
+            MockResponse
+                .Builder()
+                .webSocketUpgrade(
+                    object : WebSocketListener() {
+                        override fun onOpen(
+                            webSocket: WebSocket,
+                            response: Response,
+                        ) {
+                            venue = webSocket
+                        }
 
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
-                        sent += text
-                    }
-                },
-            ),
+                        override fun onMessage(
+                            webSocket: WebSocket,
+                            text: String,
+                        ) {
+                            sent += text
+                        }
+                    },
+                ).build(),
         )
         val url = server.url("/v5/public/linear").toString().replace("http", "ws")
         return BybitMarketStream(url, contracts, { tickers += it }, { s, p -> trades += s to p }, { s, p ->
@@ -61,7 +63,7 @@ class BybitMarketStreamTest {
     }
 
     @AfterEach
-    fun stop() = server.shutdown()
+    fun stop() = server.close()
 
     @Test
     fun `a quoted contract merges its ticker snapshot, deltas and best levels into one ticker`() {

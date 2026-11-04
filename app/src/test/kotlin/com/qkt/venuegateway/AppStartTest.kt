@@ -63,7 +63,7 @@ class AppStartTest {
                             ).header("Authorization", "Bearer t")
                             .build(),
                     ).execute()
-                    .use { it.body!!.string() }
+                    .use { it.body.string() }
             assertThat(
                 body,
             ).contains("\"adapter\":\"test-venue\"", "\"account_login\":\"acct-1\"", "\"venue_connected\":true")
