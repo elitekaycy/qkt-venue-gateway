@@ -65,21 +65,15 @@ internal object BybitPrivateJson {
             createdMs = o.text("createdTime")?.toLong(),
         )
 
-    /** The wallet answer's account row (a unified account has one) and its row of [coin], zero when it holds none. */
-    fun wallet(
-        o: JsonObject,
-        coin: String,
-    ): BybitWallet {
-        val row = BybitJson.run { o.items("coin") }.firstOrNull { it.text("coin") == coin }
-        return BybitWallet(
-            coin = coin,
-            walletBalance = row?.decimal("walletBalance") ?: BigDecimal.ZERO,
-            equity = row?.decimal("equity") ?: BigDecimal.ZERO,
+    /** The wallet answer's account row (a unified account has one): its pooled figures, in USD. */
+    fun wallet(o: JsonObject) =
+        BybitWallet(
+            walletBalance = o.needDecimal("totalWalletBalance"),
+            marginBalance = o.needDecimal("totalMarginBalance"),
             initialMargin = o.needDecimal("totalInitialMargin"),
             maintenanceMargin = o.needDecimal("totalMaintenanceMargin"),
             available = o.needDecimal("totalAvailableBalance"),
         )
-    }
 
     /** [o] as the `/v5/order/create` body. */
     fun create(o: BybitNewOrder): JsonObject =

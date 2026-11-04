@@ -94,12 +94,16 @@ internal object BybitMapping {
         return VenueFunding(e.execId, e.symbol, e.execFee, e.feeCurrency ?: currency, position, e.execTimeMs)
     }
 
-    /** The account in [w]'s coin: that coin's balance and equity, and the unified account's pooled margin (in USD). */
+    /**
+     * The unified account as Bybit margins it, every figure pooled across its coins and in USD, so equity over margin
+     * used is the account's own margin level: equity is the margin balance (wallet balance plus unrealised profit),
+     * never one coin's equity against the whole account's margin.
+     */
     fun account(w: BybitWallet) =
         AccountSnapshot(
-            w.coin,
+            ACCOUNT_CURRENCY,
             w.walletBalance,
-            w.equity,
+            w.marginBalance,
             w.initialMargin,
             w.available,
             w.initialMargin,
@@ -151,4 +155,7 @@ internal object BybitMapping {
             "FOK" -> TimeInForce.FOK
             else -> error("bybit time in force $bybit is not supported")
         }
+
+    /** What a unified account values its pooled money and margin in. */
+    private const val ACCOUNT_CURRENCY = "USD"
 }
