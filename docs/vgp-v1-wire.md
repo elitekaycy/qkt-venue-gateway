@@ -125,9 +125,36 @@ An `event` also carries its terms, all absent for every other kind:
 | `outcome` | the settled value once known, in [0, 1] (`"0"` for a NO) |
 | `fee_model`, `taker_fee_rate`, `maker_fee_rate`, `fee_rounding` | the per-order fee shape: `probability` is rate × contracts × p × (1 − p), rounded up to `fee_rounding`; no `maker_fee_rate` means no maker fee. Charges still arrive on fills |
 
-A dated contract stays listed for at least **30 days after its expiry**, so a client restarting after
-a weekend still maps the contracts it held to their settlements. (The qkt client also maps an unlisted
-option by its name, which is exact; a dated future has no such rule.)
+A dated contract stays listed for at least **30 days after its expiry** (an `event`: 7 days by default, as the
+gateway's operator sets it, since venues list thousands a day), so a client restarting after a weekend still maps
+the contracts it held to their settlements. (The qkt client also maps an unlisted option by its name, which is
+exact; a dated future has no such rule.) `GET /v1/instruments/{code}` also answers for a contract the venue no
+longer lists when the venue can still look it up by code (a settled event, with its `outcome`).
+
+The gateway reads the venue's listing on a timer (a minute by default) and when a code it was asked for is not in
+its last read, not on every request, so a listing can lag the venue by that long.
+
+**Paging, filters and changes.** `GET /v1/instruments` takes optional query parameters:
+
+| Parameter | Keeps |
+|---|---|
+| `kind`, `category`, `series`, `event` | instruments whose field equals the value |
+| `status` | `open` (the venue lists it, `trading` is not `close_only` or `disabled`, and its `close_at` and `expiry` are still ahead), `closed` (any other) or `all` (the default) |
+| `updated_since=<ms>` | instruments added or changed at or after that time, and the codes removed since |
+| `cursor`, `limit` | at most `limit` (1 to 5000; all when absent) instruments with codes after `cursor` |
+
+With none of them the response is the plain list above, unchanged. With any of them it is a page, by code:
+```json
+{"instruments": [<Instrument>], "removed": [{"code": "KXINXU-26NOV06H1500-T7425", "removed": true}],
+ "next": "KXINXU-26NOV06H1600-T7400", "as_of": 1794006012000}
+```
+`next` is the `cursor` of the following page, absent on the last. `removed` is present only with `updated_since`:
+each code that left the listing since, filtered as it was last listed. `as_of` is when the gateway read the
+listing served; a client polls for changes with `updated_since=<as_of>` (a change at that instant may be sent
+twice, never missed). The gateway derives changes from its own successive reads and remembers removals 7 days:
+an `updated_since` from before that, or from before the gateway's first read since it started, is `400
+invalid_request`, and the client reads the listing in full. Changes are a poll, not stream events: the stream
+carries money records only.
 
 ### `GET /v1/bars?symbol=<code>&window_ms=<ms>&from=<ms>&to=<ms>`
 Closed bars of one instrument, oldest first, each `start` in `[from, to)` and aligned to UTC:

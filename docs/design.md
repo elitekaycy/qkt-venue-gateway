@@ -78,6 +78,8 @@ interface VenueAdapter : AutoCloseable {
     fun connect(listener: AdapterListener)             // opens the venue link; listener gets pushes
     fun identity(): VenueIdentity                      // account login, trade mode (demo|real), currency
     fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms
+    val listingRefreshMs: Long                         // how often the host reads instruments() (default a minute)
+    fun instrument(code: String): Instrument?          // a code the venue no longer lists, when it can look it up (default null)
     fun account(): AccountSnapshot
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>
@@ -130,6 +132,13 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   perhaps still forming. The host builds every window once for all venues: from the largest native length
   dividing it (first open, highest high, lowest low, last close, summed volume), closed windows only, and asks
   the adapter for those windows' klines alone.
+- **The listing is served by the host.** The host reads `instruments()` every `listingRefreshMs` (a minute by
+  default) on the scheduler it hands the adapter, and on a lookup miss at most every 10 seconds; requests are
+  answered from that read, indexed by code, never by asking the venue. Each read goes through the instrument shelf
+  (dated contracts kept 30 days after expiry, event contracts `GATEWAY_EVENT_KEEP_DAYS`, 7 by default) and is
+  diffed with the one before, which is how `/v1/instruments` pages, filters and serves `updated_since` changes for
+  every venue without adapter code. `instrument(code)` answers a code the venue no longer lists (a settled
+  contract), when the venue can look it up.
 - **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
   triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
   turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order

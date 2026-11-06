@@ -7,7 +7,7 @@ strings. The full contract is the [wire protocol](../vgp-v1-wire.md).
 |---|---|---|
 | `GET /v1/health` | any | Adapter, account, venue link, kill switch, stream and sequence |
 | `GET /v1/account`, `/v1/positions` | any | Balances and margin; open positions |
-| `GET /v1/instruments[/{code}]` | any | Listings, including dated contracts expired within 30 days |
+| `GET /v1/instruments[/{code}]` | any | Listings, including dated contracts expired within 30 days (events 7); optional filters, pages and `updated_since` changes |
 | `POST /v1/orders`; `PATCH`, `DELETE /v1/orders/{id}` | trader | Place (idempotent), change, cancel |
 | `GET /v1/orders[/{id}]` | any | Open orders placed through this gateway; one order by its client id |
 | `POST /v1/positions/close` | trader | Close a position at market; idempotent on an optional `client_order_id` |
