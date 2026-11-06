@@ -21,8 +21,7 @@ class BybitOrderDeskTest {
     private val now = BybitVenue.NOW
     private val servers = mutableListOf<Fixtures.Server>()
 
-    private fun server(route: (String, Map<String, String>) -> String?) =
-        Fixtures.Server(route).also { servers += it }
+    private fun server(route: (String, Map<String, String>) -> String?) = Fixtures.Server(route).also { servers += it }
 
     @AfterEach
     fun stop() = servers.forEach { it.close() }

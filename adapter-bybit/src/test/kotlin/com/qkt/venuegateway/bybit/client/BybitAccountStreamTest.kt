@@ -30,26 +30,25 @@ class BybitAccountStreamTest {
     private fun venue(
         answerAuth: String?,
         pushes: List<String> = emptyList(),
-    ) =
-        MockResponse
-            .Builder()
-            .webSocketUpgrade(
-                object : WebSocketListener() {
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
-                        sent += text
-                        if (text.contains("\"auth\"") && answerAuth != null) webSocket.send(answerAuth)
-                        if (text.contains("\"subscribe\"")) pushes.forEach { webSocket.send(Fixtures.text(it)) }
-                    }
+    ) = MockResponse
+        .Builder()
+        .webSocketUpgrade(
+            object : WebSocketListener() {
+                override fun onMessage(
+                    webSocket: WebSocket,
+                    text: String,
+                ) {
+                    sent += text
+                    if (text.contains("\"auth\"") && answerAuth != null) webSocket.send(answerAuth)
+                    if (text.contains("\"subscribe\"")) pushes.forEach { webSocket.send(Fixtures.text(it)) }
+                }
 
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) = Unit
-                },
-            ).build()
+                override fun onOpen(
+                    webSocket: WebSocket,
+                    response: Response,
+                ) = Unit
+            },
+        ).build()
 
     private fun stream() =
         BybitAccountStream(

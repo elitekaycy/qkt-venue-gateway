@@ -130,7 +130,7 @@ class BybitAdapterAccountTest {
         assertThat(funding.symbol).isEqualTo("BTCUSDT")
         assertThat(funding.amount).isEqualByComparingTo("0.0085907")
         assertThat(funding.position).isEqualByComparingTo("0.001")
-        assertThat(venue.sent("/v5/execution/list").first().url.queryParameter("execType")).isEqualTo("Funding")
+        assertThat(venue.param("/v5/execution/list", "execType")).isEqualTo("Funding")
     }
 
     @Test
@@ -163,7 +163,7 @@ class BybitAdapterAccountTest {
         assertThat(positions.accounting).isEqualTo(Accounting.NETTING)
         assertThat(positions.rows).isEmpty()
         assertThat(venue.sent("/v5/position/list")).isEmpty()
-        assertThat(venue.sent("/v5/account/wallet-balance").single().url.queryParameter("accountType"))
+        assertThat(venue.param("/v5/account/wallet-balance", "accountType"))
             .isEqualTo("UNIFIED")
     }
 
@@ -173,7 +173,7 @@ class BybitAdapterAccountTest {
 
         venue.adapter.openOrders()
 
-        assertThat(venue.sent("/v5/order/realtime").first().url.queryParameter("category")).isEqualTo("spot")
-        assertThat(venue.sent("/v5/order/realtime").first().url.queryParameter("settleCoin")).isNull()
+        assertThat(venue.param("/v5/order/realtime", "category")).isEqualTo("spot")
+        assertThat(venue.param("/v5/order/realtime", "settleCoin")).isNull()
     }
 }

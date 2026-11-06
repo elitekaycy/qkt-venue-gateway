@@ -52,7 +52,7 @@ class BybitAdapterOrdersTest {
         assertThat(placed.status).isEqualTo(OrderStatus.WORKING)
         assertThat(venue.body("/v5/order/create"))
             .contains("\"orderLinkId\":\"rec-rest-1\"", "\"positionIdx\":0", "\"price\":\"77392.3\"")
-        assertThat(venue.sent("/v5/position/list").single().url.queryParameter("symbol")).isEqualTo("BTCUSDT")
+        assertThat(venue.param("/v5/position/list", "symbol")).isEqualTo("BTCUSDT")
     }
 
     @Test
@@ -116,7 +116,7 @@ class BybitAdapterOrdersTest {
     fun `cancelling an order bybit never had, or one that already ended, sends nothing`() {
         val unknown = venue()
         unknown.adapter.cancel("rec-unknown")
-        assertThat(unknown.sent("/v5/order/history").single().url.queryParameter("orderLinkId"))
+        assertThat(unknown.param("/v5/order/history", "orderLinkId"))
             .isEqualTo("rec-unknown")
         assertThat(unknown.sent("/v5/order/cancel")).isEmpty()
 

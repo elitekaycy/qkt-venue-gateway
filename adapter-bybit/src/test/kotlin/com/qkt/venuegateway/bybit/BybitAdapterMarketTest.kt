@@ -57,7 +57,7 @@ class BybitAdapterMarketTest {
 
         assertThat(bars).hasSize(15)
         assertThat(bars.last().volume).isEqualByComparingTo("0.048")
-        assertThat(venue.sent("/v5/market/kline").single().url.queryParameter("interval")).isEqualTo("1")
+        assertThat(venue.param("/v5/market/kline", "interval")).isEqualTo("1")
     }
 
     @Test
@@ -71,7 +71,7 @@ class BybitAdapterMarketTest {
         assertThat(prints).hasSize(6)
         assertThat(prints.last().id).isEqualTo("c9973f17-3657-54b1-b419-3690be7a964b")
         assertThat(prints.last().side).isEqualTo(Side.SELL)
-        assertThat(venue.sent("/v5/market/recent-trade").single().url.queryParameter("limit")).isEqualTo("1000")
+        assertThat(venue.param("/v5/market/recent-trade", "limit")).isEqualTo("1000")
         assertThat(Files.readString(dir.resolve("taped.txt"))).contains("BTCUSDT")
     }
 
@@ -93,8 +93,9 @@ class BybitAdapterMarketTest {
 
         val depth = venue.adapter.depth("BTCUSDT", 1_791_239_000_000, tickerTime + 1_000)
 
-        assertThat(depth.single().timeMs).isEqualTo(1_791_239_695_194L)
-        assertThat(depth.single().asks.first().price).isEqualByComparingTo("87717.80")
-        assertThat(venue.sent("/v5/market/orderbook").single().url.queryParameter("limit")).isEqualTo("10")
+        val book = depth.single()
+        assertThat(book.timeMs).isEqualTo(1_791_239_695_194L)
+        assertThat(book.asks.first().price).isEqualByComparingTo("87717.80")
+        assertThat(venue.param("/v5/market/orderbook", "limit")).isEqualTo("10")
     }
 }

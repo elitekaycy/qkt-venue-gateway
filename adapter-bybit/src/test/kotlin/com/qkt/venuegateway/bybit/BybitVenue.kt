@@ -77,6 +77,12 @@ internal class BybitVenue(
     fun sent(path: String): List<RecordedRequest> =
         synchronized(server.requests) { server.requests.toList() }.filter { it.url.encodedPath == path }
 
+    /** Query parameter [name] of the first request sent to [path]. */
+    fun param(
+        path: String,
+        name: String,
+    ): String? = sent(path).first().url.queryParameter(name)
+
     override fun close() {
         adapter.close()
         server.close()
