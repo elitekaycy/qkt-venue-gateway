@@ -51,7 +51,7 @@ internal object ContractChecks {
         quantity: BigDecimal,
     ): BigDecimal = if (side == Side.BUY) quantity else quantity.negate()
 
-    private fun instrument(i: Instrument) {
+    internal fun instrument(i: Instrument) {
         val what = "instrument ${i.code}"
         assertThat(i.code).describedAs(what).isNotBlank
         assertThat(i.currency).describedAs("$what currency").isNotBlank
@@ -61,9 +61,10 @@ internal object ContractChecks {
         val option = i.kind == InstrumentKind.OPTION
         assertThat(i.expiryMs != null)
             .describedAs("$what expiry")
-            .isEqualTo(option || i.kind == InstrumentKind.FUTURE)
+            .isEqualTo(option || i.kind == InstrumentKind.FUTURE || i.kind == InstrumentKind.EVENT)
         assertThat(i.strike != null).describedAs("$what strike").isEqualTo(option)
         assertThat(i.underlying != null).describedAs("$what underlying").isEqualTo(option)
         assertThat(i.right).describedAs("$what right").isIn(if (option) listOf("call", "put") else listOf(null))
+        EventChecks.terms(i)
     }
 }
