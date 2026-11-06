@@ -16,7 +16,7 @@ internal object EventChecks {
         assertThat(e.series).describedAs("$what series").isNotBlank
         assertThat(e.event).describedAs("$what event").isNotBlank
         assertThat(e.closeAtMs).describedAs("$what close").isGreaterThanOrEqualTo(e.openAtMs)
-        val bounds = e.floor != null to (e.cap != null)
+        val bounds = (e.floor != null) to (e.cap != null)
         val expected =
             when (e.strikeType) {
                 StrikeType.BETWEEN -> true to true
