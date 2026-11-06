@@ -45,6 +45,8 @@ abstractions, no dead code, no TODOs left behind, no new dependency without a re
   removed. No hand-written venue JSON.
 - Tests are offline by default. Live tests (`AdapterContractTest`, probes) skip without their venue
   key locally and run in the adapter workflow, where skipping fails.
+- Every line a PR adds or edits under `src/main` runs under an offline test, and the merged Kover floor
+  in `config/coverage-floor.properties` only rises (`docs/project/test-coverage.md`).
 - Name tests as sentences of behaviour: `` `a missing token is refused by name` ``.
 
 ## Branches, commits and pull requests
