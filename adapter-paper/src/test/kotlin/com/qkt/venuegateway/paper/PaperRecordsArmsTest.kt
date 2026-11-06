@@ -172,4 +172,28 @@ class PaperRecordsArmsTest {
 
         assertThat(change.fills.single().price).isEqualByComparingTo("94.8")
     }
+
+    @Test
+    fun `equal records hash alike whether their optional fields are absent or given`() {
+        val bare =
+            working.copy(
+                venueOrderId = null,
+                limitPrice = null,
+                stopPrice = null,
+                avgFillPrice = null,
+                rejectReason = null,
+            )
+        val noVenueId = fill.copy(venueOrderId = null)
+        val held = VenueFunding("tx-1", symbol, BigDecimal.ONE, "USDC", BigDecimal("2"), 11L)
+
+        assertThat(Order(bare)).hasSameHashCodeAs(Order(bare)).isEqualTo(Order(bare))
+        assertThat(Order(working)).hasSameHashCodeAs(Order(working)).isEqualTo(Order(working))
+        assertThat(Fill(noVenueId)).hasSameHashCodeAs(Fill(noVenueId)).isEqualTo(Fill(noVenueId))
+        assertThat(Fill(fill)).hasSameHashCodeAs(Fill(fill)).isEqualTo(Fill(fill))
+        assertThat(FundingRecord(held)).hasSameHashCodeAs(FundingRecord(held)).isEqualTo(FundingRecord(held))
+        listOf<Any>(Position(symbol, "1", "2"), Settlement(symbol, "1", 2), Charge("A", "1", "C")).forEach {
+            assertThat(it.equals("x")).isFalse
+            assertThat(it.equals(null)).isFalse
+        }
+    }
 }
