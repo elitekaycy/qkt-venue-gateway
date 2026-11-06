@@ -42,12 +42,12 @@ class InstrumentShelfTest {
             assertThat(
                 shelf.listing(listOf(perp)).map { it.code },
             ).containsExactlyInAnyOrder(perp.code, future.code, option.code)
-            assertThat(shelf.find(future.code, live = emptyList())).isEqualTo(future)
+            assertThat(shelf.listing(emptyList())).contains(future)
         }
         now = expiry + 31 * day
         InstrumentShelf.open(file) { now }.use { shelf ->
             assertThat(shelf.listing(listOf(perp)).map { it.code }).containsExactly(perp.code)
-            assertThat(shelf.find(future.code, live = emptyList())).isNull()
+            assertThat(shelf.listing(emptyList())).isEmpty()
         }
     }
 
@@ -61,8 +61,23 @@ class InstrumentShelfTest {
 
             assertThat(shelf.listing(listOf(retick)).single { it.code == future.code }.tickSize).isEqualTo("5")
             assertThat(shelf.listing(emptyList()).map { it.code }).containsExactly(future.code)
-            assertThat(shelf.find(perp.code, live = emptyList())).isNull()
-            assertThat(shelf.find(perp.code, live = listOf(perp))).isEqualTo(perp)
+            assertThat(shelf.listing(listOf(perp))).containsExactly(perp, retick)
+        }
+    }
+
+    @Test
+    fun `an event contract is kept a shorter while after its expiry than other dated contracts`(
+        @TempDir dir: Path,
+    ) {
+        val event = future.copy(code = "KXINXU-26NOV06H1500-T7425", kind = "event", series = "KXINXU")
+        var now = expiry - day
+        InstrumentShelf.open(dir.resolve("instruments.db"), eventKeepMs = 2 * day) { now }.use { shelf ->
+            shelf.listing(listOf(future, event))
+            now = expiry + day
+
+            assertThat(shelf.listing(emptyList()).map { it.code }).containsExactly(future.code, event.code)
+            now = expiry + 3 * day
+            assertThat(shelf.listing(emptyList()).map { it.code }).containsExactly(future.code)
         }
     }
 }

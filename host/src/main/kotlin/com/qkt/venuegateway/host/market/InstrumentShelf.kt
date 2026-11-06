@@ -10,8 +10,9 @@ import kotlinx.serialization.json.Json
 
 /**
  * The listing the gateway serves (wire spec §3): the venue's live listing, plus every dated contract it
- * listed before and no longer does, until [keepMs] (30 days) after its expiry, so a client restarting
- * after a weekend still maps a contract it held to its settlement. Dated contracts are remembered as
+ * listed before and no longer does, until [keepMs] (30 days) after its expiry, an event contract until
+ * [eventKeepMs] (7 days: venues list thousands a day), so a client restarting after a weekend still maps a
+ * contract it held to its settlement. Dated contracts are remembered as
  * last listed, in memory and in their own SQLite file (written only when one changes); a perpetual or
  * spot instrument is never kept once the venue drops it. Holds for every adapter, whatever its venue
  * offers for expired contracts. Thread-safe.
@@ -20,6 +21,7 @@ class InstrumentShelf private constructor(
     private val db: Connection,
     private val clock: () -> Long,
     private val keepMs: Long,
+    private val eventKeepMs: Long,
 ) : AutoCloseable {
     private val json = Json { ignoreUnknownKeys = true }
     private val remembered = HashMap<String, WireInstrument>()
@@ -41,18 +43,11 @@ class InstrumentShelf private constructor(
     @Synchronized
     fun listing(live: List<WireInstrument>): List<WireInstrument> {
         remember(live.filter { it.expiry != null && remembered[it.code] != it })
-        forget(clock() - keepMs)
+        forget(clock())
         val liveCodes = live.mapTo(HashSet()) { it.code }
         return live +
             remembered.values.filter { it.code !in liveCodes }.sortedWith(compareBy({ it.expiry }, { it.code }))
     }
-
-    /** [code] from the [live] listing, else from the remembered contracts; null when neither holds it. */
-    @Synchronized
-    fun find(
-        code: String,
-        live: List<WireInstrument>,
-    ): WireInstrument? = listing(live).firstOrNull { it.code == code }
 
     override fun close() = synchronized(this) { db.close() }
 
@@ -66,8 +61,8 @@ class InstrumentShelf private constructor(
         changed.forEach { remembered[it.code] = it }
     }
 
-    private fun forget(cutoff: Long) {
-        val expired = remembered.values.filter { it.expiry!! < cutoff }
+    private fun forget(now: Long) {
+        val expired = remembered.values.filter { it.expiry!! < now - if (it.kind == EVENT) eventKeepMs else keepMs }
         if (expired.isEmpty()) return
         write("DELETE FROM instruments WHERE code = ?", expired) { st, i -> st.setString(1, i.code) }
         expired.forEach { remembered.remove(it.code) }
@@ -97,12 +92,14 @@ class InstrumentShelf private constructor(
     }
 
     companion object {
-        private const val THIRTY_DAYS_MS = 30L * 86_400_000L
+        private const val DAY_MS = 86_400_000L
+        private const val EVENT = "event"
 
-        /** Opens (or creates) the shelf at [file], keeping expired contracts [keepMs] by [clock]. */
+        /** Opens (or creates) the shelf at [file], keeping expired contracts [keepMs] and events [eventKeepMs]. */
         fun open(
             file: Path,
-            keepMs: Long = THIRTY_DAYS_MS,
+            keepMs: Long = 30 * DAY_MS,
+            eventKeepMs: Long = 7 * DAY_MS,
             clock: () -> Long,
         ): InstrumentShelf {
             file.parent?.let { Files.createDirectories(it) }
@@ -113,7 +110,7 @@ class InstrumentShelf private constructor(
                     "CREATE TABLE IF NOT EXISTS instruments(code TEXT PRIMARY KEY, expiry INTEGER NOT NULL, instrument_json TEXT NOT NULL)",
                 )
             }
-            return InstrumentShelf(db, clock, keepMs)
+            return InstrumentShelf(db, clock, keepMs, eventKeepMs)
         }
     }
 }

@@ -10,7 +10,6 @@ import com.qkt.vgp.WireChange
 import com.qkt.vgp.WireClose
 import com.qkt.vgp.WireDeals
 import com.qkt.vgp.WireHealth
-import com.qkt.vgp.WireInstrument
 import com.qkt.vgp.WireKillSwitch
 import com.qkt.vgp.WireOrder
 import com.qkt.vgp.WireOrders
@@ -25,7 +24,6 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -38,16 +36,7 @@ internal fun Route.restRoutes(gateway: Gateway) {
     get("/v1/account") {
         call.serve(gateway, ANY_ROLE) { json(WireAccount.serializer(), WireReads.account(gateway.adapter.account())) }
     }
-    get("/v1/instruments") {
-        call.serve(gateway, ANY_ROLE) { json(ListSerializer(WireInstrument.serializer()), gateway.instruments()) }
-    }
-    get("/v1/instruments/{code}") {
-        call.serve(gateway, ANY_ROLE) {
-            val code = parameters["code"]!!
-            gateway.instrument(code)?.let { json(WireInstrument.serializer(), it) }
-                ?: error(404, "not_found", "no instrument $code")
-        }
-    }
+    instrumentRoutes(gateway)
     get("/v1/positions") {
         call.serve(
             gateway,
