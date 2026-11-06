@@ -9,7 +9,7 @@ logback = "1.6.6"
 junit = "5.11.4"
 assertj = "3.27.7"
 ktlint-plugin = "12.1.1"
-kover = "0.9.1"
+kover = "0.9.11"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
