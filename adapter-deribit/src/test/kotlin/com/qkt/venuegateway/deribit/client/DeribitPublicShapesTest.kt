@@ -81,5 +81,8 @@ class DeribitPublicShapesTest {
         val rates = client.fundingRates("SOL_USDC-PERPETUAL", 1_791_122_400_000L, 1_791_126_000_000L)
 
         assertThat(rates.map { it.timestampMs }).containsExactly(1_791_122_400_000L, 1_791_126_000_000L)
+        answer(fixture("funding-rate-history.json"))
+        val later = client.fundingRates("SOL_USDC-PERPETUAL", 1_791_126_000_000L, 1_791_129_600_000L)
+        assertThat(later.map { it.timestampMs }).containsExactly(1_791_126_000_000L, 1_791_129_600_000L)
     }
 }
