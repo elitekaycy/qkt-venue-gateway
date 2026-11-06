@@ -31,7 +31,10 @@ internal class RecordedDeribitSocket : AutoCloseable {
         Json.parseToJsonElement(javaClass.getResource("/fixtures/private/$name")!!.readText()).jsonObject
 
     /** A client connected to this socket, what it sent while connecting already taken. */
-    fun connected(): DeribitPrivateClient {
+    fun connected(
+        onOrder: (DeribitOrder) -> Unit = {},
+        onTrade: (DeribitTrade) -> Unit = {},
+    ): DeribitPrivateClient {
         server.enqueue(MockResponse.Builder().webSocketUpgrade(Venue()).build())
         val client =
             DeribitPrivateClient(
@@ -39,8 +42,8 @@ internal class RecordedDeribitSocket : AutoCloseable {
                 "id-7",
                 "secret-7",
                 setOf("USDC"),
-                {},
-                {},
+                onOrder,
+                onTrade,
                 { up, _ -> connections += up },
             )
         client.start()
