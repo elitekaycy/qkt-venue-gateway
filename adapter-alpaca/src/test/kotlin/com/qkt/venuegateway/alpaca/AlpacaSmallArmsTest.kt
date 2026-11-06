@@ -136,6 +136,9 @@ class AlpacaSmallArmsTest {
         assertThatThrownBy { AlpacaTimeframes.of(2 * day) }.hasMessageContaining("no bars")
         assertThatThrownBy { AlpacaTimeframes.of(24 * hour + hour) }.hasMessageContaining("no bars")
         assertThatThrownBy { AlpacaTimeframes.of(90 * 1_000L) }.hasMessageContaining("no bars")
+        assertThatThrownBy { AlpacaTimeframes.of(0) }.hasMessageContaining("no bars")
+        assertThatThrownBy { AlpacaTimeframes.of(-hour) }.hasMessageContaining("no bars")
+        assertThatThrownBy { AlpacaTimeframes.of(25 * hour) }.hasMessageContaining("no bars")
     }
 
     private fun equityAdapter(
