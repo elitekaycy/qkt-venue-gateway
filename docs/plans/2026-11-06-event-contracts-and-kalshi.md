@@ -61,7 +61,11 @@ test, a spec edit, a qkt reader. No protocol bump.
 |---|---|---|
 | `series` | the recurring question type, the family | `series_ticker` |
 | `event` | one instance of the series (one close time) | `event_ticker` |
-| `strike_type` | `greater`, `greater_or_equal`, `less`, `less_or_equal`, `between`, `custom` | `strike_type` (`functional`/`structured` → `custom`) |
+| `strike_type` | `greater`, `greater_or_equal`, `less`, `less_or_equal`, `between`, `custom`, `none` | `strike_type` (`functional`/`structured` → `custom`; absent → `none`) |
+| `occasion` | a key shared by families about one occasion (one game's winner, spread, total) | the event ticker after the series prefix (`26NOV06OKCMEM`) |
+| `occurs_at` | when the asked-about thing happens (game start, window end), epoch ms | `occurrence_datetime` |
+| `can_close_early` | trading may stop before `close_at` | `can_close_early` |
+| `frequency` | the series cadence, normalised (`15m`, `1h`, `1d`, `1w`, `1mo`, `1q`, `1y`, `custom`, `one_off`) | series `frequency` |
 | `floor`, `cap` | the strike bounds the predicate uses | `floor_strike`, `cap_strike` |
 | `open_at`, `close_at` | trading opens / stops (epoch ms) | `open_time`, `close_time` |
 | `title` | the human question for this market | `yes_sub_title` ("7,425 or above") |
@@ -160,7 +164,7 @@ Branch `adapter/kalshi`, touching only `adapter-kalshi/**`, after the §3 host/A
 | Factory, settings | `KalshiAdapterFactory` (`type = "kalshi"`), `KalshiSettings`: `environment=demo\|production` (no default), `shard`, key id from `GATEWAY_LOGIN`, PEM from `GATEWAY_SECRET_FILE` |
 | Signing | `client/KalshiAuth`: RSA-PSS SHA-256 over `timestamp_ms + METHOD + path` (query stripped), JDK `Signature`; moves to `venue-support` only when a second venue needs it |
 | Clients | `client/KalshiRest` (v2 orders `POST /portfolio/events/orders`, amend/decrease, batch), `client/KalshiSocket` over `ReconnectingSocket` (`orderbook_delta` with seq/gap → fresh snapshot, `ticker`, `trade`, `fill`, `user_orders`, `market_lifecycle_v2`, `cfbenchmarks_value`) |
-| Listing | `KalshiListing` on `support.Listing`: series → events → markets, refreshed every 60 s; excludes multivariate combo markets (`KXMVE…`) |
+| Listing | `KalshiListing` on `support.Listing`: series → events → markets for every category (Sports, Elections, Politics, Financials, Economics, Crypto, Commodities, Climate, Mentions, Entertainment, …), refreshed every 60 s; combo markets (`KXMVE…`) listed with `trading: disabled` (request-for-quote only); paused markets `disabled`, closed markets `close_only` |
 | Mapping | `KalshiMapping` (market → `Instrument` per §3.1), `KalshiOrderMapping` (signed YES quantity: buy = YES, sell = NO; prices as dollar strings; `tick_ranges` from `price_ranges`), `KalshiBookMapping` (NO bids → YES asks; 0 → absent) |
 | Orders | `KalshiOrderDesk`: market→IOC emulation, stop refusal, reduce-only emulation, `client_order_id` as label, `orderByLabel` |
 | Settlement | `KalshiSettlement`: lifecycle `settled` + market `result` → `VenueSettlement(price ∈ [0,1])`, stable timestamp (the journal dedupes on `(symbol, time)`) |
