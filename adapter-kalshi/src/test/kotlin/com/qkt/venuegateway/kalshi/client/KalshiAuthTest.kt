@@ -68,7 +68,7 @@ class KalshiAuthTest {
     fun `a pem passed with escaped newlines, as one environment line, is read`() {
         val auth = KalshiAuth("key-id", Fixtures.pem.replace("\n", "\\n"))
 
-        assertThat(auth.headers(1L, "GET", "/x")).containsKey("KALSHI-ACCESS-SIGNATURE")
+        assertThat(auth.headers(1L, "GET", "/x").keys).contains("KALSHI-ACCESS-SIGNATURE")
     }
 
     @Test

@@ -41,7 +41,7 @@ class KalshiPortfolioTest {
         val request = server.requests.single()
         assertThat(request.headers["KALSHI-ACCESS-KEY"]).isEqualTo("key-id")
         assertThat(request.headers["KALSHI-ACCESS-TIMESTAMP"]).isEqualTo("42")
-        assertThat(request.headers["KALSHI-ACCESS-SIGNATURE"]).isNotBlank
+        assertThat(request.headers["KALSHI-ACCESS-SIGNATURE"].isNullOrBlank()).describedAs("signed").isFalse
     }
 
     @Test
