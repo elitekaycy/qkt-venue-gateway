@@ -1,6 +1,8 @@
 package com.qkt.venuegateway.alpaca.client
 
 import com.qkt.venuegateway.alpaca.Fixtures
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
@@ -108,12 +110,12 @@ class AlpacaClientsTest {
     @Test
     fun `fills read the next page after the last activity's id while a page is full`() {
         val activity = Fixtures.array("activities-fill.json").first()
-        val full = kotlinx.serialization.json.JsonArray(List(100) { activity }).toString()
+        val full = JsonArray(List(100) { activity }).toString()
         server.enqueue(MockResponse(code = 200, body = full))
         answer("activities-fill.json")
         assertThat(AlpacaTrading(http).fills(0L, 1_800_000_000_000L)).hasSize(103)
         assertThat(server.takeRequest().url.queryParameter("page_token")).isNull()
-        val token = (activity["id"] as kotlinx.serialization.json.JsonPrimitive).content
+        val token = (activity["id"] as JsonPrimitive).content
         assertThat(server.takeRequest().url.queryParameter("page_token")).isEqualTo(token)
     }
 }
