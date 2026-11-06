@@ -11,6 +11,7 @@ class WireRequestsValuesTest {
     fun `a change is a value of its three optional fields, absent ones staying absent on the wire`() {
         val change = WireChange(quantity = "0.1", limitPrice = "50000")
 
+        assertThat(change.equals(change)).describedAs("a value is equal to itself").isTrue
         assertThat(change).isEqualTo(change.copy()).hasSameHashCodeAs(change.copy())
         assertThat(change).isNotEqualTo(change.copy(stopPrice = "49000")).isNotEqualTo("change")
         assertThat(change.copy(quantity = null)).isNotEqualTo(change)
@@ -27,6 +28,7 @@ class WireRequestsValuesTest {
     fun `a close is a value of its symbol, quantity, ticket and label, each optional`() {
         val close = WireClose(symbol = "BTC_USDC-PERPETUAL", clientOrderId = "c-1")
 
+        assertThat(close.equals(close)).describedAs("a value is equal to itself").isTrue
         assertThat(close).isEqualTo(close.copy()).hasSameHashCodeAs(close.copy())
         assertThat(close).isNotEqualTo(close.copy(ticket = "t-1")).isNotEqualTo(close.copy(quantity = "1"))
         assertThat(close.copy(symbol = null)).isNotEqualTo(close)
