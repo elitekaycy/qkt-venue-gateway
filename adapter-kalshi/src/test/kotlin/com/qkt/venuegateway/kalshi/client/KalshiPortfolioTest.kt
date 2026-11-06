@@ -120,7 +120,7 @@ class KalshiPortfolioTest {
     }
 
     @Test
-    fun `an amend keeps the label, and a cancel is by id; a refusal carries Kalshi's code`() {
+    fun `an amend keeps the label, and a cancel is by id, a refusal carries Kalshi's code`() {
         val order = portfolio.order(placed)!!
         portfolio.amend(order, BigDecimal("3"), BigDecimal("0.03"))
         portfolio.cancel(placed)

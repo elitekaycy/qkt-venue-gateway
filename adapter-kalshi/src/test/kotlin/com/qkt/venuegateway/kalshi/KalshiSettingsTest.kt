@@ -17,7 +17,7 @@ class KalshiSettingsTest {
     ) = AdapterContext(settings, { 0L }, dir, credentials)
 
     @Test
-    fun `the environment has no default, since production is real money; the shard defaults to 0`() {
+    fun `the environment has no default, since production is real money, the shard defaults to 0`() {
         assertThatThrownBy { KalshiSettings.of(context(emptyMap())) }
             .hasMessageContaining("setting environment is required")
         val demo = KalshiSettings.of(context(mapOf("environment" to "demo")))

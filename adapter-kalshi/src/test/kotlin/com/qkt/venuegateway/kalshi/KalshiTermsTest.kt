@@ -38,7 +38,7 @@ class KalshiTermsTest {
     }
 
     @Test
-    fun `fees scale with the multiplier; maker fees only where the fee type says`() {
+    fun `fees scale with the multiplier, maker fees only where the fee type says`() {
         val half = BigDecimal("0.5")
         assertThat(KalshiTerms.fee("quadratic", half, false)!!.takerRate).isEqualByComparingTo("0.035")
         assertThat(KalshiTerms.fee("quadratic_with_maker_fees", half, false)!!.makerRate)
@@ -51,7 +51,7 @@ class KalshiTermsTest {
     }
 
     @Test
-    fun `an outcome is 1 for yes, 0 for no, the settlement value for a scalar; an unknown result fails`() {
+    fun `an outcome is 1 for yes, 0 for no, the settlement value for a scalar, an unknown result fails`() {
         assertThat(KalshiTerms.outcome(market.copy(result = "yes"))).isEqualByComparingTo("1")
         assertThat(KalshiTerms.outcome(market.copy(result = "scalar", settlementValue = BigDecimal("0.37"))))
             .isEqualByComparingTo("0.37")
@@ -59,7 +59,7 @@ class KalshiTermsTest {
     }
 
     @Test
-    fun `only an active market trades in full; closed closes only; combos and unopened markets are disabled`() {
+    fun `only an active market trades in full, closed closes only, combos and unopened markets are disabled`() {
         assertThat(KalshiTerms.trading(market, 0)).isEqualTo(Tradability.FULL)
         assertThat(KalshiTerms.trading(market.copy(status = "closed"), 0)).isEqualTo(Tradability.CLOSE_ONLY)
         listOf("initialized", "inactive", "determined", "disputed", "amended", "finalized", "settled").forEach {

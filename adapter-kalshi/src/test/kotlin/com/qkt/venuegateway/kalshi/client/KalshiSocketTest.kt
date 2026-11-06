@@ -54,7 +54,7 @@ class KalshiSocketTest {
     }
 
     @Test
-    fun `pushes reach their handlers as each frame's msg; errors and acks are not pushes`() {
+    fun `pushes reach their handlers as each frame's msg, errors and acks are not pushes`() {
         socket.quote(listOf("KXNBA3D-26NOV05MIAGSW-GSWSCURRY30"))
         socket.start()
         repeat(3) { next() }

@@ -80,7 +80,7 @@ class KalshiAdapterTest {
     }
 
     @Test
-    fun `bars come from the yes mid of candles, none on the demo's one-sided book; other lengths are refused`() {
+    fun `bars come from the yes mid of candles, none on the demo's one-sided book, other lengths are refused`() {
         assertThat(adapter.klines(CURRY, 60_000L, 1_793_926_800_000L, 1_793_927_400_000L)).isEmpty()
         assertThat(venue.server.requests.last().url.queryParameter("period_interval")).isEqualTo("1")
         assertThatThrownBy { adapter.klines(CURRY, 300_000L, 0L, 1L) }.isInstanceOf(VenueRefusedException::class.java)

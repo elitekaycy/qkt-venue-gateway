@@ -57,7 +57,7 @@ class KalshiOrderDeskTest {
     }
 
     @Test
-    fun `a label Kalshi already holds answers the order holding it; one it cannot find stays refused`() {
+    fun `a label Kalshi already holds answers the order holding it, one it cannot find stays refused`() {
         val retried = adapter.place(order("qkt-probe-fill"))
 
         assertThat(retried.status).isEqualTo(OrderStatus.FILLED)
@@ -97,7 +97,7 @@ class KalshiOrderDeskTest {
     }
 
     @Test
-    fun `a cancel reaches only a resting order; an ended or unknown one is no error`() {
+    fun `a cancel reaches only a resting order, an ended or unknown one is no error`() {
         adapter.place(order("qkt-probe-rest"))
         adapter.cancel("qkt-probe-rest")
         adapter.cancel("qkt-probe-fill")
@@ -110,7 +110,7 @@ class KalshiOrderDeskTest {
     }
 
     @Test
-    fun `a change amends the total quantity and the price; an unknown label is false and a stop is refused`() {
+    fun `a change amends the total quantity and the price, an unknown label is false and a stop is refused`() {
         assertThat(adapter.modify("qkt-probe-rest", OrderChange(quantity = BigDecimal("3")))).isTrue
 
         val amend = Json.parseToJsonElement(venue.server.requests.last().body!!.utf8()).jsonObject

@@ -21,7 +21,7 @@ class KalshiMarketMappingTest {
     ) = Fixtures.json(name)[key]!!.jsonArray.map { it.jsonObject }
 
     @Test
-    fun `a ticker is a yes quote; Kalshi's 0 bid and 1 ask are absent sides`() {
+    fun `a ticker is a yes quote, Kalshi's 0 bid and 1 ask are absent sides`() {
         val both = KalshiMarketMapping.quote(KalshiMarketJson.ticker(msg("ticker")))
         val noAsk = KalshiMarketMapping.quote(KalshiMarketJson.ticker(msg("ticker-no-ask")))
         val noBid = KalshiMarketMapping.quote(KalshiMarketJson.ticker(msg("ticker-no-bid")))
