@@ -77,7 +77,7 @@ interface VenueAdapter : AutoCloseable {
     val capabilities: Set<Capability>                  // optional services served (default: bars, quotes, settlements)
     fun connect(listener: AdapterListener)             // opens the venue link; listener gets pushes
     fun identity(): VenueIdentity                      // account login, trade mode (demo|real), currency
-    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms
+    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms, tick ranges
     val listingRefreshMs: Long                         // how often the host reads instruments() (default a minute)
     fun instrument(code: String): Instrument?          // a code the venue no longer lists, when it can look it up (default null)
     fun account(): AccountSnapshot
@@ -118,8 +118,9 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   interest over time, each figure at the instant the venue made it known), `OPTION_MARKS` (option quotes
   carry the mark IV and the forward, `VenueQuote.markIv` and `underlying`), `TRADES` (a contract's public
   tape, each print with its aggressor side), `LIQUIDATIONS` (the prints that liquidated a position, with
-  the side liquidated) and `DEPTH` (a contract's order book, its best ten levels a side, as the adapter
-  recorded it). The host reports them in
+  the side liquidated), `DEPTH` (a contract's order book, its best ten levels a side, as the adapter
+  recorded it) and `STOP_ORDERS` (the venue holds stop and stop-limit orders; an adapter without it refuses them
+  with `VenueRefusedException`, so qkt can refuse a strategy that needs stops before it starts). The host reports them in
   `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
   undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
   does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without

@@ -64,7 +64,9 @@ happened in between.
 event), `funding_rates` (`/v1/funding-rates`), `mark_prices` (`/v1/marks`, and quotes that carry `mark`
 and `index` where the venue reports them), `open_interest` (`/v1/open-interest`), `option_marks` (option
 quotes that carry `mark_iv` and `underlying`, §4a), `trades` (`/v1/trades`), `liquidations`
-(`/v1/liquidations`) and `depth` (`/v1/depth`). An endpoint whose capability is not declared answers
+(`/v1/liquidations`), `depth` (`/v1/depth`) and `stop_orders` (the venue holds `stop` and `stop_limit` orders
+itself; a gateway without it refuses them, `422 venue_rejected`, so a client that needs stops refuses to start on
+it). An endpoint whose capability is not declared answers
 `501 unsupported` (`/v1/settlements` is still served, from what the journal holds). A gateway that
 predates the field omits it; a client treats that as none declared. A client ignores a name it does not
 know. Funding is the cash a venue moves between longs and shorts of a perpetual; a client books it, so it
@@ -124,6 +126,11 @@ An `event` also carries its terms, all absent for every other kind:
 | `title` | the contract's human label |
 | `outcome` | the settled value once known, in [0, 1] (`"0"` for a NO) |
 | `fee_model`, `taker_fee_rate`, `maker_fee_rate`, `fee_rounding` | the per-order fee shape: `probability` is rate × contracts × p × (1 − p), rounded up to `fee_rounding`; no `maker_fee_rate` means no maker fee. Charges still arrive on fills |
+
+`tick_ranges`, present only where the venue's price grid changes across the price range, lists it as
+`[{"from": "0", "to": "0.1", "tick": "0.001"}, {"from": "0.1", "to": "0.9", "tick": "0.01"}, …]`: prices from
+`from` up to `to` move in steps of `tick`, the ranges ascending without gaps. `tick_size` is then the finest tick,
+so a client that ignores the ranges still sends prices the venue can refuse, never ones it rounds silently.
 
 A dated contract stays listed for at least **30 days after its expiry** (an `event`: 7 days by default, as the
 gateway's operator sets it, since venues list thousands a day), so a client restarting after a weekend still maps
