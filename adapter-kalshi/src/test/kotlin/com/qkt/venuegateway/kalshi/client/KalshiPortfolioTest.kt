@@ -105,7 +105,8 @@ class KalshiPortfolioTest {
 
         assertThat(answer.orderId).isEqualTo(placed)
         assertThat(answer.remainingCount).isEqualByComparingTo("1")
-        val sentBody = server.requests.single().body!!.utf8()
+        val request = server.requests.single()
+        val sentBody = request.body!!.utf8()
         val body = Json.parseToJsonElement(sentBody).jsonObject
         assertThat(body.mapValues { it.value.jsonPrimitive.content }).containsExactlyInAnyOrderEntriesOf(
             mapOf(
