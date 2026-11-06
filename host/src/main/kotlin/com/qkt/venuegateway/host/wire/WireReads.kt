@@ -31,7 +31,9 @@ object WireReads {
             a.maintenanceMargin?.toPlainString(),
         )
 
-    fun instrument(i: Instrument): WireInstrument =
+    fun instrument(i: Instrument): WireInstrument = WireEventReads.withTerms(base(i), i.event)
+
+    private fun base(i: Instrument): WireInstrument =
         WireInstrument(
             code = i.code,
             kind = i.kind.wire(),

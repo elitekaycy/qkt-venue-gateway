@@ -3,8 +3,11 @@ package com.qkt.venuegateway.adapter
 /** Whether an account trades money ([REAL]) or a venue's test environment ([DEMO]). */
 enum class TradeMode { DEMO, REAL }
 
-/** What an instrument is: [EQUITY] is a share of a company, held outright (not a CFD on it). */
-enum class InstrumentKind { SPOT, PERPETUAL, FUTURE, OPTION, EQUITY }
+/**
+ * What an instrument is: [EQUITY] is a share of a company, held outright (not a CFD on it); [EVENT] is a binary event
+ * contract paying 1 when its question resolves YES and 0 when NO, priced in [0, 1] ([EventTerms]).
+ */
+enum class InstrumentKind { SPOT, PERPETUAL, FUTURE, OPTION, EQUITY, EVENT }
 
 /**
  * What the account may do with an instrument the venue still lists: a delisted or halted share is [CLOSE_ONLY] or
