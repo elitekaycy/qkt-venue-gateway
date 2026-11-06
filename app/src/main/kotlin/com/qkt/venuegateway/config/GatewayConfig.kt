@@ -21,6 +21,7 @@ import java.nio.file.Path
  * | `GATEWAY_LOGIN`, `GATEWAY_SECRET` | none | the venue credentials, both or neither |
  * | `GATEWAY_PLUGINS_DIR` | none | adapter jars beside the built-in ones |
  * | `GATEWAY_RECORDING_RETENTION_DAYS` | `0` | UTC days every recording of the venue's market keeps besides today (0: all) |
+ * | `GATEWAY_EVENT_KEEP_DAYS` | `7` | days an event contract stays listed after its expiry (other dated contracts: 30) |
  * | `GATEWAY_SETTING_<KEY>` | the adapter's | adapter setting `<key>`, lower-cased |
  *
  * Any variable but a setting may instead be given as `<NAME>_FILE`, the path of a file holding the
@@ -37,12 +38,13 @@ data class GatewayConfig(
     val pluginsDir: Path? = null,
     val credentials: Credentials? = null,
     val recordingRetentionDays: Int = 0,
+    val eventKeepDays: Int = 7,
 ) {
     /** Every field but the role tokens, which are secrets and never printed. */
     override fun toString() =
         "GatewayConfig(host=$host, port=$port, stateDir=$stateDir, tokens=${tokens.keys}, adapter=$adapter, " +
             "settings=$settings, pluginsDir=$pluginsDir, credentials=$credentials, " +
-            "recordingRetentionDays=$recordingRetentionDays)"
+            "recordingRetentionDays=$recordingRetentionDays, eventKeepDays=$eventKeepDays)"
 
     companion object {
         /** The prefix of every adapter setting's variable: `GATEWAY_SETTING_STOP_TRIGGER` is `stop_trigger`. */
@@ -55,6 +57,7 @@ data class GatewayConfig(
                 "GATEWAY_STATE_DIR" to "./state",
                 "GATEWAY_ADAPTER" to "paper",
                 "GATEWAY_RECORDING_RETENTION_DAYS" to "0",
+                "GATEWAY_EVENT_KEEP_DAYS" to "7",
             )
 
         /** Adapter settings the host's one recording retention replaced. */
@@ -75,6 +78,7 @@ data class GatewayConfig(
                 pluginsDir = vars.optional("GATEWAY_PLUGINS_DIR")?.let { Path.of(it) },
                 credentials = credentials(vars),
                 recordingRetentionDays = retention(vars, env),
+                eventKeepDays = eventKeepDays(vars),
             )
         }
 
@@ -88,6 +92,12 @@ data class GatewayConfig(
             }
             val days = vars.withDefault(name)
             require(DAYS.matches(days)) { "$name must be a whole number of days, 0 to keep all: $days" }
+            return days.toInt()
+        }
+
+        private fun eventKeepDays(vars: Vars): Int {
+            val days = vars.withDefault("GATEWAY_EVENT_KEEP_DAYS")
+            require(DAYS.matches(days)) { "GATEWAY_EVENT_KEEP_DAYS must be a whole number of days: $days" }
             return days.toInt()
         }
 

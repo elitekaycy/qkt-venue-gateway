@@ -77,7 +77,9 @@ interface VenueAdapter : AutoCloseable {
     val capabilities: Set<Capability>                  // optional services served (default: bars, quotes, settlements)
     fun connect(listener: AdapterListener)             // opens the venue link; listener gets pushes
     fun identity(): VenueIdentity                      // account login, trade mode (demo|real), currency
-    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms
+    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms, tick ranges
+    val listingRefreshMs: Long                         // how often the host reads instruments() (default a minute)
+    fun instrument(code: String): Instrument?          // a code the venue no longer lists, when it can look it up (default null)
     fun account(): AccountSnapshot
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>
@@ -116,8 +118,9 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   interest over time, each figure at the instant the venue made it known), `OPTION_MARKS` (option quotes
   carry the mark IV and the forward, `VenueQuote.markIv` and `underlying`), `TRADES` (a contract's public
   tape, each print with its aggressor side), `LIQUIDATIONS` (the prints that liquidated a position, with
-  the side liquidated) and `DEPTH` (a contract's order book, its best ten levels a side, as the adapter
-  recorded it). The host reports them in
+  the side liquidated), `DEPTH` (a contract's order book, its best ten levels a side, as the adapter
+  recorded it) and `STOP_ORDERS` (the venue holds stop and stop-limit orders; an adapter without it refuses them
+  with `VenueRefusedException`, so qkt can refuse a strategy that needs stops before it starts). The host reports them in
   `/v1/health`, never asks for one that is not declared, and answers `501 unsupported` for it; an
   undeclared call throws `VenueUnsupportedException`. A venue that charges funding but cannot report it
   does not declare `FUNDING`, and qkt then refuses to trade its perpetuals rather than book them without
@@ -130,6 +133,13 @@ Rules every adapter keeps, checked by the conformance suite (§9):
   perhaps still forming. The host builds every window once for all venues: from the largest native length
   dividing it (first open, highest high, lowest low, last close, summed volume), closed windows only, and asks
   the adapter for those windows' klines alone.
+- **The listing is served by the host.** The host reads `instruments()` every `listingRefreshMs` (a minute by
+  default) on the scheduler it hands the adapter, and on a lookup miss at most every 10 seconds; requests are
+  answered from that read, indexed by code, never by asking the venue. Each read goes through the instrument shelf
+  (dated contracts kept 30 days after expiry, event contracts `GATEWAY_EVENT_KEEP_DAYS`, 7 by default) and is
+  diffed with the one before, which is how `/v1/instruments` pages, filters and serves `updated_since` changes for
+  every venue without adapter code. `instrument(code)` answers a code the venue no longer lists (a settled
+  contract), when the venue can look it up.
 - **A market order never rests** (wire spec, `POST /v1/orders`). A `MARKET` order, or a `STOP` once
   triggered, ends with what filled at once; an adapter whose venue leaves a remainder working (Deribit
   turns it into a limit at its price-band edge) cancels it as soon as it sees it, and reports the order
@@ -202,13 +212,16 @@ Runs at start, after every venue reconnect, and every 60 seconds:
 ## 8. Quotes
 
 - One quote hub per process: it merges every client's `GET /v1/quotes` subscription into one adapter
-  subscription (codes plus roots; a root expands to every listed option of it, including ones listed
-  later, by refreshing the instrument list every 10 minutes).
+  subscription (codes plus roots; a root expands to every listed instrument of it, by an option's `underlying` or
+  an event contract's series or event, including ones listed later, by refreshing the instrument list every 10
+  minutes).
 - Each subscribed quote is pushed on change and **re-sent with `time` advanced at least every 5 seconds
   while it holds** (wire spec §4a), so a quiet book stays fresh and a stopped venue feed goes stale.
   It holds only while the venue link and the adapter's own quote feed are up: an adapter whose quotes
   come over a link apart from the venue link (Deribit's public ticker socket) reports that link through
   `AdapterListener.quoteFeed`, and while it is down nothing is re-sent, so qkt's stale-data gate trips.
+- A client asking `refresh=changes` is sent changed quotes only, batched every 250 ms into one message, and every
+  quote it holds every 30 seconds instead of the 5-second refresh.
 - Quotes are never journaled and never replayed.
 
 ## 9. Testing
