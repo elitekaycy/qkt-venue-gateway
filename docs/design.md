@@ -77,7 +77,7 @@ interface VenueAdapter : AutoCloseable {
     val capabilities: Set<Capability>                  // optional services served (default: bars, quotes, settlements)
     fun connect(listener: AdapterListener)             // opens the venue link; listener gets pushes
     fun identity(): VenueIdentity                      // account login, trade mode (demo|real), currency
-    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying
+    fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms
     fun account(): AccountSnapshot
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>
