@@ -26,7 +26,8 @@ internal object EventChecks {
             }
         assertThat(bounds).describedAs("$what (floor, cap) present for ${e.strikeType}").isEqualTo(expected)
         if (e.floor != null && e.cap != null) {
-            assertThat(e.floor).describedAs("$what floor below cap").isLessThan(e.cap)
+            // An exact-count bucket ("exactly 45 seats") lists the same floor and cap.
+            assertThat(e.floor).describedAs("$what floor not above cap").isLessThanOrEqualTo(e.cap)
         }
         e.outcome?.let { assertThat(it).describedAs("$what outcome").isBetween(BigDecimal.ZERO, BigDecimal.ONE) }
         e.fee?.let { fee ->

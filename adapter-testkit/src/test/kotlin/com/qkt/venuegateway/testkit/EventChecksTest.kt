@@ -68,8 +68,14 @@ class EventChecksTest {
         refused(contract(ladder.copy(strikeType = StrikeType.BETWEEN)), "(floor, cap)")
 
     @Test
-    fun `a between contract whose floor is not below its cap is refused`() =
-        refused(contract(ladder.copy(strikeType = StrikeType.BETWEEN, cap = BigDecimal("7425"))), "floor below cap")
+    fun `a between contract whose floor is above its cap is refused`() =
+        refused(contract(ladder.copy(strikeType = StrikeType.BETWEEN, cap = BigDecimal("7400"))), "floor not above cap")
+
+    @Test
+    fun `an exact-count bucket with equal floor and cap passes`() {
+        val exact = ladder.copy(strikeType = StrikeType.BETWEEN, floor = BigDecimal("45"), cap = BigDecimal("45"))
+        assertThatCode { ContractChecks.instrument(contract(exact)) }.doesNotThrowAnyException()
+    }
 
     @Test
     fun `a plain question with a floor is refused`() =
