@@ -39,4 +39,18 @@ class WireRequestsValuesTest {
         val (symbol, quantity, ticket, label) = close
         assertThat(listOf(symbol, quantity, ticket, label)).containsExactly("BTC_USDC-PERPETUAL", null, null, "c-1")
     }
+
+    @Test
+    fun `equal requests hash alike whether their optional fields are all absent or all given`() {
+        assertThat(WireChange()).hasSameHashCodeAs(WireChange()).isEqualTo(WireChange())
+        assertThat(
+            WireChange("1", "2", "3"),
+        ).hasSameHashCodeAs(WireChange("1", "2", "3")).isEqualTo(WireChange("1", "2", "3"))
+        assertThat(WireClose()).hasSameHashCodeAs(WireClose()).isEqualTo(WireClose())
+        assertThat(
+            WireClose("S", "1", "t", "c"),
+        ).hasSameHashCodeAs(WireClose("S", "1", "t", "c")).isEqualTo(WireClose("S", "1", "t", "c"))
+        assertThat(WireChange().equals(null)).isFalse
+        assertThat(WireClose().equals(null)).isFalse
+    }
 }
