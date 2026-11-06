@@ -74,10 +74,15 @@ class BybitSettingsTest {
             Capability.MARK_PRICES,
             Capability.OPEN_INTEREST,
             Capability.LIQUIDATIONS,
+            Capability.STOP_ORDERS,
         )
-        assertThat(
-            spot.capabilities,
-        ).containsExactlyInAnyOrder(Capability.BARS, Capability.QUOTES, Capability.TRADES, Capability.DEPTH)
+        assertThat(spot.capabilities).containsExactlyInAnyOrder(
+            Capability.BARS,
+            Capability.QUOTES,
+            Capability.TRADES,
+            Capability.DEPTH,
+            Capability.STOP_ORDERS,
+        )
         assertThat(linear.capabilities).doesNotContain(Capability.SETTLEMENTS, Capability.OPTION_MARKS)
     }
 }
