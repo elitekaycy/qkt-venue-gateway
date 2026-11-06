@@ -13,7 +13,7 @@ strings. The full contract is the [wire protocol](../vgp-v1-wire.md).
 | `POST /v1/positions/close` | trader | Close a position at market; idempotent on an optional `client_order_id` |
 | `GET /v1/deals`, `/v1/settlements`, `/v1/bars` | any | Fills, settlements and closed bars, paged |
 | `WS /v1/stream?since=<seq>&stream=<id>` | any | The event journal: replayed from `since`, then live; `reset` when `stream` is not the current one |
-| `WS /v1/quotes?symbols=…&roots=…` | any | Live quotes by code or option root |
+| `WS /v1/quotes?symbols=…&roots=…&refresh=changes` | any | Live quotes by code, option root or event series/event; optionally changes only, batched |
 | `POST /v1/kill`, `/v1/kill/release` | guardian | Kill switch |
 
 The wire protocol also defines market-data routes that an adapter serves when it declares the capability:

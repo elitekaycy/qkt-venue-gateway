@@ -416,8 +416,9 @@ Event `type` and `data`:
 
 Market data, apart from the event log: quotes are latest-wins and high volume, so they carry no
 `seq`, are never replayed, and a reconnect simply subscribes again. `roots` subscribes every listed
-option of a root (an instrument's `underlying`), including options listed after the subscription; a
-code subscribed both ways is sent once. Each message is one quote:
+instrument of a root, including those listed after the subscription: a root is an option's `underlying`, or an
+event contract's `series` or `event` (`roots=KXINXU` is every contract of that series); a code subscribed both
+ways is sent once. Each message is one quote:
 ```json
 {"symbol": "BTC_USDC-25DEC26-92000-C", "bid": "640", "ask": "655", "bid_size": "1.2", "ask_size": "0.8",
  "mark": "648.5", "mark_iv": "52.3", "underlying": "84437.55", "time": 1790835377133, "index": "84301.2"}
@@ -434,6 +435,12 @@ subscribed quote holds, the gateway sends it again with `time` advanced at least
 venues push options only when their book changes, and a quiet book must stay distinguishable from a
 stopped feed. The client's market-data gate judges each contract by these refreshes, so a contract
 whose refreshes stop is stale and new orders on it wait.
+
+**`refresh=changes`** (optional) suits a subscription of many contracts. Each message is then a JSON array of
+quotes: the quotes that changed (any field but `time`) within one 250 ms tick, sent together; a quote that did not
+change is not sent again. Every **30 seconds** while the feed holds, one message carries every quote the client
+holds with `time` advanced, so a client judging staleness allows 30 seconds rather than 5. Any other `refresh`
+value closes the socket (`1003`, naming it). Without `refresh` the behaviour above is unchanged.
 
 ## 5. Client behaviour
 
