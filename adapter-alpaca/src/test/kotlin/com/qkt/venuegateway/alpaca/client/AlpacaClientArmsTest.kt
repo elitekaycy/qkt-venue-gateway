@@ -75,7 +75,8 @@ class AlpacaClientArmsTest {
         stream.up()
         stream.text("""{"T":"success"}""")
         stream.text("""[{"T":"q","S":"AAPL"}]""")
-        stream.text("""{"T":"other"}""")
+        stream.text("""[{"T":"other"}]""")
+        stream.text("""[{"x":1}]""")
         stream.text("""{"not":"a list"}""")
         stream.text("""["x",{"T":"q","S":"MSFT"}]""")
 
@@ -134,6 +135,7 @@ class AlpacaClientArmsTest {
         val stream = AlpacaTradeStream("k", "s", { updates += it }, { up, why -> links += up to why })
 
         stream.text("""{"stream":"trade_updates"}""")
+        stream.text("""{"data":{"x":1}}""")
         stream.text("""{"stream":"other","data":{"x":1}}""")
         stream.text("""{"stream":"trade_updates","data":{"event":"fill"}}""")
         stream.up()
