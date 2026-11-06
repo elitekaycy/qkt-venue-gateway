@@ -28,6 +28,8 @@ subprojects {
 // Coverage (docs/project/test-coverage.md): one merged Kover report over every module. `koverVerify`
 // fails the build when total line or branch coverage drops below config/coverage-floor.properties;
 // the floor only rises.
+repositories { mavenCentral() }
+
 dependencies { subprojects.forEach { kover(it) } }
 
 val coverageFloor =
