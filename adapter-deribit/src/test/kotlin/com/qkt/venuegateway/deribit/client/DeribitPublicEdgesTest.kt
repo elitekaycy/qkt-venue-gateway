@@ -58,9 +58,11 @@ class DeribitPublicEdgesTest {
         assertThat(url.queryParameter("depth")).isEqualTo("10")
         assertThat(book.name).isEqualTo("BTC_USDC-PERPETUAL")
         assertThat(book.timestampMs).isEqualTo(1_791_171_007_549L)
-        assertThat(book.bids.first().first.toPlainString()).isEqualTo("86472.7")
-        assertThat(book.bids.first().second).isEqualByComparingTo("10")
-        assertThat(book.asks.first().first.toPlainString()).isEqualTo("86472.8")
+        val bid = book.bids.first()
+        val ask = book.asks.first()
+        assertThat(bid.first.toPlainString()).isEqualTo("86472.7")
+        assertThat(bid.second).isEqualByComparingTo("10")
+        assertThat(ask.first.toPlainString()).isEqualTo("86472.8")
     }
 
     @Test
