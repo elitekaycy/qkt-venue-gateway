@@ -53,4 +53,27 @@ class WireRequestsValuesTest {
         assertThat(WireChange().equals(null)).isFalse
         assertThat(WireClose().equals(null)).isFalse
     }
+
+    @Test
+    fun `a request is written and read with every optional field given, and with none`() {
+        val change = WireChange("1", "2", "3")
+        val close = WireClose("S", "1", "t", "c")
+
+        listOf(WireChange(), change).forEach {
+            assertThat(
+                json.decodeFromString(WireChange.serializer(), json.encodeToString(WireChange.serializer(), it)),
+            ).isEqualTo(it)
+        }
+        listOf(WireClose(), close).forEach {
+            assertThat(
+                json.decodeFromString(WireClose.serializer(), json.encodeToString(WireClose.serializer(), it)),
+            ).isEqualTo(it)
+        }
+        assertThat(json.encodeToString(WireChange.serializer(), change))
+            .isEqualTo("""{"quantity":"1","limit_price":"2","stop_price":"3"}""")
+        assertThat(json.encodeToString(WireClose.serializer(), close))
+            .isEqualTo("""{"symbol":"S","quantity":"1","ticket":"t","client_order_id":"c"}""")
+        assertThat(json.decodeFromString(WireChange.serializer(), "{}")).isEqualTo(WireChange())
+        assertThat(json.decodeFromString(WireClose.serializer(), "{}")).isEqualTo(WireClose())
+    }
 }
