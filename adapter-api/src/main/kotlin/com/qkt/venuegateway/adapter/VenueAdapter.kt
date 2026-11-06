@@ -30,7 +30,14 @@ interface VenueAdapter : AutoCloseable {
 
     fun identity(): VenueIdentity
 
+    /** Every instrument listed now; the host reads it every [listingRefreshMs] and serves what it read. */
     fun instruments(): List<Instrument>
+
+    /** How often the host reads [instruments], in milliseconds. */
+    val listingRefreshMs: Long get() = 60_000
+
+    /** [code] although the venue no longer lists it (a settled contract), or null when the venue cannot say. */
+    fun instrument(code: String): Instrument? = null
 
     fun account(): AccountSnapshot
 
@@ -145,10 +152,7 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueBar>
 
-    /**
-     * Subscribes the quotes of [codes], replacing the last subscription; pushes go to the listener. The host expands
-     * a client's roots into their listed options (by [Instrument.underlying]) before it asks.
-     */
+    /** Subscribes the quotes of [codes], replacing the last; the host has expanded clients' roots into codes. */
     fun subscribeQuotes(codes: Set<String>)
 }
 
