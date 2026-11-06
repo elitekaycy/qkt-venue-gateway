@@ -84,8 +84,9 @@ internal object KalshiMarketMapping {
 
     /**
      * A settlement of a market the account held, at Kalshi's settled time (stable, so read twice it is one record):
-     * 1 for `yes`, 0 for `no`, and a scalar's value per YES contract (Kalshi's cents) for `scalar`; a fee is a
-     * delivery fee. Null for a settlement without a result.
+     * 1 for `yes`, 0 for `no`, and a scalar's value per YES contract (Kalshi's cents) for `scalar`. Kalshi's
+     * `fee_cost` there is the trading fees the fills already carried (recorded: 0.0054 on a market whose one fill
+     * paid 0.0054), so it is no charge of its own. Null for a settlement without a result.
      */
     fun settlement(s: KalshiSettlement): VenueSettlement? {
         val price =
@@ -98,8 +99,7 @@ internal object KalshiMarketMapping {
                 "" -> return null
                 else -> error("kalshi market_result ${s.marketResult} of ${s.ticker} is not known")
             }
-        val costs = if (s.feeCost.signum() == 0) emptyList() else listOf(Cost(CostKind.DELIVERY_FEE, s.feeCost, USD))
-        return VenueSettlement(s.ticker, price, s.settledMs, costs)
+        return VenueSettlement(s.ticker, price, s.settledMs)
     }
 
     /** A position as signed YES contracts at the YES price paid: a NO position's cost buys NO at 1 − p. */

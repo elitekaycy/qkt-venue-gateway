@@ -36,7 +36,7 @@ class KalshiVenue : AutoCloseable {
                 "GET /portfolio/orders/$FILLED" -> "private/order-filled.json"
                 "GET /portfolio/orders/$ASKED" -> "private/order-ask-filled.json"
                 "GET /portfolio/fills" -> "private/fills.json"
-                "GET /portfolio/settlements" -> "private/settlements-empty.json"
+                "GET /portfolio/settlements" -> "private/settlements.json"
                 "POST /portfolio/events/orders" -> placement(body)
                 "POST /portfolio/events/orders/$RESTING/amend" -> "private/amend.json"
                 "DELETE /portfolio/events/orders/$RESTING" -> "private/cancel.json"

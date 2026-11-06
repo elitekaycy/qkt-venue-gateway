@@ -112,17 +112,20 @@ class KalshiMarketMappingTest {
     }
 
     @Test
-    fun `a settlement pays 1, 0 or a scalar's value at Kalshi's settled time, its fee a delivery fee`() {
+    fun `a settlement pays 1, 0 or a scalar's value at Kalshi's settled time, charging nothing twice`() {
         fun s(
             result: String,
             cents: Int? = null,
-            fee: String = "0",
-        ) = KalshiMarketMapping.settlement(KalshiSettlement("T", result, cents, 7L, BigDecimal(fee)))
+        ) = KalshiMarketMapping.settlement(KalshiSettlement("T", result, cents, 7L))
 
         assertThat(s("yes")!!.price).isEqualByComparingTo("1")
         assertThat(s("no")!!.price).isEqualByComparingTo("0")
         assertThat(s("scalar", 37)!!.price).isEqualByComparingTo("0.37")
-        assertThat(s("yes", fee = "0.01")!!.costs.single().kind).isEqualTo(CostKind.DELIVERY_FEE)
+        val recorded = list("private/settlements.json", "settlements").map(KalshiPortfolioJson::settlement)
+        val settled = recorded.mapNotNull(KalshiMarketMapping::settlement)
+        assertThat(settled.map { it.price }).allMatch { it.signum() == 0 }
+        assertThat(settled.flatMap { it.costs }).describedAs("fees came on the fills").isEmpty()
+        assertThat(settled.first().timeMs).isEqualTo(1_793_950_419_422L)
         assertThat(s("yes")!!.timeMs).isEqualTo(7L)
         assertThat(s("")).isNull()
         assertThatThrownBy { s("scalar") }.hasMessageContaining("without a value")

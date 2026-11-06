@@ -90,6 +90,10 @@ WebSocket), the account's user id replaced by zeros.
   An amend keeps the order id and the label; the order's `initial_count` stays the original size. Recorded
   refusals: `invalid_price` (off the grid), `insufficient_balance`, `not_found`. Kalshi's order does not echo the
   time in force or type sent, so they are reported as sent while the gateway runs, and as GTC limit after a restart.
+- **Settlements.** Read from the account's settlement history (`/portfolio/settlements`): 1 for `yes`, 0 for `no`,
+  a scalar's `value` in cents, at `settled_time`. Kalshi's `fee_cost` there is the trading fees the market's fills
+  already paid (recorded: 0.0054 and 0.0007, the fills' fees), so a settlement carries no cost of its own. Recorded
+  settlements came 6 and 93 minutes after close.
 - **Account.** Balance is per shard (`balance_breakdown`); positions are signed YES (negative = NO) with their cost.
   Margin used is Kalshi's portfolio value.
 - **Liquidity.** The demo is thin: most markets have one side or none, so the demo's candles carry no YES mid and

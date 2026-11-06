@@ -40,7 +40,6 @@ data class KalshiSettlement(
     val marketResult: String,
     val valueCents: Int?,
     val settledMs: Long,
-    val feeCost: BigDecimal,
 )
 
 /** The account's position in [ticker]: [position] YES contracts (negative: NO), costing [exposure] in dollars. */

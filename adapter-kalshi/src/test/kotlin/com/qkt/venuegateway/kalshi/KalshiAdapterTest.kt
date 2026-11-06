@@ -76,6 +76,8 @@ class KalshiAdapterTest {
         assertThat(fills.map { it.clientOrderId })
             .containsExactly("qkt-probe-fill", "qkt-probe-ask", "01a1ae63-1720-7260-9267-e5687417590a")
         assertThat(fills.first().side).isEqualTo(Side.BUY)
+        val settled = adapter.settlements(0L, Long.MAX_VALUE / 2)
+        assertThat(settled.map { it.symbol }).containsExactly(CURRY, "KXWTIH-26NOV0601-T91.49")
         assertThat(adapter.settlements(0L, 1_000L)).isEmpty()
     }
 

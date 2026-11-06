@@ -56,7 +56,6 @@ object KalshiPortfolioJson {
             o.text("market_result") ?: "",
             o.text("value")?.toInt(),
             o.instantMs("settled_time") ?: error("kalshi settlement of ${o.need("ticker")} without settled_time"),
-            o.decimal("fee_cost") ?: BigDecimal.ZERO,
         )
 
     fun position(o: JsonObject) =
