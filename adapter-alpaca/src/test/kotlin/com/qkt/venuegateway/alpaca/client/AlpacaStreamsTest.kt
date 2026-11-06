@@ -118,4 +118,25 @@ class AlpacaStreamsTest {
             .hasMessageContaining("406")
             .hasMessageContaining("connection limit exceeded")
     }
+
+    @Test
+    fun `a data stream tells its feed it is up, down only after it was up, and logs in afresh after a drop`() {
+        val frames = Fixtures.frames("ws-data-crypto.json")
+        val feed = mutableListOf<Pair<Boolean, String>>()
+        val symbols = SubscriptionSet<String>().apply { want(listOf("BTC/USD")) }
+        val stream = AlpacaQuoteStream("key", "secret", symbols, {}, { up, why -> feed += up to why }, replyMs = 1_000)
+        stream.text(frames[0])
+        stream.opening(Replaying(frames.drop(1), stream::text))
+        stream.up()
+        stream.dropped("closed 1000", wasUp = true)
+        stream.dropped("failed: refused", wasUp = false)
+        assertThat(feed).containsExactly(
+            true to "alpaca data stream subscribed",
+            false to "alpaca data stream: closed 1000",
+        )
+        // The greeting of the dropped link no longer counts: a new opening waits for its own.
+        val silent = Replaying(emptyList(), stream::text)
+        assertThatThrownBy { stream.opening(silent) }.isInstanceOf(java.util.concurrent.TimeoutException::class.java)
+        assertThat(silent.sent).isEmpty()
+    }
 }

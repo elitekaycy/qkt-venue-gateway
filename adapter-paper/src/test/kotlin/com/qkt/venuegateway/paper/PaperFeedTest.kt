@@ -2,6 +2,8 @@ package com.qkt.venuegateway.paper
 
 import com.qkt.venuegateway.deribit.client.DeribitTickers
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class PaperFeedTest {
@@ -33,5 +35,47 @@ class PaperFeedTest {
             Thread.sleep(10)
         }
         feed.close()
+    }
+
+    @Test
+    fun `before a feed is started wanting codes subscribes nothing and closing is safe`() {
+        val feed = PaperFeed { trading }
+
+        feed.want(setOf("BTC_USDC-PERPETUAL"))
+        feed.close()
+
+        assertThat(feed["BTC_USDC-PERPETUAL"]).isNull()
+        assertThat(subscribed).isEmpty()
+    }
+
+    @Test
+    fun `a renewal that fails is logged and the next one subscribes again`() {
+        val reads = AtomicInteger()
+        val feed =
+            PaperFeed(refreshMs = 20) {
+                check(reads.incrementAndGet() != 2) { "book busy" }
+                trading
+            }
+        feed.start(
+            object : DeribitTickers {
+                override fun start() {}
+
+                override fun subscribe(names: Set<String>) {
+                    subscribed += names
+                }
+
+                override fun close() {}
+            },
+        )
+
+        val deadline = System.currentTimeMillis() + 5_000
+        while (subscribed.size < 2) {
+            check(System.currentTimeMillis() < deadline) { "never renewed after a failure: $subscribed" }
+            Thread.sleep(10)
+        }
+        feed.close()
+
+        assertThat(reads.get()).isGreaterThanOrEqualTo(3)
+        assertThat(subscribed.take(2)).containsOnly(setOf("BTC_USDC-PERPETUAL"))
     }
 }
