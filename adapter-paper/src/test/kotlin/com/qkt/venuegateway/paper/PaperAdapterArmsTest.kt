@@ -135,6 +135,7 @@ class PaperAdapterArmsTest {
 
         assertThat(adapter.fills(at, at).map { it.clientOrderId }).containsExactly("a-1")
         assertThat(adapter.fills(at + 1, at + 2)).isEmpty()
+        assertThat(adapter.fills(0, at - 1)).isEmpty()
         assertThat(adapter.settlements(0, at + 10)).isEmpty()
         assertThat(adapter.funding(0, at + 10)).isEmpty()
         val flat = adapter.account().equity
@@ -143,5 +144,26 @@ class PaperAdapterArmsTest {
 
         assertThat(marked - flat).isEqualByComparingTo("1499.5")
         adapter.close()
+    }
+
+    @Test
+    fun `a position held across a restart is marked at its entry until the feed has heard its instrument`(
+        @TempDir dir: Path,
+    ) {
+        val first = adapter(dir)
+        first.place(buy("a-1"))
+        first.close()
+
+        val restarted = adapter(dir)
+
+        assertThat(
+            restarted
+                .positions()
+                .rows
+                .single()
+                .quantity,
+        ).isEqualByComparingTo("1")
+        assertThat(restarted.account().equity).isEqualByComparingTo(restarted.account().balance)
+        restarted.close()
     }
 }

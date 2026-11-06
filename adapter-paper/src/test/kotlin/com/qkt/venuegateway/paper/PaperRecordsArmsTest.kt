@@ -100,6 +100,9 @@ class PaperRecordsArmsTest {
         val charge = Charge("COMMISSION", "0.1", "USDC")
         val funding = FundingRecord(VenueFunding("tx-1", symbol, BigDecimal.ONE, "USDC", null, 11L))
 
+        listOf<Any>(order, record, position, settlement, charge, funding).forEach {
+            assertThat(it.equals(it)).describedAs("$it equals itself").isTrue
+        }
         assertThat(
             order,
         ).isEqualTo(order.copy()).hasSameHashCodeAs(order.copy()).isNotEqualTo(order.copy(label = "o-2"))
