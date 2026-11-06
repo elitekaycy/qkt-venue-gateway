@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /** A venue whose listing a test changes, counting reads; it answers [unlisted] codes by [instrument]. */
 internal class ListedVenue(
-    private val fake: FakeAdapter = FakeAdapter(),
+    val fake: FakeAdapter = FakeAdapter(),
     override val listingRefreshMs: Long = 60_000,
 ) : VenueAdapter by fake {
     val listed = CopyOnWriteArrayList(fake.instruments())
