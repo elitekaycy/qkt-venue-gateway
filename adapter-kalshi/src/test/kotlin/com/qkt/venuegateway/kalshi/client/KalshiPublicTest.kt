@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.kalshi.client
 
 import com.qkt.venuegateway.kalshi.Fixtures
+import com.qkt.venuegateway.kalshi.param
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -47,7 +48,7 @@ class KalshiPublicTest {
         assertThat(events.map { it.eventTicker }).containsExactly("KXHIGHNY-26NOV05", "KXHIGHNY-26NOV06")
         assertThat(server.requests.map { it.url.queryParameter("cursor") })
             .containsExactly(null, "CgYIwOO41wYSEEtYSElHSE5ZLTI2Tk9WMDU")
-        assertThat(server.requests.first().url.queryParameter("with_nested_markets")).isEqualTo("true")
+        assertThat(server.requests.first().param("with_nested_markets")).isEqualTo("true")
         assertThat(events[1].markets).hasSize(6)
     }
 
@@ -63,7 +64,7 @@ class KalshiPublicTest {
             "KXNBA3D-26NOV05MIAGSW-GSWSCURRY30",
             "KXAAAGASD-26NOV06-4.0600",
         )
-        assertThat(server.requests.last().url.queryParameter("tickers")).contains(",")
+        assertThat(server.requests.last().param("tickers")).contains(",")
     }
 
     @Test
@@ -73,7 +74,7 @@ class KalshiPublicTest {
         assertThat(book.yes).isNotEmpty
         assertThat(book.no).isNotEmpty
         assertThat(book.yes.map { it.first }).isSorted
-        assertThat(server.requests.single().url.queryParameter("depth")).isEqualTo("10")
+        assertThat(server.requests.single().param("depth")).isEqualTo("10")
     }
 
     @Test
@@ -82,8 +83,8 @@ class KalshiPublicTest {
 
         assertThat(trades).hasSize(51)
         assertThat(trades.map { it.timeMs }).isSorted
-        assertThat(server.requests.first().url.queryParameter("min_ts")).isEqualTo("1793923275")
-        assertThat(server.requests.first().url.queryParameter("max_ts")).isEqualTo("1793926875")
+        assertThat(server.requests.first().param("min_ts")).isEqualTo("1793923275")
+        assertThat(server.requests.first().param("max_ts")).isEqualTo("1793926875")
         assertThat(trades.map { it.takerBookSide }.toSet()).isSubsetOf("bid", "ask")
     }
 

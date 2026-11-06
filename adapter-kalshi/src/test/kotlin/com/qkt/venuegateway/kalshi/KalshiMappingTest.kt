@@ -17,8 +17,7 @@ class KalshiMappingTest {
     private fun event(name: String): KalshiEvent =
         KalshiMarketJson.event(Fixtures.json(name)["events"]!!.jsonArray[0].jsonObject)
 
-    private fun series(name: String): KalshiSeries =
-        KalshiMarketJson.series(Fixtures.json(name)["series"]!!.jsonObject)
+    private fun series(name: String): KalshiSeries = KalshiMarketJson.series(Fixtures.json(name)["series"]!!.jsonObject)
 
     private fun ms(text: String) = Instant.parse(text).toEpochMilli()
 

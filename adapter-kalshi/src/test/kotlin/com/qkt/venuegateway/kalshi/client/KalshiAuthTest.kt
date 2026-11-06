@@ -76,7 +76,8 @@ class KalshiAuthTest {
         assertThatThrownBy { KalshiAuth("key-id", "not-a-key") }
             .hasMessageContaining("PEM private key")
             .hasMessageNotContaining("not-a-key")
-        val ec = KeyPairGenerator.getInstance("EC").generateKeyPair().private.encoded
+        val ecPair = KeyPairGenerator.getInstance("EC").generateKeyPair()
+        val ec = ecPair.private.encoded
         assertThatThrownBy { KalshiAuth("key-id", pem("PRIVATE KEY", ec)) }
             .hasMessageContaining("neither Ed25519 nor RSA")
     }

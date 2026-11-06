@@ -105,3 +105,6 @@ object Fixtures {
     private const val API = "/trade-api/v2"
     private const val SOCKET = "/trade-api/ws/v2"
 }
+
+/** The query parameter [name] this request carried. */
+fun RecordedRequest.param(name: String): String? = url.queryParameter(name)

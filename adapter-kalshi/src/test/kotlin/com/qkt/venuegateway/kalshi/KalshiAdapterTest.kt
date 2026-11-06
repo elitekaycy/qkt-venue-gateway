@@ -82,7 +82,8 @@ class KalshiAdapterTest {
     @Test
     fun `bars come from the yes mid of candles, none on the demo's one-sided book, other lengths are refused`() {
         assertThat(adapter.klines(CURRY, 60_000L, 1_793_926_800_000L, 1_793_927_400_000L)).isEmpty()
-        assertThat(venue.server.requests.last().url.queryParameter("period_interval")).isEqualTo("1")
+        val candles = venue.server.requests.last()
+        assertThat(candles.param("period_interval")).isEqualTo("1")
         assertThatThrownBy { adapter.klines(CURRY, 300_000L, 0L, 1L) }.isInstanceOf(VenueRefusedException::class.java)
         assertThatThrownBy { adapter.klines("NOPE", 60_000L, 0L, 0L) }
             .hasMessageContaining("kalshi lists no market NOPE")
@@ -104,7 +105,8 @@ class KalshiAdapterTest {
         val oi = adapter.openInterest(CURRY, now - 60_000L, now + 60_000L)
 
         assertThat(depth.single().bids).isEmpty()
-        assertThat(depth.single().asks.single().price).isEqualByComparingTo("0.04")
+        val ask = depth.single().asks.single()
+        assertThat(ask.price).isEqualByComparingTo("0.04")
         assertThat(oi.single().openInterest).isPositive
     }
 
@@ -116,7 +118,8 @@ class KalshiAdapterTest {
         assertThat(venue.quotes.first { it.symbol == CURRY }.ask).isEqualByComparingTo("0.04")
         val snapshot = venue.quotes.size
         venue.await { venue.links.contains(true) && venue.server.sent.size >= 3 }
-        assertThat(venue.server.sent.toList().last()).contains(CURRY).doesNotContain("NOPE")
+        val subscribed = venue.server.sent.toList()
+        assertThat(subscribed.last()).contains(CURRY).doesNotContain("NOPE")
         listOf("ticker", "fill", "user-order-executed").forEach { venue.server.push(Fixtures.text("socket/$it.json")) }
         venue.await { venue.quotes.size > snapshot && venue.fills.isNotEmpty() && venue.orders.isNotEmpty() }
         assertThat(venue.fills.single().clientOrderId).isEqualTo("qkt-probe-fill")

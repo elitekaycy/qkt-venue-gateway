@@ -39,9 +39,14 @@ class KalshiOrderDeskTest {
         symbol: String = CURRY,
     ) = NewOrder(label, symbol, side, type, BigDecimal(quantity), BigDecimal("0.01"), null, tif, reduceOnly)
 
+    private fun posted(): String {
+        val post = venue.server.requests.last { it.method == "POST" }
+        return post.body!!.utf8()
+    }
+
     private fun lastPlacement() =
         Json
-            .parseToJsonElement(venue.server.requests.last { it.method == "POST" }.body!!.utf8())
+            .parseToJsonElement(posted())
             .jsonObject
             .mapValues { it.value.jsonPrimitive.content }
 
@@ -104,8 +109,8 @@ class KalshiOrderDeskTest {
         adapter.cancel("ghost")
         adapter.cancel("qkt-probe-frac")
 
-        val deletes =
-            venue.server.requests.filter { it.method == "DELETE" }.map { it.url.encodedPath.substringAfterLast('/') }
+        val deleted = venue.server.requests.filter { it.method == "DELETE" }
+        val deletes = deleted.map { it.url.encodedPath.substringAfterLast('/') }
         assertThat(deletes).containsExactly(RESTING, "01a1ae62-0d80-7507-ad66-861803c29ad9")
     }
 
@@ -113,7 +118,8 @@ class KalshiOrderDeskTest {
     fun `a change amends the total quantity and the price, an unknown label is false and a stop is refused`() {
         assertThat(adapter.modify("qkt-probe-rest", OrderChange(quantity = BigDecimal("3")))).isTrue
 
-        val amend = Json.parseToJsonElement(venue.server.requests.last().body!!.utf8()).jsonObject
+        val amended = venue.server.requests.last()
+        val amend = Json.parseToJsonElement(amended.body!!.utf8()).jsonObject
         assertThat(amend["count"]!!.jsonPrimitive.content).isEqualTo("3")
         assertThat(amend["price"]!!.jsonPrimitive.content).isEqualTo("0.0200")
         assertThat(adapter.modify("ghost", OrderChange(limitPrice = BigDecimal("0.03")))).isFalse

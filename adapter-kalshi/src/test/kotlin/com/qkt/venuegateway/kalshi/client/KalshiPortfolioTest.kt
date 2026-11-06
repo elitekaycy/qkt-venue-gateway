@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.kalshi.client
 
 import com.qkt.venuegateway.kalshi.Fixtures
+import com.qkt.venuegateway.kalshi.param
 import java.math.BigDecimal
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -61,7 +62,7 @@ class KalshiPortfolioTest {
         assertThat(p.getValue("KXAAAGASD-26NOV06-4.0600").exposure).isEqualByComparingTo("0.9")
         assertThat(p.getValue("KXNBA3D-26NOV05MIAGSW-GSWSCURRY30").position).isEqualByComparingTo("2")
         assertThat(p.getValue("KXNBA3D-26NOV05MIAGSW-GSWSCURRY30").exchangeIndex).isEqualTo(0)
-        assertThat(server.requests.single().url.queryParameter("count_filter")).isEqualTo("position")
+        assertThat(server.requests.single().param("count_filter")).isEqualTo("position")
     }
 
     @Test
@@ -83,7 +84,7 @@ class KalshiPortfolioTest {
         assertThat(fills.map { it.bookSide }).contains("bid", "ask")
         assertThat(fills.first().fee).isEqualByComparingTo("0.0007")
         assertThat(fills.first().clientOrderId).isNull()
-        assertThat(server.requests.single().url.queryParameter("min_ts")).isEqualTo("1793927000")
+        assertThat(server.requests.single().param("min_ts")).isEqualTo("1793927000")
         assertThat(portfolio.settlements(0L, 1_000L)).isEmpty()
     }
 
@@ -104,7 +105,8 @@ class KalshiPortfolioTest {
 
         assertThat(answer.orderId).isEqualTo(placed)
         assertThat(answer.remainingCount).isEqualByComparingTo("1")
-        val body = Json.parseToJsonElement(server.requests.single().body!!.utf8()).jsonObject
+        val sentBody = server.requests.single().body!!.utf8()
+        val body = Json.parseToJsonElement(sentBody).jsonObject
         assertThat(body.mapValues { it.value.jsonPrimitive.content }).containsExactlyInAnyOrderEntriesOf(
             mapOf(
                 "ticker" to "KXNBA3D-26NOV05MIAGSW-GSWSCURRY30",
