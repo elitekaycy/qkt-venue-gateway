@@ -172,7 +172,13 @@ class BybitAdapterOrdersTest {
 
     @Test
     fun `an order no longer live is found in the order history, and one in neither is unknown`() {
-        val venue = venue(mapOf("/v5/order/history" to "private/order-history-limit-cancelled.json"))
+        val venue =
+            venue(
+                mapOf(
+                    "/v5/order/realtime" to "private/order-realtime-unknown.json",
+                    "/v5/order/history" to "private/order-history-limit-cancelled.json",
+                ),
+            )
 
         val ended = venue.adapter.orderByLabel("rec-rest-1")
 
