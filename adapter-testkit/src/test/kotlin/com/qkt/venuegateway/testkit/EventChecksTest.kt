@@ -82,8 +82,7 @@ class EventChecksTest {
     }
 
     @Test
-    fun `an event that closes before it opens is refused`() =
-        refused(contract(ladder.copy(closeAtMs = 500)), "close")
+    fun `an event that closes before it opens is refused`() = refused(contract(ladder.copy(closeAtMs = 500)), "close")
 
     @Test
     fun `an outcome outside zero to one is refused`() =

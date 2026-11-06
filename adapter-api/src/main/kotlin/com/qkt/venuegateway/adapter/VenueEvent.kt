@@ -10,7 +10,9 @@ import java.math.BigDecimal
 enum class StrikeType { GREATER, GREATER_OR_EQUAL, LESS, LESS_OR_EQUAL, BETWEEN, CUSTOM, NONE }
 
 /** The shape of a venue's per-order fee. `PROBABILITY`: rate × contracts × p × (1 − p), rounded up to the unit. */
-enum class FeeModel { PROBABILITY }
+enum class FeeModel {
+    PROBABILITY,
+}
 
 /**
  * The fee an event contract pays per order, by [model]: [takerRate] when the order takes liquidity, [makerRate] when
