@@ -53,4 +53,15 @@ class BybitMarksArmsTest {
         assertThat(noIndex).hasSize(15)
         assertThat(noIndex.all { it.mark != null && it.index == null }).isTrue
     }
+
+    @Test
+    fun `klines a venue sends outside the range asked are dropped, so only the windows inside it are marked`() {
+        val sampled = marks.sampled("BTCUSDT", 60_000, from + 120_000, from + 300_000, to)
+
+        assertThat(sampled.map { it.timeMs }).containsExactly(
+            from + 179_999,
+            from + 239_999,
+            from + 299_999,
+        )
+    }
 }

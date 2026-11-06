@@ -54,4 +54,11 @@ class BybitOpenInterestArmsTest {
 
         assertThat(figures.map { it.timeMs }).containsExactly(1_791_239_689_155L)
     }
+
+    @Test
+    fun `figures published before the range starts are not served`() {
+        val figures = BybitOpenInterest(market, "linear") { now }.read("BTCUSDT", 1_791_238_700_000, 1_791_239_000_000)
+
+        assertThat(figures.map { it.timeMs }).containsExactly(1_791_238_800_000L)
+    }
 }

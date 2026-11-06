@@ -73,4 +73,15 @@ class BybitRestShapesTest {
 
         assertThat(rest.get("/v5/a", emptyList()).timeMs).isEqualTo(1_791_240_000_000L)
     }
+
+    @Test
+    fun `a retCode or time that is no plain value is read as missing, refusing or timing by the clock`() {
+        answer("""{"retCode":{"code":0},"result":{}}""")
+        answer("""{"retCode":0,"time":{"ms":1},"result":{"list":[]}}""")
+
+        assertThatThrownBy { rest.get("/v5/a", emptyList()) }
+            .isInstanceOf(IOException::class.java)
+            .hasMessageContaining("without retCode")
+        assertThat(rest.get("/v5/b", emptyList()).timeMs).isEqualTo(1_791_240_000_000L)
+    }
 }

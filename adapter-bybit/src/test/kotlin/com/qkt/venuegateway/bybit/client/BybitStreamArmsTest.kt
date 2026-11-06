@@ -203,4 +203,31 @@ class BybitStreamArmsTest {
         assertThat(orders.map { it.orderLinkId }).containsExactly("rec-stop-down")
         stream.close()
     }
+
+    @Test
+    fun `a subscription confirmed, a pong, and a frame naming no success are acknowledged without a push`() {
+        serve(onText = { socket, text ->
+            if (text.contains("subscribe")) {
+                socket.send(Fixtures.text("ws-private-subscribe.json"))
+                socket.send(Fixtures.text("ws-private-pong.json"))
+                socket.send("""{"op":"subscribe","ret_msg":"no success field"}""")
+                socket.send("""{"op":"subscribe","success":{"x":1}}""")
+                socket.send(Fixtures.text("ws-linear-public-trade.json"))
+            }
+        })
+        val socket =
+            BybitSocket(
+                url,
+                "market",
+                { listOf("publicTrade.BTCUSDT") },
+                { topic, _ -> pushes += topic },
+                { up, _ -> links += up },
+            )
+        socket.start()
+
+        until { pushes.isNotEmpty() }
+
+        assertThat(pushes).containsExactly("publicTrade.BTCUSDT")
+        socket.close()
+    }
 }

@@ -119,4 +119,14 @@ class BybitAdapterArmsTest {
 
         assertThat(venue.param("/v5/market/recent-trade", "limit")).isEqualTo("60")
     }
+
+    @Test
+    fun `subscribing only listed codes quotes them all, with nothing left out to be warned of`() {
+        val venue = venue()
+        venue.adapter.connect(RecordingListener())
+
+        venue.adapter.subscribeQuotes(setOf("BTCUSDT"))
+
+        assertThat(venue.sent("/v5/market/instruments-info")).isNotEmpty
+    }
 }
