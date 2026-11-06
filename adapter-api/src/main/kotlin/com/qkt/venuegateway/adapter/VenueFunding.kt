@@ -42,6 +42,9 @@ enum class Capability {
 
     /** The order book of a listed contract, its best levels each side, as recorded over time ([VenueAdapter.depth]). */
     DEPTH,
+
+    /** The venue holds stop and stop-limit orders itself, triggering them at their stop price. */
+    STOP_ORDERS,
 }
 
 /**
