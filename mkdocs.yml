@@ -109,6 +109,7 @@ nav:
       - project/index.md
       - Changelog: project/changelog.md
       - Contributing: project/contributing.md
+      - Test coverage: project/test-coverage.md
       - Security policy: project/security.md
       - Code of conduct: project/code-of-conduct.md
 

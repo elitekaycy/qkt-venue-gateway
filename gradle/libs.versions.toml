@@ -9,6 +9,7 @@ logback = "1.6.6"
 junit = "5.11.4"
 assertj = "3.27.7"
 ktlint-plugin = "12.1.1"
+kover = "0.9.11"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
@@ -30,3 +31,4 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-plugin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
