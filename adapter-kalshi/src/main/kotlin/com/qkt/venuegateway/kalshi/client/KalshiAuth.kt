@@ -9,6 +9,7 @@ import java.security.spec.MGF1ParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.PSSParameterSpec
 import java.util.Base64
+import java.util.HexFormat
 
 /**
  * Kalshi's request signature: the key id [keyId] in `KALSHI-ACCESS-KEY`, the time in milliseconds in
@@ -56,11 +57,7 @@ class KalshiAuth(
         const val SALT_BYTES = 32
 
         /** DER of `AlgorithmIdentifier { rsaEncryption, NULL }`, for wrapping a PKCS#1 key into PKCS#8. */
-        val RSA_ALGORITHM =
-            byteArrayOf(
-                0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86.toByte(), 0x48, 0x86.toByte(), 0xf7.toByte(), 0x0d, 0x01, 0x01,
-                0x01, 0x05, 0x00,
-            )
+        val RSA_ALGORITHM: ByteArray = HexFormat.of().parseHex("300d06092a864886f70d0101010500")
 
         fun parse(pem: String): PrivateKey {
             val text = pem.replace("\\n", "\n")

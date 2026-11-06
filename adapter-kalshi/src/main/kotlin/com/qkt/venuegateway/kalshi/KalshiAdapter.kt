@@ -1,7 +1,7 @@
 package com.qkt.venuegateway.kalshi
 
-import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AccountSnapshot
+import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.AdapterListener
 import com.qkt.venuegateway.adapter.Capability
@@ -12,10 +12,10 @@ import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.adapter.VenueIdentity
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.kalshi.KalshiErrors.venue
+import com.qkt.venuegateway.kalshi.client.KalshiMarketJson
 import com.qkt.venuegateway.kalshi.client.KalshiPortfolio
 import com.qkt.venuegateway.kalshi.client.KalshiPortfolioJson
 import com.qkt.venuegateway.kalshi.client.KalshiPublic
-import com.qkt.venuegateway.kalshi.client.KalshiMarketJson
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonObject
 
@@ -63,6 +63,9 @@ internal class KalshiAdapter(
             Capability.OPEN_INTEREST,
         )
     override val klineResolutions = KalshiMarketData.PERIODS.keys
+
+    /** Kalshi's full listing is some 35 slow pages, so the host reads it every 5 minutes. */
+    override val listingRefreshMs = 300_000L
 
     private val login = context.requiredCredentials().login
     private val labels = KalshiLabels(context.stateDir)
@@ -113,6 +116,9 @@ internal class KalshiAdapter(
                 .mapNotNull(KalshiMarketMapping::position)
         return Positions(Accounting.NETTING, rows)
     }
+
+    /** [code] as listed, or as Kalshi answers it by ticker (a settled market, with its outcome); null when unknown. */
+    override fun instrument(code: String) = venue { listing.instrument(code) }
 
     override fun openOrders() = orders.open()
 

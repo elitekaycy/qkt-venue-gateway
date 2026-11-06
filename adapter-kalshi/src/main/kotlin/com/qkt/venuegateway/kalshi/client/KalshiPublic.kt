@@ -34,6 +34,12 @@ class KalshiPublic(
         )
     }
 
+    /** The event [ticker] with its markets, settled or not, or null when Kalshi has none by it. */
+    fun event(ticker: String): KalshiEvent? =
+        rest.orNull { rest.get("/events/$ticker") }?.let {
+            KalshiMarketJson.event(JsonObject((it["event"] as JsonObject) + ("markets" to it["markets"]!!)))
+        }
+
     /** The market [ticker], settled or not, or null when Kalshi has none by it. */
     fun market(ticker: String): KalshiMarket? =
         rest.orNull { rest.get("/markets/$ticker") }?.let { KalshiMarketJson.market(it["market"] as JsonObject) }

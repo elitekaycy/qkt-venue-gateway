@@ -25,6 +25,9 @@ class KalshiVenue : AutoCloseable {
                 "GET /events" -> "demo/events-KXNBA3D.json"
                 "GET /markets" -> "demo/markets-by-tickers.json"
                 "GET /markets/$CURRY" -> "demo/market-$CURRY.json"
+                "GET /markets/$SETTLED" -> "public/market-settled-$SETTLED.json"
+                "GET /events/KXHIGHNY-26NOV04" -> "public/event-KXHIGHNY-26NOV04.json"
+                "GET /series/KXHIGHNY" -> "public/series-KXHIGHNY.json"
                 "GET /markets/$CURRY/orderbook" -> "demo/orderbook-$CURRY.json"
                 "GET /markets/trades" -> "demo/trades-$CURRY.json"
                 "GET /series/KXNBA3D/markets/$CURRY/candlesticks" -> "demo/candles-1m-$CURRY.json"
@@ -113,6 +116,7 @@ class KalshiVenue : AutoCloseable {
         const val CURRY = "KXNBA3D-26NOV05MIAGSW-GSWSCURRY30"
         const val RESTING = "01a1ae61-bf60-7752-859e-2842fa23b0ba"
         const val FILLED = "01a1ae61-f228-76f6-9226-9c3a49437fb5"
+        const val SETTLED = "KXHIGHNY-26NOV04-T77"
         const val ASKED = "01a1ae63-1338-7a82-b375-3de37729da04"
     }
 }

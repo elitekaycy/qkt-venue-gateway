@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.kalshi
 
+import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.kalshi.client.KalshiPublic
 import com.qkt.venuegateway.kalshi.client.KalshiSeries
 import com.qkt.venuegateway.support.Listing
@@ -32,6 +33,14 @@ internal class KalshiListing(
 
     /** [ticker] as listed now, reading the listing again when it does not hold it (at most every miss interval). */
     fun find(ticker: String): KalshiListed? = listing.find(ticker)
+
+    /** [ticker]'s instrument as listed, or read by ticker with its event when the listing no longer holds it. */
+    fun instrument(ticker: String): Instrument? {
+        listing.cached(ticker)?.let { return it.instrument }
+        val market = public.market(ticker) ?: return null
+        val event = public.event(market.eventTicker) ?: return null
+        return KalshiMapping.instrument(market, event, series(event.seriesTicker), shard)
+    }
 
     private fun read(): List<KalshiListed> {
         val events = public.openEvents()

@@ -36,6 +36,7 @@ class KalshiMappingTest {
         assertThat(i.expiryMs).isEqualTo(ms("2026-11-07T20:00:00Z"))
         assertThat(i.category).isEqualTo("Climate and Weather")
         assertThat(i.trading).isEqualTo(Tradability.FULL)
+        assertThat(i.tickRanges).describedAs("one step everywhere").isNull()
         val t = i.event!!
         assertThat(t.series).isEqualTo("KXHIGHNY")
         assertThat(t.event).isEqualTo("KXHIGHNY-26NOV06")
@@ -115,6 +116,8 @@ class KalshiMappingTest {
 
         assertThat(i.event!!.strikeType).isEqualTo(StrikeType.NONE)
         assertThat(i.tickSize).isEqualByComparingTo("0.001")
+        assertThat(i.tickRanges!!.map { it.tick.toPlainString() }).containsExactly("0.0010", "0.0100", "0.0010")
+        assertThat(i.tickRanges!!.first().to).isEqualByComparingTo("0.1")
         assertThat(i.event!!.occasion).isEqualTo("45")
     }
 

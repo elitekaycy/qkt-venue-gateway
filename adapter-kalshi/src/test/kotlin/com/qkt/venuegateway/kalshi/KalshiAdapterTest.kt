@@ -33,6 +33,7 @@ class KalshiAdapterTest {
         )
         assertThat(adapter.klineResolutions).containsExactlyInAnyOrder(60_000L, 3_600_000L, 86_400_000L)
         assertThat(adapter.version).isNotBlank
+        assertThat(adapter.listingRefreshMs).isEqualTo(300_000L)
     }
 
     @Test
@@ -45,6 +46,15 @@ class KalshiAdapterTest {
         assertThat(curry.category).isEqualTo("Sports")
         assertThat(curry.event!!.series).isEqualTo("KXNBA3D")
         assertThat(venue.server.requests.map { it.url.encodedPath }).contains("/trade-api/v2/series/KXNBA3D")
+    }
+
+    @Test
+    fun `a market is found by ticker when listed, and a settled one with its outcome when not`() {
+        assertThat(adapter.instrument(CURRY)!!.code).isEqualTo(CURRY)
+        val settled = adapter.instrument(KalshiVenue.SETTLED)!!
+        assertThat(settled.event!!.outcome).isEqualByComparingTo("0")
+        assertThat(settled.event!!.series).isEqualTo("KXHIGHNY")
+        assertThat(adapter.instrument("NOPE")).isNull()
     }
 
     @Test

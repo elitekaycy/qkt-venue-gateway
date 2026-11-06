@@ -4,6 +4,7 @@ import com.qkt.venuegateway.adapter.EventTerms
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.StrikeType
+import com.qkt.venuegateway.adapter.TickRange
 import com.qkt.venuegateway.kalshi.client.KalshiEvent
 import com.qkt.venuegateway.kalshi.client.KalshiMarket
 import com.qkt.venuegateway.kalshi.client.KalshiSeries
@@ -47,6 +48,7 @@ internal object KalshiMapping {
             currency = "USD",
             contractSize = CONTRACT,
             tickSize = tick(m),
+            tickRanges = m.priceRanges.map { TickRange(it.start, it.end, it.step) }.takeIf { it.size > 1 },
             volumeStep = STEP,
             volumeMin = STEP,
             expiryMs = m.expectedExpirationMs ?: m.closeTimeMs,
