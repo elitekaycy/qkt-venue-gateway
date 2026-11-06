@@ -24,7 +24,13 @@ class BybitAccountStreamTest {
     private val sent = LinkedBlockingQueue<String>()
     private val links = CopyOnWriteArrayList<Boolean>()
 
-    private fun venue(answerAuth: String?) =
+    private val orders = CopyOnWriteArrayList<BybitOrder>()
+    private val executions = CopyOnWriteArrayList<BybitExecution>()
+
+    private fun venue(
+        answerAuth: String?,
+        pushes: List<String> = emptyList(),
+    ) =
         MockResponse
             .Builder()
             .webSocketUpgrade(
@@ -35,6 +41,7 @@ class BybitAccountStreamTest {
                     ) {
                         sent += text
                         if (text.contains("\"auth\"") && answerAuth != null) webSocket.send(answerAuth)
+                        if (text.contains("\"subscribe\"")) pushes.forEach { webSocket.send(Fixtures.text(it)) }
                     }
 
                     override fun onOpen(
@@ -51,8 +58,8 @@ class BybitAccountStreamTest {
             "the-secret",
             { 1_791_240_000_000L },
             "linear",
-            {},
-            {},
+            { orders += it },
+            { executions += it },
         ) { up, _ -> links += up }
 
     @AfterEach
@@ -89,6 +96,21 @@ class BybitAccountStreamTest {
         assertThat(sent.poll(5, TimeUnit.SECONDS)).describedAs("the next link signs in again").contains("\"auth\"")
         assertThat(sent.poll(1, TimeUnit.SECONDS)).isNull()
         assertThat(links).isEmpty()
+        stream.close()
+    }
+
+    @Test
+    fun `its category's order and execution pushes reach their handlers as bybit sent them`() {
+        val pushes = listOf("private/ws-order-stop-triggered.json", "private/ws-execution-stop-fired.json")
+        server.enqueue(venue(Fixtures.text("ws-private-auth.json"), pushes))
+        val stream = stream()
+        stream.start()
+
+        val deadline = System.currentTimeMillis() + 5_000
+        while (executions.isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertThat(orders.map { it.orderLinkId to it.orderStatus }).containsExactly("rec-stop-down" to "Triggered")
+        assertThat(executions.map { it.execId }).containsExactly("85406bdb-e365-5031-b5f0-5d60da7ebaf6")
+        assertThat(stream.toString()).isEqualTo("BybitAccountStream(execution.linear)")
         stream.close()
     }
 }
