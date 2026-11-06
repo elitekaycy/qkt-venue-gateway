@@ -125,4 +125,24 @@ class ReconnectingSocketArmsTest {
         assertThat(received).isEmpty()
         assertThat(socket.isUp).isTrue
     }
+
+    @Test
+    fun `a frame sent while the opening handshake is still running is not sent, the link not being up yet`() {
+        venue()
+        var early: Boolean? = null
+        val protocol =
+            object : SocketProtocol {
+                override fun opening(link: SocketLink) {
+                    early = this@ReconnectingSocketArmsTest.sockets.single().send("too early")
+                }
+
+                override fun text(frame: String) = Unit
+            }
+        val link = socket(protocol).apply { start() }
+
+        await { early != null && link.isUp }
+
+        assertThat(early).isFalse
+        assertThat(received).doesNotContain("too early")
+    }
 }
