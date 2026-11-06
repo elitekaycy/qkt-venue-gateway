@@ -44,8 +44,8 @@ object Fixtures {
     /**
      * A Kalshi stand-in: each HTTP request is answered with the fixture [route] names for its method, path and query
      * and body (HTTP 404 with Kalshi's recorded `not_found` when none); a name `!<status> <file>` answers that
-     * file with that status (an answer recorded with a status other than 200). `/trade-api/ws/v2` upgrades to a
-     * socket whose frames from the client land in [sent]; [push] sends one to it.
+     * file with that status (an answer recorded with a status other than 200), and `!<status>` alone an empty body.
+     * `/trade-api/ws/v2` upgrades to a socket whose frames from the client land in [sent]; [push] sends one to it.
      */
     class Server(
         private val route: (method: String, path: String, query: Map<String, String>, body: String) -> String?,
@@ -67,7 +67,7 @@ object Fixtures {
                             val body = request.body?.utf8() ?: ""
                             val name = route(request.method, url.encodedPath.removePrefix(API), query, body)
                             val (status, file) = name?.let(::statusOf) ?: (404 to "private/error-not-found.json")
-                            return MockResponse(code = status, body = text(file))
+                            return MockResponse(code = status, body = if (file.isEmpty()) "" else text(file))
                         }
                     }
                 start()
@@ -83,7 +83,7 @@ object Fixtures {
         override fun close() = server.close()
 
         private fun statusOf(name: String): Pair<Int, String> =
-            if (name.startsWith("!")) name.substring(1, 4).toInt() to name.substring(5) else 200 to name
+            if (name.startsWith("!")) name.substring(1, 4).toInt() to name.drop(5) else 200 to name
 
         private inner class Listener : WebSocketListener() {
             override fun onOpen(

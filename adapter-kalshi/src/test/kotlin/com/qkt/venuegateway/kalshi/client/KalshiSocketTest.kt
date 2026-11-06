@@ -84,6 +84,21 @@ class KalshiSocketTest {
     }
 
     @Test
+    fun `an ack of another request leaves the ticker subscription unknown, and a closed socket reports no drop`() {
+        socket.start()
+        repeat(2) { next() }
+        await { links.contains(true) }
+        server.push(Fixtures.text("socket/subscribed-ticker.json"))
+        Thread.sleep(200)
+
+        socket.quote(listOf("B"))
+        assertThat(next()).doesNotContain("unsubscribe")
+        socket.close()
+        Thread.sleep(300)
+        assertThat(links).containsExactly(true)
+    }
+
+    @Test
     fun `no market quoted subscribes no ticker, and a drop is reported`() {
         socket.start()
         assertThat(next()).contains("fill")
