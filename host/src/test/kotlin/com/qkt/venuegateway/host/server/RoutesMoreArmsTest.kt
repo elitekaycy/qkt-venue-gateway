@@ -1,6 +1,7 @@
 package com.qkt.venuegateway.host.server
 
 import com.qkt.venuegateway.adapter.Side
+import com.qkt.venuegateway.adapter.VenueFundingRate
 import com.qkt.venuegateway.adapter.VenuePrint
 import com.qkt.venuegateway.host.FakeAdapter
 import com.qkt.venuegateway.host.Gateway
@@ -56,7 +57,7 @@ class RoutesMoreArmsTest {
                 venue,
                 Journal.open(dir.resolve("j.db")),
                 InstrumentShelf.open(dir.resolve("i.db")) { now },
-                mapOf(Role.TRADER to "t"),
+                mapOf(Role.TRADER to "t", Role.GUARDIAN to "g"),
             ) { now }
         gateway.start()
         venue.listener!!.connection(true, "test")
@@ -76,6 +77,7 @@ class RoutesMoreArmsTest {
         method: String,
         path: String,
         body: String? = null,
+        token: String = "t",
     ): Pair<Int, String> =
         http
             .newCall(
@@ -83,7 +85,7 @@ class RoutesMoreArmsTest {
                     .Builder()
                     .url(base + path)
                     .method(method, body?.toRequestBody("application/json".toMediaType()))
-                    .header("Authorization", "Bearer t")
+                    .header("Authorization", "Bearer $token")
                     .build(),
             ).execute()
             .use { it.code to it.body.string() }
@@ -143,5 +145,25 @@ class RoutesMoreArmsTest {
         val page = call("GET", "/v1/liquidations?$symbol&from=100&to=1000").second
 
         assertThat(page).contains("inside").doesNotContain("outside", "before")
+    }
+
+    @Test
+    fun `funding rates outside the range asked are dropped, and a page past a thousand names where the next starts`() {
+        venue.rates += (0L..1_000L).map { VenueFundingRate(it, BigDecimal("0.0001"), null) }
+        venue.rates += VenueFundingRate(20_000, BigDecimal("0.0001"), null)
+
+        val page = call("GET", "/v1/funding-rates?$symbol&from=0&to=5000").second
+
+        assertThat(page).doesNotContain("20000")
+        assertThat(page).contains("\"next\":1000")
+    }
+
+    @Test
+    fun `the kill switch of the whole account is engaged and released without naming symbols`() {
+        val engaged = call("POST", "/v1/kill", """{"scope":"all"}""", token = "g")
+        val released = call("POST", "/v1/kill/release", """{"scope":"all"}""", token = "g")
+
+        assertThat(engaged.second).contains("\"all\":true")
+        assertThat(released.second).contains("\"all\":false")
     }
 }
