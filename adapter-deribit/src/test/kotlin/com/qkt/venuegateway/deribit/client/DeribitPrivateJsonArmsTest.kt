@@ -126,4 +126,22 @@ class DeribitPrivateJsonArmsTest {
             )
         }.hasMessageContaining("type")
     }
+
+    @Test
+    fun `a flag or price that is no boolean or number is read as absent`() {
+        val odd =
+            DeribitPrivateJson.order(
+                order.set(
+                    "reduce_only" to text("yes"),
+                    "triggered" to text("maybe"),
+                    "price" to JsonPrimitive(true),
+                ),
+            )
+        val page = recordedObject("private/user-trades-by-time.json")
+
+        assertThat(odd.reduceOnly).isFalse
+        assertThat(odd.triggered).isNull()
+        assertThat(odd.price).isNull()
+        assertThat(DeribitPrivateJson.tradePage(page.set("has_more" to text("later"))).more).isFalse
+    }
 }
