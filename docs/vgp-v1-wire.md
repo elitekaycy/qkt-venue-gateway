@@ -64,7 +64,9 @@ happened in between.
 event), `funding_rates` (`/v1/funding-rates`), `mark_prices` (`/v1/marks`, and quotes that carry `mark`
 and `index` where the venue reports them), `open_interest` (`/v1/open-interest`), `option_marks` (option
 quotes that carry `mark_iv` and `underlying`, §4a), `trades` (`/v1/trades`), `liquidations`
-(`/v1/liquidations`) and `depth` (`/v1/depth`). An endpoint whose capability is not declared answers
+(`/v1/liquidations`), `depth` (`/v1/depth`) and `stop_orders` (the venue holds `stop` and `stop_limit` orders
+itself; a gateway without it refuses them, `422 venue_rejected`, so a client that needs stops refuses to start on
+it). An endpoint whose capability is not declared answers
 `501 unsupported` (`/v1/settlements` is still served, from what the journal holds). A gateway that
 predates the field omits it; a client treats that as none declared. A client ignores a name it does not
 know. Funding is the cash a venue moves between longs and shorts of a perpetual; a client books it, so it
@@ -125,9 +127,41 @@ An `event` also carries its terms, all absent for every other kind:
 | `outcome` | the settled value once known, in [0, 1] (`"0"` for a NO) |
 | `fee_model`, `taker_fee_rate`, `maker_fee_rate`, `fee_rounding` | the per-order fee shape: `probability` is rate × contracts × p × (1 − p), rounded up to `fee_rounding`; no `maker_fee_rate` means no maker fee. Charges still arrive on fills |
 
-A dated contract stays listed for at least **30 days after its expiry**, so a client restarting after
-a weekend still maps the contracts it held to their settlements. (The qkt client also maps an unlisted
-option by its name, which is exact; a dated future has no such rule.)
+`tick_ranges`, present only where the venue's price grid changes across the price range, lists it as
+`[{"from": "0", "to": "0.1", "tick": "0.001"}, {"from": "0.1", "to": "0.9", "tick": "0.01"}, …]`: prices from
+`from` up to `to` move in steps of `tick`, the ranges ascending without gaps. `tick_size` is then the finest tick,
+so a client that ignores the ranges still sends prices the venue can refuse, never ones it rounds silently.
+
+A dated contract stays listed for at least **30 days after its expiry** (an `event`: 7 days by default, as the
+gateway's operator sets it, since venues list thousands a day), so a client restarting after a weekend still maps
+the contracts it held to their settlements. (The qkt client also maps an unlisted option by its name, which is
+exact; a dated future has no such rule.) `GET /v1/instruments/{code}` also answers for a contract the venue no
+longer lists when the venue can still look it up by code (a settled event, with its `outcome`).
+
+The gateway reads the venue's listing on a timer (a minute by default) and when a code it was asked for is not in
+its last read, not on every request, so a listing can lag the venue by that long.
+
+**Paging, filters and changes.** `GET /v1/instruments` takes optional query parameters:
+
+| Parameter | Keeps |
+|---|---|
+| `kind`, `category`, `series`, `event` | instruments whose field equals the value |
+| `status` | `open` (the venue lists it, `trading` is not `close_only` or `disabled`, and its `close_at` and `expiry` are still ahead), `closed` (any other) or `all` (the default) |
+| `updated_since=<ms>` | instruments added or changed at or after that time, and the codes removed since |
+| `cursor`, `limit` | at most `limit` (1 to 5000; all when absent) instruments with codes after `cursor` |
+
+With none of them the response is the plain list above, unchanged. With any of them it is a page, by code:
+```json
+{"instruments": [<Instrument>], "removed": [{"code": "KXINXU-26NOV06H1500-T7425", "removed": true}],
+ "next": "KXINXU-26NOV06H1600-T7400", "as_of": 1794006012000}
+```
+`next` is the `cursor` of the following page, absent on the last. `removed` is present only with `updated_since`:
+each code that left the listing since, filtered as it was last listed. `as_of` is when the gateway read the
+listing served; a client polls for changes with `updated_since=<as_of>` (a change at that instant may be sent
+twice, never missed). The gateway derives changes from its own successive reads and remembers removals 7 days:
+an `updated_since` from before that, or from before the gateway's first read since it started, is `400
+invalid_request`, and the client reads the listing in full. Changes are a poll, not stream events: the stream
+carries money records only.
 
 ### `GET /v1/bars?symbol=<code>&window_ms=<ms>&from=<ms>&to=<ms>`
 Closed bars of one instrument, oldest first, each `start` in `[from, to)` and aligned to UTC:
@@ -389,8 +423,9 @@ Event `type` and `data`:
 
 Market data, apart from the event log: quotes are latest-wins and high volume, so they carry no
 `seq`, are never replayed, and a reconnect simply subscribes again. `roots` subscribes every listed
-option of a root (an instrument's `underlying`), including options listed after the subscription; a
-code subscribed both ways is sent once. Each message is one quote:
+instrument of a root, including those listed after the subscription: a root is an option's `underlying`, or an
+event contract's `series` or `event` (`roots=KXINXU` is every contract of that series); a code subscribed both
+ways is sent once. Each message is one quote:
 ```json
 {"symbol": "BTC_USDC-25DEC26-92000-C", "bid": "640", "ask": "655", "bid_size": "1.2", "ask_size": "0.8",
  "mark": "648.5", "mark_iv": "52.3", "underlying": "84437.55", "time": 1790835377133, "index": "84301.2"}
@@ -407,6 +442,12 @@ subscribed quote holds, the gateway sends it again with `time` advanced at least
 venues push options only when their book changes, and a quiet book must stay distinguishable from a
 stopped feed. The client's market-data gate judges each contract by these refreshes, so a contract
 whose refreshes stop is stale and new orders on it wait.
+
+**`refresh=changes`** (optional) suits a subscription of many contracts. Each message is then a JSON array of
+quotes: the quotes that changed (any field but `time`) within one 250 ms tick, sent together; a quote that did not
+change is not sent again. Every **30 seconds** while the feed holds, one message carries every quote the client
+holds with `time` advanced, so a client judging staleness allows 30 seconds rather than 5. Any other `refresh`
+value closes the socket (`1003`, naming it). Without `refresh` the behaviour above is unchanged.
 
 ## 5. Client behaviour
 

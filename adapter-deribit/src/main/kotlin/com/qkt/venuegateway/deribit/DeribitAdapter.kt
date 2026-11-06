@@ -64,7 +64,7 @@ class DeribitAdapter(
     override val capabilities =
         setOf(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS, Capability.FUNDING, Capability.FUNDING_RATES)
             .plus(setOf(Capability.MARK_PRICES, Capability.OPEN_INTEREST, Capability.OPTION_MARKS))
-            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH))
+            .plus(setOf(Capability.TRADES, Capability.LIQUIDATIONS, Capability.DEPTH, Capability.STOP_ORDERS))
     private val settings = DeribitSettings.of(context)
     private val login = context.requiredCredentials().login
     private val currency = settings.currency

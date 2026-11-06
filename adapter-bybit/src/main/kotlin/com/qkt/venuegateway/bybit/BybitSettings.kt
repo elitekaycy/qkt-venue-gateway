@@ -33,12 +33,12 @@ data class BybitSettings(
     val contracts get() = category == LINEAR
 
     /**
-     * What the category serves beyond orders: every category its bars, quotes, tape and depth; contracts also
+     * What the category serves beyond orders: every category its bars, quotes, tape, depth and stops; contracts also
      * funding, funding rates, marks, open interest and liquidations, which spot has none of.
      */
     val capabilities: Set<Capability>
         get() =
-            setOf(Capability.BARS, Capability.QUOTES, Capability.TRADES, Capability.DEPTH) +
+            setOf(Capability.BARS, Capability.QUOTES, Capability.TRADES, Capability.DEPTH, Capability.STOP_ORDERS) +
                 if (contracts) CONTRACTS else emptySet()
 
     /** Reads and checks the settings, refusing a bad one by its key. */

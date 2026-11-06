@@ -43,4 +43,14 @@ data class WireInstrument(
     @SerialName("taker_fee_rate") val takerFeeRate: String? = null,
     @SerialName("maker_fee_rate") val makerFeeRate: String? = null,
     @SerialName("fee_rounding") val feeRounding: String? = null,
+    /** The price grid where it changes across the price range; absent: [tickSize] everywhere. */
+    @SerialName("tick_ranges") val tickRanges: List<WireTickRange>? = null,
+)
+
+/** Prices from [from] up to [to] move in steps of [tick]. */
+@Serializable
+data class WireTickRange(
+    val from: String,
+    val to: String,
+    val tick: String,
 )
