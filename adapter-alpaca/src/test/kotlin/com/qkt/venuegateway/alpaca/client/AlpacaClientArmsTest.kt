@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 class AlpacaClientArmsTest {
     @Test
     fun `an answer that is not json, not an object or not a list is refused naming what was read`() {
-        assertThatThrownBy { AlpacaJson.parse("<html>", "assets") }
+        assertThatThrownBy { AlpacaJson.parse("{not json", "assets") }
             .isInstanceOf(IOException::class.java)
             .hasMessageContaining("alpaca assets answered without JSON")
         assertThatThrownBy { AlpacaJson.obj("[1]", "account") }.hasMessageContaining("account answered no object")
@@ -74,7 +74,7 @@ class AlpacaClientArmsTest {
         }
         stream.up()
         stream.text("""{"T":"success"}""")
-        stream.text("""{"T":"q","S":"AAPL"}""")
+        stream.text("""[{"T":"q","S":"AAPL"}]""")
         stream.text("""{"T":"other"}""")
         stream.text("""{"not":"a list"}""")
         stream.text("""["x",{"T":"q","S":"MSFT"}]""")
