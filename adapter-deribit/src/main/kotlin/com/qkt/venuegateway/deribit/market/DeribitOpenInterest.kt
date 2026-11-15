@@ -37,6 +37,6 @@ class DeribitOpenInterest(
     fun prune(): Int = recorded.prune()
 
     private companion object {
-        val CODE = Regex("[A-Za-z0-9_-]+")
+        private val CODE = Regex("[A-Za-z0-9_-]+")
     }
 }

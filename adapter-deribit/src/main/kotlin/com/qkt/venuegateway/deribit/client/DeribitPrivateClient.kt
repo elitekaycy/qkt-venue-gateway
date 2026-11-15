@@ -182,7 +182,7 @@ class DeribitPrivateClient(
     private fun BigDecimal.number() = JsonPrimitive(this)
 
     private companion object {
-        val KINDS = listOf("future", "option")
+        private val KINDS = listOf("future", "option")
         const val HEARTBEAT_SECONDS = 30
         const val PAGE = 1000
     }

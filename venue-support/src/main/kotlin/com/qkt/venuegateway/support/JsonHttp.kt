@@ -103,6 +103,6 @@ class JsonHttp(
     override fun toString() = "JsonHttp($baseUrl)"
 
     private companion object {
-        val JSON_TYPE = "application/json".toMediaType()
+        private val JSON_TYPE = "application/json".toMediaType()
     }
 }
