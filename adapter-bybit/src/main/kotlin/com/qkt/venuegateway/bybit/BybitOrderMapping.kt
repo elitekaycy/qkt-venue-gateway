@@ -28,11 +28,6 @@ internal object BybitOrderMapping {
                 "bybit takes client order ids of at most $MAX_LABEL characters: ${o.clientOrderId}",
             )
         }
-        if (o.timeInForce ==
-            TimeInForce.DAY
-        ) {
-            throw VenueRefusedException("bybit has no day orders: send gtc, ioc or fok")
-        }
         val stop = o.type == OrderType.STOP || o.type == OrderType.STOP_LIMIT
         val limited = o.type == OrderType.LIMIT || o.type == OrderType.STOP_LIMIT
         val contracts = settings.contracts
@@ -51,7 +46,7 @@ internal object BybitOrderMapping {
                     TimeInForce.GTC -> "GTC"
                     TimeInForce.IOC -> "IOC"
                     TimeInForce.FOK -> "FOK"
-                    TimeInForce.DAY -> error("unreachable")
+                    TimeInForce.DAY -> throw VenueRefusedException("bybit has no day orders: send gtc, ioc or fok")
                 },
             orderLinkId = o.clientOrderId,
             reduceOnly = o.reduceOnly && contracts,
