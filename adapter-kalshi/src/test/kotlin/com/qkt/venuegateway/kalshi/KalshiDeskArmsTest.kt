@@ -64,4 +64,13 @@ class KalshiDeskArmsTest {
             .hasMessageContaining("no position to reduce")
         assertThat(posts()).isEqualTo(before)
     }
+
+    @Test
+    fun `a print kalshi answers outside the range asked, before it or at its end, is not served`() {
+        val printed = 1_793_927_017_046L
+
+        assertThat(adapter.trades(CURRY, printed + 1, printed + 60_000, 10)).isEmpty()
+        assertThat(adapter.trades(CURRY, printed - 60_000, printed, 10)).isEmpty()
+        assertThat(adapter.trades(CURRY, printed, printed + 1, 10).map { it.timeMs }).containsExactly(printed)
+    }
 }

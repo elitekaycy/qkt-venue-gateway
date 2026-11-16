@@ -83,4 +83,18 @@ class KalshiSocketArmsTest {
         assertThat(unacked).contains("\"subscribe\"").doesNotContain("unsubscribe")
         assertThat(replaced).contains("\"unsubscribe\"", "\"sids\":[3]")
     }
+
+    @Test
+    fun `an error whose msg names no words is logged whole, and the link goes on serving`() {
+        started()
+        val error = frame("error-unknown-channel")
+        val wordless = JsonObject(error + ("msg" to JsonObject(mapOf("code" to JsonPrimitive(8)))))
+
+        server.push(wordless.toString())
+        server.push(Fixtures.text("socket/user-order-resting.json"))
+        await { orders.isNotEmpty() }
+
+        assertThat(orders).hasSize(1)
+        assertThat(links).containsExactly(true)
+    }
 }
