@@ -80,6 +80,7 @@ interface VenueAdapter : AutoCloseable {
     fun instruments(): List<Instrument>                // codes, kind, sizes, expiry/strike/right/underlying, event terms, tick ranges
     val listingRefreshMs: Long                         // how often the host reads instruments() (default a minute)
     fun instrument(code: String): Instrument?          // a code the venue no longer lists, when it can look it up (default null)
+    fun search(filter: InstrumentFilter): List<Instrument>?  // a series or event beyond the listing (default null)
     fun account(): AccountSnapshot
     fun positions(): Positions                         // netting|hedging + per-symbol/ticket rows
     fun openOrders(): List<VenueOrder>

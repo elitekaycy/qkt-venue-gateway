@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 
 /** `qkt-venue-gateway`: one account's gateway, configured by `GATEWAY_*` variables, until it is stopped. */
+@ExcludeFromCoverage("blocks on Thread.join until the process is stopped; start() holds the logic and is tested")
 fun main(args: Array<String>) {
     require(args.isEmpty()) { "qkt-venue-gateway takes no arguments: it is configured by GATEWAY_* variables" }
     val config = GatewayConfig.fromEnv(System.getenv())

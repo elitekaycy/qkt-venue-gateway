@@ -12,7 +12,8 @@ import com.qkt.venuegateway.kalshi.client.KalshiSocket
 /**
  * `GATEWAY_ADAPTER=kalshi`: one shard of one Kalshi account on the environment its settings name ([KalshiSettings]).
  * The login is the API key id and the secret its PEM private key (Ed25519 or RSA). The public market is read
- * unsigned; the listing's pages are slow (measured up to minutes on production), so its calls wait up to a minute.
+ * unsigned; a page of the whole catalogue is slow (measured up to a minute on production), so its calls wait up to a
+ * minute, every other call ten seconds, and none without a limit.
  * [urls] answers each environment's REST base and socket URL (the environment's own, unless a test points it at a
  * local server).
  */
