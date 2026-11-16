@@ -7,6 +7,7 @@ import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueRefusedException
+import com.qkt.venuegateway.kalshi.client.KalshiLabel
 import com.qkt.venuegateway.kalshi.client.KalshiMarket
 import com.qkt.venuegateway.kalshi.client.KalshiNewOrder
 import com.qkt.venuegateway.kalshi.client.KalshiOrder
@@ -48,10 +49,15 @@ internal object KalshiOrderMapping {
             count = scaled(o.quantity, COUNT_DECIMALS, 0, "quantity"),
             price = scaled(price, PRICE_DECIMALS, 2, "price"),
             timeInForce = timeInForce(o.timeInForce, atMarket),
-            clientOrderId = o.clientOrderId,
+            clientOrderId = labelled(o.clientOrderId),
             reduceOnly = reduceOnly,
         )
     }
+
+    /** [label] when Kalshi can take it as an id once encoded ([KalshiLabel]), else refused by name. */
+    private fun labelled(label: String): String =
+        label.takeIf(KalshiLabel::fits)
+            ?: throw VenueRefusedException("kalshi takes an order id of at most 64 characters, encoded: $label")
 
     /** Whether Kalshi takes `reduce_only` on [o] as sent: only immediate-or-cancel (a market order is). */
     fun immediate(o: NewOrder) = o.type == OrderType.MARKET || o.timeInForce == TimeInForce.IOC

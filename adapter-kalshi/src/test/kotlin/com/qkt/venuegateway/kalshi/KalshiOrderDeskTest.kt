@@ -58,6 +58,15 @@ class KalshiOrderDeskTest {
     }
 
     @Test
+    fun `a label too long for Kalshi once encoded is refused before anything is sent`() {
+        val posts = venue.server.requests.count { it.method == "POST" }
+        assertThatThrownBy { adapter.place(order("a".repeat(62) + ".")) }
+            .isInstanceOf(VenueRefusedException::class.java)
+            .hasMessageContaining("at most 64 characters")
+        assertThat(venue.server.requests.count { it.method == "POST" }).isEqualTo(posts)
+    }
+
+    @Test
     fun `a placed order is read back by its id, working under its label`() {
         val placed = adapter.place(order("qkt-probe-rest"))
 

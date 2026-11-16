@@ -1,8 +1,6 @@
 package com.qkt.venuegateway.kalshi.client
 
-import com.qkt.venuegateway.adapter.VenueRefusedException
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 /**
@@ -36,12 +34,9 @@ class KalshiLabelTest {
     }
 
     @Test
-    fun `a label that would pass 64 characters once encoded is refused by name`() {
-        val fits = "a".repeat(64)
-        assertThat(KalshiLabel.encode(fits)).isEqualTo(fits)
-        assertThatThrownBy { KalshiLabel.encode("a".repeat(62) + ".") }
-            .isInstanceOf(VenueRefusedException::class.java)
-            .hasMessageContaining("at most 64 characters")
-            .hasMessageContaining("needs 65")
+    fun `a label fits while it is at most 64 characters once encoded`() {
+        assertThat(KalshiLabel.fits("a".repeat(64))).isTrue()
+        assertThat(KalshiLabel.fits("a".repeat(61) + ".")).isTrue()
+        assertThat(KalshiLabel.fits("a".repeat(62) + ".")).isFalse()
     }
 }
