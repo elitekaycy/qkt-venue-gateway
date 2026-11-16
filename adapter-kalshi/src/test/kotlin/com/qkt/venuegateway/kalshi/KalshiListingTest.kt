@@ -1,6 +1,5 @@
 package com.qkt.venuegateway.kalshi
 
-import com.qkt.venuegateway.adapter.InstrumentFilter
 import com.qkt.venuegateway.adapter.Tradability
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.kalshi.KalshiVenue.Companion.CURRY
