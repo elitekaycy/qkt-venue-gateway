@@ -106,6 +106,9 @@ WebSocket), the account's user id replaced by zeros.
   empty ask as 1, each with size 0; both are absent sides here.
 - **Orders.** V2 order entry (`POST /portfolio/events/orders`, `bid`/`ask` on the YES book). The client's id is
   `client_order_id`; a second order with it is `409 order_already_exists`, answered with the order holding it.
+  Kalshi takes only letters, digits, `_`, `-`, `:` and `=` in it, up to 64 characters (a `.` is `400
+  invalid_parameters`, and qkt ends every order id `.<suffix>`), so a label is sent with any other character as
+  `=` and its hex (`ORD-a-0.x1` as `ORD-a-0=2Ex1`) and read back the same; one too long once encoded is refused.
   Kalshi finds an order only by its id, so label → id is kept in `labels.csv` in the state directory, and an
   unknown label is looked for in the account's order list. `labels.csv` is the only label → id record: if the state
   directory is lost, an order is still found through that list (which carries each order's `client_order_id`), at

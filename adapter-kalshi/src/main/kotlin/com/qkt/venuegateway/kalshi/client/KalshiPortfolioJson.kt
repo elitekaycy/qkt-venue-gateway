@@ -23,7 +23,7 @@ object KalshiPortfolioJson {
         val updated = o.longOrNull("last_updated_ts_ms") ?: o.instantMs("last_update_time") ?: created
         return KalshiOrder(
             orderId = o.need("order_id"),
-            clientOrderId = o.text("client_order_id"),
+            clientOrderId = o.text("client_order_id")?.let(KalshiLabel::decode),
             ticker = o.need("ticker"),
             bookSide = o.need("book_side"),
             status = o.need("status"),
@@ -41,7 +41,7 @@ object KalshiPortfolioJson {
         KalshiFill(
             fillId = o.text("fill_id") ?: o.need("trade_id"),
             orderId = o.need("order_id"),
-            clientOrderId = o.text("client_order_id"),
+            clientOrderId = o.text("client_order_id")?.let(KalshiLabel::decode),
             ticker = o.text("ticker") ?: o.need("market_ticker"),
             bookSide = o.need("book_side"),
             count = o.needDecimal("count_fp"),
@@ -84,7 +84,7 @@ object KalshiPortfolioJson {
             put("price", n.price.toPlainString())
             put("time_in_force", n.timeInForce)
             put("self_trade_prevention_type", "taker_at_cross")
-            put("client_order_id", n.clientOrderId)
+            put("client_order_id", KalshiLabel.encode(n.clientOrderId))
             if (n.reduceOnly) put("reduce_only", true)
         }
 }

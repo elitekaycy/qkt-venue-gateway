@@ -2,6 +2,7 @@ package com.qkt.venuegateway.kalshi.client
 
 import com.qkt.venuegateway.kalshi.Fixtures
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.assertj.core.api.Assertions.assertThat
@@ -26,6 +27,16 @@ class KalshiJsonTest {
         assertThat(fill.timeMs).isEqualTo(1_793_927_017_000L)
         assertThat(fill.fee).isZero
         assertThat(fill.clientOrderId).isNull()
+    }
+
+    @Test
+    fun `a fill and an order read their label back from the id Kalshi holds`() {
+        val sent = JsonPrimitive("ORD-atto_settle-0=2Emwjckoij")
+        val fill = KalshiPortfolioJson.fill(JsonObject(msg("fill") + ("client_order_id" to sent)))
+        assertThat(fill.clientOrderId).isEqualTo("ORD-atto_settle-0.mwjckoij")
+        val order = Fixtures.json("private/order-resting.json")["order"]!!.jsonObject
+        val read = KalshiPortfolioJson.order(JsonObject(order + ("client_order_id" to sent)))
+        assertThat(read.clientOrderId).isEqualTo("ORD-atto_settle-0.mwjckoij")
     }
 
     @Test

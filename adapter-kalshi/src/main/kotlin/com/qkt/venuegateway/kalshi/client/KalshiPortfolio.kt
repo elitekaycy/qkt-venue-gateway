@@ -65,7 +65,7 @@ class KalshiPortfolio(
                 put("side", order.bookSide)
                 put("price", price.toPlainString())
                 put("count", count.toPlainString())
-                order.clientOrderId?.let {
+                order.clientOrderId?.let(KalshiLabel::encode)?.let {
                     put("client_order_id", it)
                     put("updated_client_order_id", it)
                 }
