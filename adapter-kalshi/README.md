@@ -104,7 +104,9 @@ WebSocket), the account's user id replaced by zeros.
 - **Orders.** V2 order entry (`POST /portfolio/events/orders`, `bid`/`ask` on the YES book). The client's id is
   `client_order_id`; a second order with it is `409 order_already_exists`, answered with the order holding it.
   Kalshi finds an order only by its id, so label → id is kept in `labels.csv` in the state directory, and an
-  unknown label is looked for in the account's order list. A market order is an IOC limit at the grid's worst price
+  unknown label is looked for in the account's order list. `labels.csv` is the only label → id record: if the state
+  directory is lost, an order is still found through that list (which carries each order's `client_order_id`), at
+  the cost of one listing read per lookup until the label is learnt again. A market order is an IOC limit at the grid's worst price
   (0.99 or 0.999 to buy, 0.01 or 0.001 to sell). `reduce_only` is accepted on IOC only (`400 invalid_order:
   reduce_only can only be used with IoC orders`), so a resting reduce-only order is sent for at most the position.
   An amend keeps the order id and the label; the order's `initial_count` stays the original size. The order read

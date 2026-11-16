@@ -25,7 +25,9 @@ import java.math.BigDecimal
  * shows an amend or a cancel on the order only some time after taking it (measured on the demo: the old price 0.6 s
  * after, the new one at 1 s), so a change returns once the order read by its id shows it, tried [settleTries] times,
  * and is reported unavailable when it never does. A change to what the order already is sends nothing: Kalshi
- * refuses it (`400 AMEND_ORDER_NO_OP`).
+ * refuses it (`400 AMEND_ORDER_NO_OP`). That wait holds the calling request: about a second as measured, and at
+ * most [settleTries] pauses of [pauseMs] (5 s by default) plus the reads. A client whose own call timeout ends first
+ * (qkt's default is 5 s) may send the change again, which is safe: the order already shows it, so nothing is sent.
  */
 internal class KalshiOrderDesk(
     private val portfolio: KalshiPortfolio,
