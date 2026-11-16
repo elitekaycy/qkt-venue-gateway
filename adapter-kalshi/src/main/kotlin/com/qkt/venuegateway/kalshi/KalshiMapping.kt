@@ -22,7 +22,9 @@ internal data class KalshiListed(
  * A Kalshi market as an [InstrumentKind.EVENT] instrument: its ticker as the code, paying 1 USD per contract, priced
  * on the finest step of its `price_ranges`, in steps of 0.01 contract (the demo took a 1.5-contract order on a
  * whole-cent market; Kalshi no longer reports which markets trade fractions), expiring when the result is expected.
- * The question reads the strike type against the bound it uses: `greater*` the floor only, `less*` the cap only.
+ * The question reads the strike type against the bound it uses: `greater*` the floor only, `less*` the cap only. A
+ * `between` whose floor is above its cap asks nothing answerable (recorded on the demo: `KXGDPYEAR-27-B0.8`, 0.6 to
+ * 0.000001), so it is refused and the listing leaves it out.
  */
 internal object KalshiMapping {
     private val CONTRACT = BigDecimal.ONE
@@ -65,6 +67,7 @@ internal object KalshiMapping {
         val type = KalshiTerms.strikeType(m.strikeType)
         val floor = m.floorStrike.takeIf { type in FLOORED }
         val cap = m.capStrike.takeIf { type in CAPPED }
+        check(floor == null || cap == null || floor <= cap) { "${m.ticker} is between $floor and a lower $cap" }
         return EventTerms(
             series = event.seriesTicker,
             event = event.eventTicker,

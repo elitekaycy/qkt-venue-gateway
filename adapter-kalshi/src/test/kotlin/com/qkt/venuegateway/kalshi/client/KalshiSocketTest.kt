@@ -1,9 +1,12 @@
 package com.qkt.venuegateway.kalshi.client
 
 import com.qkt.venuegateway.kalshi.Fixtures
+import java.net.ServerSocket
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.JsonObject
+import okhttp3.OkHttpClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -109,5 +112,24 @@ class KalshiSocketTest {
 
         await { links.contains(false) }
         assertThat(links).startsWith(true, false)
+    }
+
+    @Test
+    fun `a handshake the venue never answers is given up and tried again, whatever the client's own timeouts`() {
+        val patient = OkHttpClient.Builder().connectTimeout(Duration.ZERO).readTimeout(Duration.ZERO).build()
+        ServerSocket(0).use { silent ->
+            silent.soTimeout = 10_000
+            val url = "ws://127.0.0.1:${silent.localPort}/trade-api/ws/v2"
+            val auth = KalshiAuth("key-id", Fixtures.pem)
+            KalshiSocket(url, auth, { 7L }, {}, {}, {}, { up, _ -> links += up }, patient, handshakeMs = 200).use {
+                it.start()
+
+                silent.accept().use { unanswered ->
+                    silent.accept().use { again -> assertThat(again.isConnected).isTrue }
+                    assertThat(unanswered.isClosed).isFalse
+                }
+                assertThat(links).isEmpty()
+            }
+        }
     }
 }

@@ -33,7 +33,7 @@ class KalshiAdapterTest {
         )
         assertThat(adapter.klineResolutions).containsExactlyInAnyOrder(60_000L, 3_600_000L, 86_400_000L)
         assertThat(adapter.version).isNotBlank
-        assertThat(adapter.listingRefreshMs).isEqualTo(300_000L)
+        assertThat(adapter.listingRefreshMs).isEqualTo(60_000L)
     }
 
     @Test
