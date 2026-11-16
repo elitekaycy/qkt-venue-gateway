@@ -49,7 +49,7 @@ class AlpacaAdapter(
 ) : VenueAdapter {
     override val id = "alpaca"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
-    override val capabilities = setOf(Capability.BARS, Capability.QUOTES)
+    override val capabilities = setOf(Capability.BARS, Capability.QUOTES, Capability.STOP_ORDERS)
 
     private val log = LoggerFactory.getLogger(AlpacaAdapter::class.java)
     private val listing = AlpacaListing(trading, settings.assetClasses, clock, fractional = settings.fractional)

@@ -1,6 +1,8 @@
 package com.qkt.venuegateway.alpaca.client
 
 import com.qkt.venuegateway.alpaca.Fixtures
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.assertj.core.api.Assertions.assertThat
@@ -86,5 +88,34 @@ class AlpacaClientsTest {
         val fills = AlpacaTrading(http).fills(0L, 1_800_000_000_000L)
         assertThat(fills).hasSize(3)
         assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `an order is posted and a replace is patched, each with its JSON body`() {
+        answer("order-limit-accepted.json")
+        answer("order-replace.json")
+        val placed = Fixtures.obj("order-limit-accepted.json")
+        val trading = AlpacaTrading(http)
+        assertThat(trading.submit(placed)).isEqualTo(placed)
+        trading.replace("id-1", Fixtures.obj("order-replace.json"))
+        val post = server.takeRequest()
+        assertThat(post.method).isEqualTo("POST")
+        assertThat(post.target).isEqualTo("/v2/orders")
+        assertThat(post.body!!.utf8()).isEqualTo(placed.toString())
+        val patch = server.takeRequest()
+        assertThat(patch.method).isEqualTo("PATCH")
+        assertThat(patch.target).isEqualTo("/v2/orders/id-1")
+    }
+
+    @Test
+    fun `fills read the next page after the last activity's id while a page is full`() {
+        val activity = Fixtures.array("activities-fill.json").first()
+        val full = JsonArray(List(100) { activity }).toString()
+        server.enqueue(MockResponse(code = 200, body = full))
+        answer("activities-fill.json")
+        assertThat(AlpacaTrading(http).fills(0L, 1_800_000_000_000L)).hasSize(103)
+        assertThat(server.takeRequest().url.queryParameter("page_token")).isNull()
+        val token = (activity["id"] as JsonPrimitive).content
+        assertThat(server.takeRequest().url.queryParameter("page_token")).isEqualTo(token)
     }
 }

@@ -57,6 +57,6 @@ class AlpacaCoinFees(
     }
 
     private companion object {
-        val MAX_FEE: BigDecimal = BigDecimal("0.01")
+        private val MAX_FEE: BigDecimal = BigDecimal("0.01")
     }
 }

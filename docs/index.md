@@ -16,6 +16,7 @@ hide:
   <span class="pill">Alpaca</span>
   <span class="pill">Bybit</span>
   <span class="pill">Deribit</span>
+  <span class="pill">Kalshi</span>
   <span class="pill">Paper</span>
   <!-- pills:end -->
 </div>
@@ -118,6 +119,7 @@ either side.</p>
 | [`alpaca`](adapters/alpaca.md) | Alpaca paper and live: US shares (whole shares, regular, extended and overnight sessions) and USD coin pairs | New |
 | [`bybit`](adapters/bybit.md) | Bybit testnet and mainnet: USDT/USDC linear contracts, or spot | New |
 | [`deribit`](adapters/deribit.md) | Deribit testnet and mainnet: USDC-linear perpetuals, futures and options | Stable |
+| [`kalshi`](adapters/kalshi.md) | Kalshi demo and production: binary event contracts of every category | New |
 | [`paper`](adapters/paper.md) | Simulated account on Deribit's public prices; no account needed | Stable |
 <!-- adapters:end -->
 

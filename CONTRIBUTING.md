@@ -44,7 +44,7 @@ and how it was tested.
 
 | Workflow | Job | Runs | Checks |
 |---|---|---|---|
-| `check` | `build` | every PR, push to main | compile, ktlint, every module's tests (offline) |
+| `check` | `build` | every PR, push to main | compile, ktlint, every module's tests (offline), coverage floor, 100% of changed lines covered ([test coverage](https://github.com/elitekaycy/qkt-venue-gateway/blob/dev/docs/project/test-coverage.md)) |
 | `check` | `rules` | every PR, push to main | `scripts/check-rules.sh`, shellcheck |
 | `check` | `image` | every PR, push to main | `docker compose up` the paper gateway, wait for healthy, call it |
 | `pr` | `pr` | every PR | branch name, title, commits, adapter branch scope (`scripts/check-pr.sh`) |

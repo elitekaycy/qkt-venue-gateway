@@ -20,8 +20,11 @@ internal class KitOrders(
     private var sequence = 0
     private val placed = mutableListOf<String>()
 
-    /** A label no earlier run used. */
-    fun label(): String = "kit-$run-${++sequence}"
+    /**
+     * A label no earlier run used, shaped as qkt writes its own (`ORD-<strategy>-<n>.<suffix>`: letters, digits,
+     * `_`, `-` and a `.`), so an adapter whose venue refuses one of those characters fails here, not in production.
+     */
+    fun label(): String = "ORD-kit_$run-${++sequence}.$run"
 
     /** Places [order] on [adapter], remembering it for [cancelWorking]. */
     fun place(

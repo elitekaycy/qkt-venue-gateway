@@ -72,6 +72,6 @@ internal class DeribitMarketRemainders(
         o.label != null && o.state == "open" && (o.originalOrderType ?: o.orderType) in MARKET_TYPES
 
     private companion object {
-        val MARKET_TYPES = setOf("market", "stop_market")
+        private val MARKET_TYPES = setOf("market", "stop_market")
     }
 }
