@@ -25,6 +25,15 @@ class GatewayConfigTest {
         assertThat(config.pluginsDir).isNull()
         assertThat(config.credentials).isNull()
         assertThat(config.recordingRetentionDays).isZero
+        assertThat(config.eventKeepDays).isEqualTo(7)
+    }
+
+    @Test
+    fun `event contracts are kept a set number of whole days, and anything else is refused by name`() {
+        assertThat(GatewayConfig.fromEnv(tokens + ("GATEWAY_EVENT_KEEP_DAYS" to "2")).eventKeepDays).isEqualTo(2)
+        assertThatThrownBy { GatewayConfig.fromEnv(tokens + ("GATEWAY_EVENT_KEEP_DAYS" to "a week")) }
+            .hasMessageContaining("GATEWAY_EVENT_KEEP_DAYS")
+            .hasMessageContaining("a week")
     }
 
     @Test

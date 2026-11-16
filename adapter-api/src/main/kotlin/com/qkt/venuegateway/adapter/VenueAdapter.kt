@@ -30,7 +30,21 @@ interface VenueAdapter : AutoCloseable {
 
     fun identity(): VenueIdentity
 
+    /** Every instrument listed now; the host reads it every [listingRefreshMs] and serves what it read. */
     fun instruments(): List<Instrument>
+
+    /** How often the host reads [instruments], in milliseconds. */
+    val listingRefreshMs: Long get() = 60_000
+
+    /** [code] although the venue no longer lists it (a settled contract), or null when the venue cannot say. */
+    fun instrument(code: String): Instrument? = null
+
+    /**
+     * The instruments of the series or event [filter] names, read from the venue although [instruments] does not
+     * list them (a catalogue too large to list whole), each with the `trading` this account has on it; null when the
+     * adapter knows only its listing, and the host filters that.
+     */
+    fun search(filter: InstrumentFilter): List<Instrument>? = null
 
     fun account(): AccountSnapshot
 
@@ -145,10 +159,7 @@ interface VenueAdapter : AutoCloseable {
         toMs: Long,
     ): List<VenueBar>
 
-    /**
-     * Subscribes the quotes of [codes], replacing the last subscription; pushes go to the listener. The host expands
-     * a client's roots into their listed options (by [Instrument.underlying]) before it asks.
-     */
+    /** Subscribes the quotes of [codes], replacing the last; the host has expanded clients' roots into codes. */
     fun subscribeQuotes(codes: Set<String>)
 }
 
@@ -181,14 +192,3 @@ interface AdapterListener {
         reason: String,
     )
 }
-
-/** The venue refused a request; [reason] is its own. Served as `422 venue_rejected`. */
-class VenueRefusedException(
-    val reason: String,
-) : RuntimeException(reason)
-
-/** The venue cannot be reached. Served as `503 venue_unavailable`. */
-class VenueUnavailableException(
-    message: String,
-    cause: Throwable? = null,
-) : RuntimeException(message, cause)

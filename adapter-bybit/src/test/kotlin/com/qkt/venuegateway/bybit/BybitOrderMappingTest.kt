@@ -100,9 +100,16 @@ class BybitOrderMappingTest {
         assertThatThrownBy {
             body(order(OrderType.LIMIT, tif = TimeInForce.DAY))
         }.isInstanceOf(VenueRefusedException::class.java)
+            .hasMessageContaining("no day orders")
         assertThatThrownBy { body(order(OrderType.LIMIT, id = "x".repeat(46))) }
             .isInstanceOf(VenueRefusedException::class.java)
             .hasMessageContaining("45")
         assertThat(body(order(OrderType.LIMIT, id = "x".repeat(45)))).contains("x".repeat(45))
+    }
+
+    @Test
+    fun `immediate-or-cancel and fill-or-kill go by bybit's names`() {
+        assertThat(body(order(OrderType.LIMIT, tif = TimeInForce.IOC))).contains("\"timeInForce\":\"IOC\"")
+        assertThat(body(order(OrderType.LIMIT, tif = TimeInForce.FOK))).contains("\"timeInForce\":\"FOK\"")
     }
 }

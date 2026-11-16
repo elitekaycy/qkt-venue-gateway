@@ -4,6 +4,7 @@ import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.Positions
 import com.qkt.venuegateway.adapter.Side
+import com.qkt.venuegateway.adapter.TickRange
 import com.qkt.venuegateway.adapter.VenueBar
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
@@ -51,7 +52,7 @@ internal object ContractChecks {
         quantity: BigDecimal,
     ): BigDecimal = if (side == Side.BUY) quantity else quantity.negate()
 
-    private fun instrument(i: Instrument) {
+    internal fun instrument(i: Instrument) {
         val what = "instrument ${i.code}"
         assertThat(i.code).describedAs(what).isNotBlank
         assertThat(i.currency).describedAs("$what currency").isNotBlank
@@ -61,9 +62,30 @@ internal object ContractChecks {
         val option = i.kind == InstrumentKind.OPTION
         assertThat(i.expiryMs != null)
             .describedAs("$what expiry")
-            .isEqualTo(option || i.kind == InstrumentKind.FUTURE)
+            .isEqualTo(option || i.kind == InstrumentKind.FUTURE || i.kind == InstrumentKind.EVENT)
         assertThat(i.strike != null).describedAs("$what strike").isEqualTo(option)
         assertThat(i.underlying != null).describedAs("$what underlying").isEqualTo(option)
         assertThat(i.right).describedAs("$what right").isIn(if (option) listOf("call", "put") else listOf(null))
+        EventChecks.terms(i)
+        i.tickRanges?.let { ticks(what, i.tickSize, it) }
+    }
+
+    /** Ranges ascend without gaps, each with a positive tick, and [tickSize] is the finest of them. */
+    private fun ticks(
+        what: String,
+        tickSize: BigDecimal,
+        ranges: List<TickRange>,
+    ) {
+        assertThat(ranges).describedAs("$what tick ranges").isNotEmpty
+        ranges.forEach {
+            assertThat(it.tick).describedAs("$what tick from ${it.from}").isPositive
+            assertThat(it.from).describedAs("$what tick range from ${it.from}").isLessThan(it.to)
+        }
+        assertThat(ranges.zipWithNext().all { (a, b) -> a.to.compareTo(b.from) == 0 })
+            .describedAs("$what tick ranges ascend without gaps")
+            .isTrue
+        assertThat(tickSize)
+            .describedAs("$what tick size, the finest tick")
+            .isEqualByComparingTo(ranges.minOf { it.tick })
     }
 }

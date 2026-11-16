@@ -45,6 +45,7 @@ class DeribitFundingTest {
             Capability.TRADES,
             Capability.LIQUIDATIONS,
             Capability.DEPTH,
+            Capability.STOP_ORDERS,
         )
         adapter.close()
     }

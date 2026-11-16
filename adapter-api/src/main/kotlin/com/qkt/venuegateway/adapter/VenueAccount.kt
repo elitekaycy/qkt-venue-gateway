@@ -13,7 +13,9 @@ data class VenueIdentity(
  * One instrument the venue lists, by its venue [code]. [expiryMs] only for dated contracts; [strike],
  * [right] (`call`/`put`) and [underlying] only for options. [category] is the venue's own grouping of the
  * instrument, when it has one (`us_equity`, `Stocks`): qkt picks session calendars by it. [trading] is what the
- * account may do with it.
+ * account may do with it. [event] carries an event contract's terms, and only an [InstrumentKind.EVENT] has them.
+ * [tickRanges] is the venue's price grid where it changes across the price range (null: [tickSize] everywhere);
+ * [tickSize] is then its finest tick.
  */
 data class Instrument(
     val code: String,
@@ -29,6 +31,15 @@ data class Instrument(
     val underlying: String? = null,
     val category: String? = null,
     val trading: Tradability = Tradability.FULL,
+    val event: EventTerms? = null,
+    val tickRanges: List<TickRange>? = null,
+)
+
+/** Prices from [from] up to [to] move in steps of [tick]. */
+data class TickRange(
+    val from: BigDecimal,
+    val to: BigDecimal,
+    val tick: BigDecimal,
 )
 
 /** The account's money in [currency]: what it holds, what it is worth, and its margin. */

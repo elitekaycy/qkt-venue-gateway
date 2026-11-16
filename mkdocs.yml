@@ -89,6 +89,7 @@ nav:
       - Alpaca: adapters/alpaca.md
       - Bybit: adapters/bybit.md
       - Deribit: adapters/deribit.md
+      - Kalshi: adapters/kalshi.md
       - Paper: adapters/paper.md
       # adapters:end
       - Adapter rules: adapters.md

@@ -9,31 +9,35 @@ import java.util.concurrent.TimeUnit
 import org.slf4j.LoggerFactory
 
 /**
- * Every client's quote subscription on one account (wire spec §4a): their codes, and every listed option of their
- * roots (by the listing's `underlying`), merged into one adapter subscription of codes; each venue quote delivered
- * to the clients that want it. The listing is read again at most every [listingRecheckMs] when an unknown code
- * arrives, and every [rootRefreshMs] while a root is wanted, so options the venue lists later (new expiries) are
- * subscribed too. Every quote a client holds is sent again with its time advanced every [refreshMs] while the venue
- * link is up, so a quiet book stays fresh and a dead link goes stale.
+ * Every client's quote subscription on one account (wire spec §4a): their codes, and every listed instrument of their
+ * roots (an option's `underlying`, an event contract's series or event), merged into one adapter subscription of
+ * codes; each venue quote delivered to the clients that want it. The listing is read again at most every
+ * [listingRecheckMs] when an unknown code arrives, and every [rootRefreshMs] while a root is wanted, so instruments
+ * the venue lists later (new expiries) are subscribed too. Every quote a client holds is sent again with its time
+ * advanced every [refreshMs] while the venue link is up, so a quiet book stays fresh and a dead link goes stale; a
+ * `refresh=changes` client instead gets only changes, batched every [batchMs], and all it holds every [heartbeatMs].
  */
 class QuoteHub(
     private val gateway: Gateway,
     private val refreshMs: Long = 5_000,
     private val listingRecheckMs: Long = 60_000,
     private val rootRefreshMs: Long = 600_000,
+    private val batchMs: Long = 250,
+    private val heartbeatMs: Long = 30_000,
 ) : AutoCloseable {
-    /** One client's subscription; [send] must not block. */
+    /** One client's subscription; [send] must not block. A [batch] client is sent changes only, through it. */
     class Subscriber internal constructor(
         val codes: Set<String>,
         val roots: Set<String>,
         internal val send: (VenueQuote) -> Unit,
+        internal val batch: ChangeBatch? = null,
     )
 
     private val log = LoggerFactory.getLogger(QuoteHub::class.java)
     private val subscribers = CopyOnWriteArrayList<Subscriber>()
     private val latest = ConcurrentHashMap<String, VenueQuote>()
 
-    @Volatile private var underlyingOf: Map<String, String> = emptyMap()
+    @Volatile private var rootsOf: Map<String, Set<String>> = emptyMap()
 
     @Volatile private var listedAt: Long? = null
 
@@ -51,6 +55,8 @@ class QuoteHub(
         gateway.onQuote = ::onQuote
         timer.scheduleWithFixedDelay(::refresh, refreshMs, refreshMs, TimeUnit.MILLISECONDS)
         timer.scheduleWithFixedDelay(::expandRoots, rootRefreshMs, rootRefreshMs, TimeUnit.MILLISECONDS)
+        timer.scheduleWithFixedDelay(::flush, batchMs, batchMs, TimeUnit.MILLISECONDS)
+        timer.scheduleWithFixedDelay(::heartbeat, heartbeatMs, heartbeatMs, TimeUnit.MILLISECONDS)
     }
 
     /** Subscribes [codes] and [roots] for [send]; closing the result ends the subscription. */
@@ -58,12 +64,23 @@ class QuoteHub(
         codes: Set<String>,
         roots: Set<String>,
         send: (VenueQuote) -> Unit,
+    ): AutoCloseable = add(Subscriber(codes, roots, send))
+
+    /** Subscribes [codes] and [roots] for [send], changes only, each batch at once (`refresh=changes`). */
+    fun subscribeChanges(
+        codes: Set<String>,
+        roots: Set<String>,
+        send: (List<VenueQuote>) -> Unit,
     ): AutoCloseable {
-        val subscriber = Subscriber(codes, roots, send)
-        if (roots.isNotEmpty()) relist()
+        val batch = ChangeBatch(send)
+        return add(Subscriber(codes, roots, batch::offer, batch))
+    }
+
+    private fun add(subscriber: Subscriber): AutoCloseable {
+        if (subscriber.roots.isNotEmpty()) relist()
         subscribers += subscriber
         resubscribe()
-        latest.values.filter { wants(subscriber, it.symbol) }.forEach(send)
+        latest.values.filter { wants(subscriber, it.symbol) }.forEach(subscriber.send)
         return AutoCloseable {
             subscribers -= subscriber
             resubscribe()
@@ -76,7 +93,7 @@ class QuoteHub(
 
     private fun onQuote(quote: VenueQuote) {
         latest[quote.symbol] = quote
-        if (quote.symbol !in underlyingOf && subscribers.any { it.roots.isNotEmpty() }) relist()
+        if (quote.symbol !in rootsOf && subscribers.any { it.roots.isNotEmpty() }) relist()
         subscribers.filter { wants(it, quote.symbol) }.forEach { it.send(quote) }
     }
 
@@ -84,27 +101,40 @@ class QuoteHub(
         // A quote is only refreshed while it can still change: a stopped feed must read as stale.
         if (!gateway.quotesLive) return
         val now = gateway.clock()
-        for (subscriber in subscribers) {
-            latest.values.filter { wants(subscriber, it.symbol) }.forEach { subscriber.send(it.copy(timeMs = now)) }
+        for (subscriber in subscribers.filter { it.batch == null }) {
+            held(subscriber, now).forEach(subscriber.send)
         }
     }
+
+    private fun flush() = subscribers.forEach { it.batch?.flush() }
+
+    private fun heartbeat() {
+        if (!gateway.quotesLive) return
+        val now = gateway.clock()
+        subscribers.forEach { s -> s.batch?.heartbeat(held(s, now)) }
+    }
+
+    private fun held(
+        subscriber: Subscriber,
+        now: Long,
+    ) = latest.values.filter { wants(subscriber, it.symbol) }.map { it.copy(timeMs = now) }
 
     private fun wants(
         subscriber: Subscriber,
         code: String,
-    ) = code in subscriber.codes || underlyingOf[code]?.let { it in subscriber.roots } == true
+    ) = code in subscriber.codes || rootsOf[code]?.any { it in subscriber.roots } == true
 
     @Synchronized
     private fun resubscribe() {
         val roots = subscribers.flatMap { it.roots }.toSet()
-        val options = underlyingOf.filterValues { it in roots }.keys
+        val options = rootsOf.filterValues { it.any(roots::contains) }.keys
         val wanted = subscribers.flatMap { it.codes }.toSet() + options
         if (wanted == subscribed) return
         subscribed = wanted
         gateway.adapter.subscribeQuotes(wanted)
     }
 
-    /** Reads the listing again and subscribes the options it now lists of every wanted root; a failure waits for the next. */
+    /** Reads the listing again and subscribes what it now lists of every wanted root; a failure waits for the next. */
     private fun expandRoots() {
         if (subscribers.none { it.roots.isNotEmpty() }) return
         runCatching {
@@ -119,10 +149,10 @@ class QuoteHub(
         val last = listedAt
         if (!force && last != null && now - last < listingRecheckMs) return
         listedAt = now
-        underlyingOf =
+        rootsOf =
             gateway.adapter
                 .instruments()
-                .mapNotNull { i -> i.underlying?.let { i.code to it } }
-                .toMap()
+                .associate { i -> i.code to setOfNotNull(i.underlying, i.event?.series, i.event?.event) }
+                .filterValues { it.isNotEmpty() }
     }
 }

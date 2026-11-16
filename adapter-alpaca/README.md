@@ -58,7 +58,8 @@ SYMBOLS
 
 ## Capabilities
 
-Bars and quotes. The host builds every bar window from Alpaca's klines of 1, 5, 15 and 30 minutes and an hour, all
+Bars, quotes and stop orders (Alpaca holds stop and stop-limit orders; a coin pair takes stop-limit only, so the
+venue refuses a plain stop on one). The host builds every bar window from Alpaca's klines of 1, 5, 15 and 30 minutes and an hour, all
 on the UTC grid (Alpaca stamps a share's daily bar at midnight New York, 04:00 or 05:00 UTC, so days are built from
 hours). Each quote subscription replaces the last: what is no longer asked for is unsubscribed on its stream. Alpaca
 lists no expiring contracts, so settlements, funding, marks, open interest, the tape, liquidations and depth are

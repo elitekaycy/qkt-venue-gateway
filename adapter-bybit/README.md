@@ -61,8 +61,8 @@ qkt writes `-` in venue codes as `_`.
 
 | Category | Declared |
 |---|---|
-| `linear` | bars, quotes, funding, funding_rates, mark_prices, open_interest, trades, liquidations, depth |
-| `spot` | bars, quotes, trades, depth |
+| `linear` | bars, quotes, funding, funding_rates, mark_prices, open_interest, trades, liquidations, depth, stop_orders |
+| `spot` | bars, quotes, trades, depth, stop_orders |
 
 Not declared, answered `501`: settlements (no Bybit delivery record has been recorded to map from yet) and
 option marks (no options).

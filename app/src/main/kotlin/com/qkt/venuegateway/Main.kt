@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 
 /** `qkt-venue-gateway`: one account's gateway, configured by `GATEWAY_*` variables, until it is stopped. */
+@ExcludeFromCoverage("blocks on Thread.join until the process is stopped; start() holds the logic and is tested")
 fun main(args: Array<String>) {
     require(args.isEmpty()) { "qkt-venue-gateway takes no arguments: it is configured by GATEWAY_* variables" }
     val config = GatewayConfig.fromEnv(System.getenv())
@@ -33,7 +34,8 @@ fun start(
 ): RunningGateway {
     val log = LoggerFactory.getLogger("com.qkt.venuegateway.Main")
     val factory = AdapterLoader(config.pluginsDir).factory(config.adapter)
-    // One HTTP client and one scheduler for the adapter: it derives from them, the host shuts them down last.
+    // One HTTP client and one scheduler for the adapter (the host's listing reads share it): it derives from them,
+    // the host shuts them down last.
     val http = OkHttpClient()
     val scheduler = Executors.newScheduledThreadPool(ADAPTER_THREADS, daemon("adapter"))
     val runtime =
@@ -64,10 +66,15 @@ fun start(
         Gateway(
             adapter,
             Journal.open(config.stateDir.resolve("journal.db")),
-            InstrumentShelf.open(config.stateDir.resolve("instruments.db"), clock = clock),
+            InstrumentShelf.open(
+                config.stateDir.resolve("instruments.db"),
+                eventKeepMs = config.eventKeepDays * DAY_MS,
+                clock = clock,
+            ),
             config.tokens,
             clock,
         )
+    gateway.catalog.start(scheduler)
     val hub = QuoteHub(gateway).also { it.start() }
     gateway.start()
     val reconciler = Reconciler(gateway).also { it.start() }
@@ -94,3 +101,5 @@ class RunningGateway(
 
 /** Threads of the scheduler the adapter's timers and ordered work share (each socket keeps its own). */
 private const val ADAPTER_THREADS = 4
+
+private const val DAY_MS = 86_400_000L

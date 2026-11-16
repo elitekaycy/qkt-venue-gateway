@@ -9,16 +9,20 @@ import com.qkt.vgp.WireBars
 import com.qkt.vgp.WireQuote
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * Market data (wire spec §3 bars, §4a quotes): `GET /v1/bars`, closed bars only ([BarBuilder]), a page of at most
  * [BARS_PAGE] windows, each page's klines asked of the adapter alone (so no venue call is larger than a page),
- * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes` (WebSocket), the [hub]'s quotes for the client's codes
- * and roots, never replayed (a missing or wrong token is `401` before the upgrade). A slow client loses its
- * oldest buffered quotes, never the newest.
+ * with `next` the start of the following page while closed time remains before `to`; and `GET /v1/quotes`
+ * (WebSocket), the [hub]'s quotes for the client's codes and roots, never replayed (a missing or wrong token is `401`
+ * before the upgrade): one quote a message, or with `refresh=changes` one JSON array of changed quotes a message (any
+ * other `refresh` closes the socket naming it). A slow client loses its oldest buffered messages, never the newest.
  */
 internal fun Route.marketRoutes(
     gateway: Gateway,
@@ -53,9 +57,26 @@ internal fun Route.marketRoutes(
                 ?.filter { it.isNotBlank() }
                 ?.toSet()
                 .orEmpty()
-        val buffer = Channel<WireQuote>(QUOTE_BUFFER, BufferOverflow.DROP_OLDEST)
-        hub.subscribe(codes, roots) { buffer.trySend(WireReads.quote(it)) }.use {
-            for (quote in buffer) send(Frame.Text(wireJson.encodeToString(WireQuote.serializer(), quote)))
+        when (q["refresh"]) {
+            null -> {
+                val buffer = Channel<WireQuote>(QUOTE_BUFFER, BufferOverflow.DROP_OLDEST)
+                val subscription = hub.subscribe(codes, roots) { buffer.trySend(WireReads.quote(it)) }
+                try {
+                    for (quote in buffer) send(Frame.Text(wireJson.encodeToString(WireQuote.serializer(), quote)))
+                } finally {
+                    subscription.close()
+                }
+            }
+            "changes" -> {
+                val batches = Channel<List<WireQuote>>(BATCH_BUFFER, BufferOverflow.DROP_OLDEST)
+                val subscription = hub.subscribeChanges(codes, roots) { batches.trySend(it.map(WireReads::quote)) }
+                try {
+                    for (batch in batches) send(Frame.Text(wireJson.encodeToString(QUOTE_BATCH, batch)))
+                } finally {
+                    subscription.close()
+                }
+            }
+            else -> close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "refresh must be changes"))
         }
     }
 }
@@ -71,5 +92,7 @@ internal fun windowMs(raw: String?): Long {
 
 private const val BARS_PAGE = 1000
 private const val QUOTE_BUFFER = 10_000
+private const val BATCH_BUFFER = 1_000
+private val QUOTE_BATCH = ListSerializer(WireQuote.serializer())
 private const val MINUTE_MS = 60_000L
 private const val DAY_MS = 86_400_000L

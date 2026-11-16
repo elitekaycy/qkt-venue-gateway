@@ -83,12 +83,12 @@ abstract class AdapterContractTest {
         val (adapter, _) = connect(dir)
         val identity = adapter.identity()
         val instruments = adapter.instruments()
-
         assertThat(identity.login).isNotBlank
         assertThat(identity.currency).isNotBlank
         ContractChecks.listing(instruments)
         val codes = listOf(restingOrder("x"), fillingOrder("x")).map { it.symbol } + activeCode
         assertThat(instruments.map { it.code }).containsAll(codes)
+        SearchChecks.series(adapter, instruments.first { it.code == activeCode })
     }
 
     @Test
