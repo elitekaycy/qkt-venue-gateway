@@ -2,6 +2,20 @@
 
 Written at each release by scripts/release.sh from Conventional Commits; not edited by hand.
 
+## v0.4.0 (2026-11-16)
+
+### Features
+
+- host: read a series or an event from a venue that can search (#144) (11b7aa8)
+- kalshi: add the kalshi adapter for event contracts (#127) (d796ca0)
+- host: scale the catalog, quote roots by family, tick ranges (#122) (ea8d926)
+- wire: list event contracts with their terms (#121) (850e2c3)
+
+### Fixes
+
+- kalshi: send an order label in the characters kalshi takes (#149) (81e2680)
+- kalshi: list only the series the series setting names (#142) (88360b3)
+
 ## v0.3.2 (2026-11-04)
 
 ### Fixes
