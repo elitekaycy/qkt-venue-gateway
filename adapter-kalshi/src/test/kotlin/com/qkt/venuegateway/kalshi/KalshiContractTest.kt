@@ -3,6 +3,7 @@ package com.qkt.venuegateway.kalshi
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.Credentials
 import com.qkt.venuegateway.adapter.NewOrder
+import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
 import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
@@ -16,9 +17,12 @@ import com.qkt.venuegateway.testkit.AdapterContractTest
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.io.TempDir
 
 /**
  * The Kalshi adapter against the demo environment: real orders on the demo market trading most right now that is
@@ -59,6 +63,21 @@ class KalshiContractTest : AdapterContractTest() {
     override fun refusedOrder(clientOrderId: String) = limit(clientOrderId, "0.015")
 
     override val activeCode: String get() = Demo.market.ticker
+
+    /** qkt ends each of its order ids `.<suffix>`, and Kalshi refuses a `.` in an id: the label must still work. */
+    @Test
+    fun `a label with a dot rests, is found by it and is cancelled`(
+        @TempDir dir: Path,
+    ) {
+        val label = "kit.dot-${System.currentTimeMillis()}"
+        newAdapter(dir).use { adapter ->
+            val placed = adapter.place(restingOrder(label))
+            assertThat(placed.clientOrderId).isEqualTo(label)
+            assertThat(adapter.orderByLabel(label)?.status).isEqualTo(OrderStatus.WORKING)
+            adapter.cancel(label)
+            assertThat(adapter.orderByLabel(label)?.status).isEqualTo(OrderStatus.CANCELLED)
+        }
+    }
 
     private fun market(
         clientOrderId: String,

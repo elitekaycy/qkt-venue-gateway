@@ -24,12 +24,12 @@ class OrderChecksTest {
     private fun connected(venue: FakeVenue) = RecordingListener().also(venue::connect)
 
     @Test
-    fun `labels are unique within a run and name it`() {
+    fun `labels are unique within a run, name it and are shaped as qkt writes its order ids`() {
         val first = kit.label()
         val second = kit.label()
 
-        assertThat(first).startsWith("kit-").endsWith("-1")
-        assertThat(second).isEqualTo(first.removeSuffix("1") + "2")
+        assertThat(first).matches("""ORD-kit_[0-9a-z]+-1\.[0-9a-z]+""")
+        assertThat(second).isEqualTo(first.replace("-1.", "-2."))
     }
 
     @Test

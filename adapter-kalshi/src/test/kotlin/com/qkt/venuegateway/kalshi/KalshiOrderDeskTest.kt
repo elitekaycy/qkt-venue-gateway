@@ -51,6 +51,22 @@ class KalshiOrderDeskTest {
             .mapValues { it.value.jsonPrimitive.content }
 
     @Test
+    fun `a label with a dot, as qkt writes them, reaches Kalshi in the characters it takes`() {
+        adapter.place(order("ORD-atto_settle-0.mwjckoij"))
+
+        assertThat(lastPlacement()["client_order_id"]).isEqualTo("ORD-atto_settle-0=2Emwjckoij")
+    }
+
+    @Test
+    fun `a label too long for Kalshi once encoded is refused before anything is sent`() {
+        val posts = venue.server.requests.count { it.method == "POST" }
+        assertThatThrownBy { adapter.place(order("a".repeat(62) + ".")) }
+            .isInstanceOf(VenueRefusedException::class.java)
+            .hasMessageContaining("at most 64 characters")
+        assertThat(venue.server.requests.count { it.method == "POST" }).isEqualTo(posts)
+    }
+
+    @Test
     fun `a placed order is read back by its id, working under its label`() {
         val placed = adapter.place(order("qkt-probe-rest"))
 
