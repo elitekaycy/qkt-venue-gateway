@@ -44,7 +44,8 @@ object Fixtures {
     /**
      * A Kalshi stand-in: each HTTP request is answered with the fixture [route] names for its method, path and query
      * and body (HTTP 404 with Kalshi's recorded `not_found` when none); a name `!<status> <file>` answers that
-     * file with that status (an answer recorded with a status other than 200), and `!<status>` alone an empty body.
+     * file with that status (an answer recorded with a status other than 200), and `!<status>` alone an empty body;
+     * a name starting `{` is answered as it is (a recorded answer a test altered).
      * `/trade-api/ws/v2` upgrades to a socket whose frames from the client land in [sent]; [push] sends one to it.
      */
     class Server(
@@ -66,6 +67,7 @@ object Fixtures {
                             val query = url.queryParameterNames.associateWith { url.queryParameter(it)!! }
                             val body = request.body?.utf8() ?: ""
                             val name = route(request.method, url.encodedPath.removePrefix(API), query, body)
+                            if (name != null && name.startsWith("{")) return MockResponse(body = name)
                             val (status, file) = name?.let(::statusOf) ?: (404 to "private/error-not-found.json")
                             return MockResponse(code = status, body = if (file.isEmpty()) "" else text(file))
                         }

@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class KalshiVenue : AutoCloseable {
     val server =
         Fixtures.Server { method, path, query, body ->
-            when ("$method $path") {
+            overrides["$method $path"] ?: when ("$method $path") {
                 "GET /series" -> "demo/series-list.json"
                 "GET /series/KXNBA3D" -> "demo/series-KXNBA3D.json"
                 "GET /series/$HOURLY" -> "demo/series-$HOURLY.json"
@@ -50,6 +50,9 @@ class KalshiVenue : AutoCloseable {
                 else -> null
             }
         }
+
+    /** Answers a test sets for `METHOD path`, taking the place of the recorded route (a fixture name, `!<status>`, or `{`…). */
+    val overrides = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /** What the next reads of the [RESTING] order answer (Kalshi shows a change late), before what it is now. */
     val restingReads = ConcurrentLinkedQueue<String>()
@@ -90,18 +93,21 @@ class KalshiVenue : AutoCloseable {
             }
         }
 
-    /** The adapter on shard [shard], its every call answered by [server]. */
+    /** The adapter on shard [shard], its every call answered by [server], recording in [stateDir] for [retentionDays]. */
     fun adapter(
         shard: Int = 0,
         series: String = "KXNBA3D",
         clock: () -> Long = System::currentTimeMillis,
+        stateDir: java.nio.file.Path = Files.createTempDirectory("kalshi-venue"),
+        retentionDays: Int = 0,
     ): VenueAdapter {
         val context =
             AdapterContext(
                 mapOf("environment" to "demo", "shard" to "$shard", "series" to series),
                 clock,
-                Files.createTempDirectory("kalshi-venue"),
+                stateDir,
                 Credentials("key-id", Fixtures.pem),
+                recordingRetentionDays = retentionDays,
             )
         return KalshiAdapterFactory { server.restUrl to server.socketUrl }.create(context)
     }
