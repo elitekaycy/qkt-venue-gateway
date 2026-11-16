@@ -75,7 +75,10 @@ class PaperAdapterArmsTest {
         mark: BigDecimal? = null,
     ) = DeribitTicker(perp, now, bid, BigDecimal.TEN, ask, BigDecimal.TEN, mark, null, null, null)
 
-    private fun adapter(dir: Path): PaperAdapter {
+    private fun adapter(
+        dir: Path,
+        connected: Boolean = true,
+    ): PaperAdapter {
         val adapter =
             PaperAdapter(
                 AdapterContext(mapOf("starting_balance" to "10000", "settlement_check_ms" to "60000"), { now }, dir),
@@ -90,7 +93,7 @@ class PaperAdapterArmsTest {
                     override fun close() {}
                 }
             }
-        adapter.connect(HeardListener(heard))
+        if (connected) adapter.connect(HeardListener(heard))
         return adapter
     }
 
@@ -165,5 +168,22 @@ class PaperAdapterArmsTest {
         ).isEqualByComparingTo("1")
         assertThat(restarted.account().equity).isEqualByComparingTo(restarted.account().balance)
         restarted.close()
+    }
+
+    @Test
+    fun `an order placed before a listener is connected is kept, its pushes dropped rather than replayed`(
+        @TempDir dir: Path,
+    ) {
+        val adapter = adapter(dir, connected = false)
+
+        val placed = adapter.place(buy("early"))
+        Thread.sleep(200)
+        adapter.connect(HeardListener(heard))
+        Thread.sleep(200)
+
+        assertThat(placed.clientOrderId).isEqualTo("early")
+        assertThat(adapter.fills(0, Long.MAX_VALUE).map { it.clientOrderId }).containsExactly("early")
+        assertThat(heard).isEmpty()
+        adapter.close()
     }
 }

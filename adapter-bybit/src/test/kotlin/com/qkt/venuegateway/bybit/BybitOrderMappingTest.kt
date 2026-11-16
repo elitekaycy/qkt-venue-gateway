@@ -100,6 +100,7 @@ class BybitOrderMappingTest {
         assertThatThrownBy {
             body(order(OrderType.LIMIT, tif = TimeInForce.DAY))
         }.isInstanceOf(VenueRefusedException::class.java)
+            .hasMessageContaining("no day orders")
         assertThatThrownBy { body(order(OrderType.LIMIT, id = "x".repeat(46))) }
             .isInstanceOf(VenueRefusedException::class.java)
             .hasMessageContaining("45")

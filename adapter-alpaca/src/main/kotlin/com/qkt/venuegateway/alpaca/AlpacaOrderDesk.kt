@@ -192,7 +192,7 @@ class AlpacaOrderDesk(
         const val DUPLICATE = "40010001"
 
         /** The times in force Alpaca takes `extended_hours` on (a limit only; measured: DAY and GTC accepted). */
-        val EXTENDED_TIF = setOf(TimeInForce.DAY, TimeInForce.GTC)
+        private val EXTENDED_TIF = setOf(TimeInForce.DAY, TimeInForce.GTC)
         const val SETTLE_POLLS = 20
         const val SETTLE_POLL_MS = 250L
     }
