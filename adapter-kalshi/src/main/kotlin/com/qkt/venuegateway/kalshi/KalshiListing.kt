@@ -8,24 +8,27 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.LoggerFactory
 
 /**
- * Every market of every open event, in every category, mapped once a read ([KalshiMapping]). Kalshi lists series,
- * events and markets apart: the series (about 16,000 in one 20 MB answer) are read every [seriesRefreshMs], and a
- * series an event names that the last read did not hold is read by its ticker; the events with their markets (about
- * 7,000 events, 18,000 markets on production on 2026-11-05) are read again once [refreshMs] old and on a lookup of a
- * ticker not held, at most every [missRereadMs]. A market whose terms cannot be mapped (an unknown status or strike
- * type) is logged and left out, so one odd market never empties the listing.
+ * The markets of the open events of the series in [scope] (the `series` setting), mapped once a read
+ * ([KalshiMapping]). Each named series is read by its ticker and its events through Kalshi's `series_ticker` filter
+ * (under a second a series), so nothing outside the scope is ever read; a named series Kalshi does not have fails the
+ * read naming it. An empty [scope] is the whole catalogue (`series=*`): every series in one 20 MB answer and every
+ * open event page by page, many minutes of reading, so it is kept far longer. The listing is read again once
+ * [refreshMs] old and on a lookup of a ticker not held, at most every [missRereadMs]; the series' terms every
+ * [seriesRefreshMs]. A market whose terms cannot be mapped (an unknown status or strike type) is logged and left out,
+ * so one odd market never empties the listing. [instrument] answers any ticker, listed or not.
  */
 internal class KalshiListing(
     private val public: KalshiPublic,
     private val shard: Int,
     private val clock: () -> Long,
-    refreshMs: Long = 300_000,
-    missRereadMs: Long = 60_000,
+    private val scope: List<String>,
+    refreshMs: Long = refreshFor(scope),
+    missRereadMs: Long = if (scope.isEmpty()) refreshMs else SCOPED_MISS_REREAD_MS,
     private val seriesRefreshMs: Long = 21_600_000,
 ) {
     private val log = LoggerFactory.getLogger(KalshiListing::class.java)
     private val extraSeries = ConcurrentHashMap<String, KalshiSeries>()
-    private val seriesList = Listing({ public.series() }, KalshiSeries::ticker, clock, seriesRefreshMs)
+    private val seriesList = Listing(::readSeries, KalshiSeries::ticker, clock, seriesRefreshMs)
     private val listing = Listing(::read, { it.market.ticker }, clock, refreshMs, missRereadMs)
 
     /** Every listed market, by ticker. */
@@ -34,7 +37,7 @@ internal class KalshiListing(
     /** [ticker] as listed now, reading the listing again when it does not hold it (at most every miss interval). */
     fun find(ticker: String): KalshiListed? = listing.find(ticker)
 
-    /** [ticker]'s instrument as listed, or read by ticker with its event when the listing no longer holds it. */
+    /** [ticker]'s instrument as listed, or read by ticker with its event when the listing does not hold it. */
     fun instrument(ticker: String): Instrument? {
         listing.cached(ticker)?.let { return it.instrument }
         val market = public.market(ticker) ?: return null
@@ -43,7 +46,8 @@ internal class KalshiListing(
     }
 
     private fun read(): List<KalshiListed> {
-        val events = public.openEvents()
+        seriesList.all()
+        val events = if (scope.isEmpty()) public.openEvents() else scope.flatMap { public.openEvents(it) }
         return events.flatMap { event ->
             val series = series(event.seriesTicker)
             event.markets.mapNotNull { market ->
@@ -54,6 +58,22 @@ internal class KalshiListing(
         }
     }
 
+    private fun readSeries(): List<KalshiSeries> =
+        if (scope.isEmpty()) {
+            public.series()
+        } else {
+            scope.map { public.series(it) ?: error("setting series names $it, a series kalshi does not have") }
+        }
+
     private fun series(ticker: String): KalshiSeries? =
         seriesList.cached(ticker) ?: extraSeries[ticker] ?: public.series(ticker)?.also { extraSeries[ticker] = it }
+
+    companion object {
+        private const val SCOPED_REFRESH_MS = 60_000L
+        private const val SCOPED_MISS_REREAD_MS = 10_000L
+        private const val WHOLE_REFRESH_MS = 3_600_000L
+
+        /** How old a listing of [scope] may grow: a minute for named series, an hour for the whole catalogue. */
+        fun refreshFor(scope: List<String>): Long = if (scope.isEmpty()) WHOLE_REFRESH_MS else SCOPED_REFRESH_MS
+    }
 }

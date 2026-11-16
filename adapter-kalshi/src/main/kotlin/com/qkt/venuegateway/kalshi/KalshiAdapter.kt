@@ -38,7 +38,7 @@ internal interface KalshiStream : AutoCloseable {
 
 /**
  * One Kalshi account, one shard of it ([KalshiSettings]; credentials: the API key id as login and its PEM private key
- * as secret). Every market of every category is listed as an event contract ([KalshiListing]); orders carry the
+ * as secret). Every market of the series it is set to list is an event contract ([KalshiListing]); orders carry the
  * client's id as Kalshi's `client_order_id` ([KalshiOrderDesk]). The socket ([KalshiStream]) is the venue
  * connection: it pushes the account's fills and orders and the quoted markets' tickers. Fills and settlements are
  * also read back from the account's history by the host's reconcile.
@@ -49,7 +49,7 @@ internal class KalshiAdapter(
     private val public: KalshiPublic,
     private val portfolio: KalshiPortfolio,
     link: KalshiLink,
-    private val listing: KalshiListing = KalshiListing(public, settings.shard, context.clock),
+    private val listing: KalshiListing = KalshiListing(public, settings.shard, context.clock, settings.series),
 ) : VenueAdapter {
     override val id = "kalshi"
     override val version: String = javaClass.`package`?.implementationVersion ?: "dev"
@@ -64,8 +64,8 @@ internal class KalshiAdapter(
         )
     override val klineResolutions = KalshiMarketData.PERIODS.keys
 
-    /** Kalshi's full listing is some 35 slow pages, so the host reads it every 5 minutes. */
-    override val listingRefreshMs = 300_000L
+    /** As often as the listing itself is read again: every minute for named series, hourly for the whole catalogue. */
+    override val listingRefreshMs = KalshiListing.refreshFor(settings.series)
 
     private val login = context.requiredCredentials().login
     private val labels = KalshiLabels(context.stateDir)
@@ -117,7 +117,7 @@ internal class KalshiAdapter(
         return Positions(Accounting.NETTING, rows)
     }
 
-    /** [code] as listed, or as Kalshi answers it by ticker (a settled market, with its outcome); null when unknown. */
+    /** [code] as listed, or as Kalshi answers it by ticker (settled, or of a series not listed); null when unknown. */
     override fun instrument(code: String) = venue { listing.instrument(code) }
 
     override fun openOrders() = orders.open()

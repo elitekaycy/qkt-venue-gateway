@@ -21,7 +21,11 @@ import java.math.BigDecimal
  * immediate-or-cancel order (recorded: `reduce_only can only be used with IoC orders`), so a resting reduce-only
  * order is sent for at most the position it reduces, and refused when there is none. A label Kalshi already holds
  * (`409 order_already_exists`, a retried placement) answers the order holding it. A placement is read back by its id,
- * retried [readBackTries] times [pauseMs] apart, then reported unavailable so the host resolves it by label.
+ * retried [readBackTries] times [pauseMs] apart, then reported unavailable so the host resolves it by label. Kalshi
+ * shows an amend or a cancel on the order only some time after taking it (measured on the demo: the old price 0.6 s
+ * after, the new one at 1 s), so a change returns once the order read by its id shows it, tried [settleTries] times,
+ * and is reported unavailable when it never does. A change to what the order already is sends nothing: Kalshi
+ * refuses it (`400 AMEND_ORDER_NO_OP`).
  */
 internal class KalshiOrderDesk(
     private val portfolio: KalshiPortfolio,
@@ -30,6 +34,7 @@ internal class KalshiOrderDesk(
     private val netPosition: (String) -> BigDecimal,
     private val readBackTries: Int = 10,
     private val pauseMs: Long = 200,
+    private val settleTries: Int = 25,
     private val sleep: (Long) -> Unit = Thread::sleep,
 ) {
     fun place(order: NewOrder): VenueOrder {
@@ -62,18 +67,25 @@ internal class KalshiOrderDesk(
             venue { portfolio.cancel(order.orderId) }
         } catch (e: VenueRefusedException) {
             if (!e.reason.contains("not_found")) throw e
+            return
         }
+        shown(order.orderId, "the cancel of $label") { it.status != RESTING }
     }
 
-    /** Amends the order labelled [label] in price or total quantity; false when Kalshi has no such order. */
+    /**
+     * Amends the order labelled [label] in price or total quantity, returning once Kalshi shows the change; false
+     * when Kalshi has no such order.
+     */
     fun modify(
         label: String,
         change: OrderChange,
     ): Boolean {
         if (change.stopPrice != null) throw refused("kalshi has no stop orders: a stop price cannot be set")
         val order = find(label) ?: return false
+        if (changed(order, change)) return true
         val count = change.quantity ?: (order.fillCount + order.remainingCount)
         venue { portfolio.amend(order, count, change.limitPrice ?: order.yesPrice) }
+        shown(order.orderId, "the change to $label") { changed(it, change) }
         return true
     }
 
@@ -105,6 +117,26 @@ internal class KalshiOrderDesk(
         val all = venue { portfolio.orders() }
         all.forEach(::learn)
         return all.firstOrNull { it.clientOrderId == label }
+    }
+
+    /** Whether [o] already is what [change] asks: the price and the total quantity it names. */
+    private fun changed(
+        o: KalshiOrder,
+        change: OrderChange,
+    ): Boolean {
+        val priced = change.limitPrice?.let { it.compareTo(o.yesPrice) == 0 } ?: true
+        val sized = change.quantity?.let { it.compareTo(o.fillCount + o.remainingCount) == 0 } ?: true
+        return priced && sized
+    }
+
+    /** Waits until order [orderId], read by its id, is as [done] says; unavailable when it never is. */
+    private fun shown(
+        orderId: String,
+        what: String,
+        done: (KalshiOrder) -> Boolean,
+    ) {
+        Retry.until(settleTries, pauseMs, sleep) { venue { portfolio.order(orderId) }?.takeIf(done) }
+            ?: throw VenueUnavailableException("kalshi took $what but does not show it yet")
     }
 
     private fun labelOf(orderId: String): String =
