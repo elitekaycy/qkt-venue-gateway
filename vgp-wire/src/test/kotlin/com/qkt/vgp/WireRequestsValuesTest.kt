@@ -76,4 +76,14 @@ class WireRequestsValuesTest {
         assertThat(json.decodeFromString(WireChange.serializer(), "{}")).isEqualTo(WireChange())
         assertThat(json.decodeFromString(WireClose.serializer(), "{}")).isEqualTo(WireClose())
     }
+
+    @Test
+    fun `a writer that writes defaults writes every absent field of a request as null`() {
+        val everything = Json { encodeDefaults = true }
+
+        assertThat(everything.encodeToString(WireChange.serializer(), WireChange()))
+            .isEqualTo("""{"quantity":null,"limit_price":null,"stop_price":null}""")
+        assertThat(everything.encodeToString(WireClose.serializer(), WireClose(symbol = "S")))
+            .isEqualTo("""{"symbol":"S","quantity":null,"ticket":null,"client_order_id":null}""")
+    }
 }
