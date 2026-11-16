@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.host.market
 
+import com.qkt.venuegateway.adapter.InstrumentFilter
 import com.qkt.venuegateway.adapter.VenueUnavailableException
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -85,5 +86,22 @@ class CatalogTest {
         timer.shutdownNow()
 
         assertThat(catalog.current().byCode).containsKey("BTC_USDC-PERPETUAL")
+    }
+
+    @Test
+    fun `a search is read from the venue itself and not kept, and a venue that cannot search answers null`() {
+        val venue = ListedVenue()
+        val catalog = catalog(venue)
+        val filter = InstrumentFilter(series = "KXS")
+
+        assertThat(catalog.search(filter)).isNull()
+
+        venue.searchable = listOf(eventContract("KXS-E1-A", "KXS", "KXS-E1"))
+        val found = catalog.search(filter)
+        assertThat(found?.listing?.map { it.code }).containsExactly("KXS-E1-A")
+        assertThat(found?.byCode?.keys).containsExactly("KXS-E1-A")
+        assertThat(found?.live).containsExactly("KXS-E1-A")
+        assertThat(venue.searches).containsExactly(filter, filter)
+        assertThat(catalog.current().byCode).doesNotContainKey("KXS-E1-A")
     }
 }

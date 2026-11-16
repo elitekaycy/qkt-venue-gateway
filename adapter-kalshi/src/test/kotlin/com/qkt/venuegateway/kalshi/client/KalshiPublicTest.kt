@@ -50,6 +50,15 @@ class KalshiPublicTest {
             .containsExactly(null, "CgYIwOO41wYSEEtYSElHSE5ZLTI2Tk9WMDU")
         assertThat(server.requests.first().param("with_nested_markets")).isEqualTo("true")
         assertThat(events[1].markets).hasSize(6)
+        assertThat(server.requests.first().param("series_ticker")).isNull()
+    }
+
+    @Test
+    fun `one series' open events are asked for by its ticker`() {
+        public.openEvents("KXHIGHNY")
+
+        assertThat(server.requests.map { it.param("series_ticker") }).containsExactly("KXHIGHNY", "KXHIGHNY")
+        assertThat(server.requests.first().param("status")).isEqualTo("open")
     }
 
     @Test

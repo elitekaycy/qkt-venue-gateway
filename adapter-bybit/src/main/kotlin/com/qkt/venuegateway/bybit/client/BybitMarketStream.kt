@@ -98,6 +98,6 @@ class BybitMarketStream(
     private fun items(frame: JsonObject) = (frame["data"] as JsonArray).map { it.jsonObject }
 
     private companion object {
-        val NONE: Pair<BigDecimal?, BigDecimal?> = null to null
+        private val NONE: Pair<BigDecimal?, BigDecimal?> = null to null
     }
 }

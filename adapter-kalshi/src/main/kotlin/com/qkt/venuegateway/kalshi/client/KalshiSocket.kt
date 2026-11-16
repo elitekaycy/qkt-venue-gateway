@@ -23,7 +23,8 @@ import org.slf4j.LoggerFactory
  * `fill` and `user_orders` channels and, when [tickers] names any, the `ticker` channel of those markets (an empty
  * list would subscribe every market, so none is sent). Kalshi pings every 10 s and the transport answers; the client
  * pings every [PING_MS] and drops a link whose pong does not come. Pushes reach [onFill], [onOrder] and [onTicker]
- * as each frame's `msg`; the link going up and down is [onConnection].
+ * as each frame's `msg`; the link going up and down is [onConnection]. Nothing waits without a limit: the handshake
+ * has [handshakeMs] to connect and as long to answer, whatever the client handed in allows.
  */
 class KalshiSocket(
     url: String,
@@ -34,6 +35,7 @@ class KalshiSocket(
     private val onTicker: (JsonObject) -> Unit,
     private val onConnection: (Boolean, String) -> Unit,
     http: OkHttpClient = OkHttpClient(),
+    handshakeMs: Long = 10_000,
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(KalshiSocket::class.java)
     private val json = Json { ignoreUnknownKeys = true }
@@ -50,6 +52,9 @@ class KalshiSocket(
     private val signed =
         http
             .newBuilder()
+            .connectTimeout(Duration.ofMillis(handshakeMs))
+            .readTimeout(Duration.ofMillis(handshakeMs))
+            .writeTimeout(Duration.ofMillis(handshakeMs))
             .pingInterval(Duration.ofMillis(PING_MS))
             .addInterceptor { chain ->
                 val request = chain.request()

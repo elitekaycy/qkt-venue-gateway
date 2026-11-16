@@ -163,6 +163,13 @@ an `updated_since` from before that, or from before the gateway's first read sin
 invalid_request`, and the client reads the listing in full. Changes are a poll, not stream events: the stream
 carries money records only.
 
+**A series or an event from the venue itself.** A venue's catalogue can be too large to list (Kalshi: over 100,000
+open markets), so a gateway may list only part of it. A query that names `series` or `event`, without
+`updated_since`, is then answered from the venue directly when its adapter can search: every instrument of that
+series (its open events) or of that event, listed by the gateway or not, each with the `trading` this account has
+on it (`disabled` for one the gateway does not trade). The other parameters still apply to what is found, and
+`as_of` is the time of that read. An adapter that cannot search answers from the gateway's listing, as before.
+
 ### `GET /v1/bars?symbol=<code>&window_ms=<ms>&from=<ms>&to=<ms>`
 Closed bars of one instrument, oldest first, each `start` in `[from, to)` and aligned to UTC:
 ```json
