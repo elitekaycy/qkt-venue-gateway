@@ -50,7 +50,10 @@ brokers:
 **Choosing the series.** A series ticker is the first part of a market's ticker (`KXINXU-26NOV16H1600-T6999.99` is
 of series `KXINXU`) and is on the market's page on kalshi.com. A market of a series not named is not listed, quoted
 or traded (an order for it is refused: `kalshi lists no market …`), though `/v1/instruments/{code}` still answers
-it by its ticker, as it answers a settled market. A named series Kalshi does not have fails the listing naming it.
+it by its ticker, as it answers a settled market, and `/v1/instruments?series=…` or `?event=…` reads any series'
+open events or any event from Kalshi directly; each such market outside the named series is `trading: disabled`.
+That is how a client browses the catalogue before choosing what to name here. A named series Kalshi does not have
+fails the listing naming it.
 
 **`GATEWAY_SETTING_SERIES=*`** reads everything Kalshi lists. Measured 2026-11-16: production 18,912 open events
 and 167,165 markets in 95 pages and 229 s; the demo 19,830 events and 226,538 markets in 100 pages and 307 s; and
