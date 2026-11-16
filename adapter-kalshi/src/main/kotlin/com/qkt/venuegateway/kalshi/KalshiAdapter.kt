@@ -5,6 +5,7 @@ import com.qkt.venuegateway.adapter.Accounting
 import com.qkt.venuegateway.adapter.AdapterContext
 import com.qkt.venuegateway.adapter.AdapterListener
 import com.qkt.venuegateway.adapter.Capability
+import com.qkt.venuegateway.adapter.InstrumentFilter
 import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.Positions
@@ -119,6 +120,9 @@ internal class KalshiAdapter(
 
     /** [code] as listed, or as Kalshi answers it by ticker (settled, or of a series not listed); null when unknown. */
     override fun instrument(code: String) = venue { listing.instrument(code) }
+
+    /** A series' or an event's markets as Kalshi holds them now, listed or not ([KalshiListing.search]). */
+    override fun search(filter: InstrumentFilter) = venue { listing.search(filter) }.sortedBy { it.code }
 
     override fun openOrders() = orders.open()
 

@@ -35,6 +35,7 @@ class VenueAdapterCompatTest {
         assertThat(legacy("getCapabilities") as Set<*>)
             .containsExactlyInAnyOrder(Capability.BARS, Capability.QUOTES, Capability.SETTLEMENTS)
         assertThat(legacy("instrument", "BTC")).isNull()
+        assertThat(legacy("search", InstrumentFilter(series = "KXS"))).isNull()
         assertThat(legacy("getListingRefreshMs")).isEqualTo(60_000L)
     }
 

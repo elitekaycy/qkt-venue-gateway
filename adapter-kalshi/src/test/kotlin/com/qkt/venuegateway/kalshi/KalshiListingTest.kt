@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.kalshi
 
+import com.qkt.venuegateway.adapter.Tradability
 import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.kalshi.KalshiVenue.Companion.CURRY
 import com.qkt.venuegateway.kalshi.KalshiVenue.Companion.HOURLY
@@ -83,7 +84,9 @@ class KalshiListingTest {
     fun `a market of a series not listed is not traded, but is still answered by its ticker`() {
         venue.adapter(series = HOURLY).use { adapter ->
             assertThat(adapter.instruments().map { it.code }).containsExactly("$HOURLY-26NOV16H03-UP")
-            assertThat(adapter.instrument(KalshiVenue.SETTLED)!!.event!!.series).isEqualTo("KXHIGHNY")
+            val settled = adapter.instrument(KalshiVenue.SETTLED)!!
+            assertThat(settled.event!!.series).isEqualTo("KXHIGHNY")
+            assertThat(settled.trading).isEqualTo(Tradability.DISABLED)
             assertThatThrownBy { adapter.trades(CURRY, 0L, 1L, 1) }
                 .hasMessageContaining("kalshi lists no market $CURRY")
         }

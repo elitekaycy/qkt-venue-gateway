@@ -1,6 +1,9 @@
 package com.qkt.venuegateway.kalshi
 
 import com.qkt.venuegateway.adapter.Instrument
+import com.qkt.venuegateway.adapter.InstrumentFilter
+import com.qkt.venuegateway.adapter.Tradability.DISABLED
+import com.qkt.venuegateway.kalshi.client.KalshiEvent
 import com.qkt.venuegateway.kalshi.client.KalshiPublic
 import com.qkt.venuegateway.kalshi.client.KalshiSeries
 import com.qkt.venuegateway.support.Listing
@@ -42,19 +45,37 @@ internal class KalshiListing(
         listing.cached(ticker)?.let { return it.instrument }
         val market = public.market(ticker) ?: return null
         val event = public.event(market.eventTicker) ?: return null
-        return KalshiMapping.instrument(market, event, series(event.seriesTicker), shard)
+        return traded(KalshiMapping.instrument(market, event, series(event.seriesTicker), shard), event)
     }
+
+    /**
+     * The markets of [filter]'s event, or of the open events of its series, read from Kalshi now: how a client finds
+     * what the scope does not list. A market outside the scope is `disabled`, as this gateway does not trade it.
+     */
+    fun search(filter: InstrumentFilter): List<Instrument> {
+        val events =
+            filter.event?.let { listOfNotNull(public.event(it)) } ?: public.openEvents(requireNotNull(filter.series))
+        return events.flatMap { event -> mapped(event).map { traded(it.instrument, event) } }
+    }
+
+    private fun traded(
+        instrument: Instrument,
+        event: KalshiEvent,
+    ): Instrument =
+        if (scope.isEmpty() || event.seriesTicker in scope) instrument else instrument.copy(trading = DISABLED)
 
     private fun read(): List<KalshiListed> {
         seriesList.all()
         val events = if (scope.isEmpty()) public.openEvents() else scope.flatMap { public.openEvents(it) }
-        return events.flatMap { event ->
-            val series = series(event.seriesTicker)
-            event.markets.mapNotNull { market ->
-                runCatching { KalshiMapping.listed(market, event, series, shard) }
-                    .onFailure { log.error("kalshi market {} left out: {}", market.ticker, it.message) }
-                    .getOrNull()
-            }
+        return events.flatMap(::mapped)
+    }
+
+    private fun mapped(event: KalshiEvent): List<KalshiListed> {
+        val series = series(event.seriesTicker)
+        return event.markets.mapNotNull { market ->
+            runCatching { KalshiMapping.listed(market, event, series, shard) }
+                .onFailure { log.error("kalshi market {} left out: {}", market.ticker, it.message) }
+                .getOrNull()
         }
     }
 

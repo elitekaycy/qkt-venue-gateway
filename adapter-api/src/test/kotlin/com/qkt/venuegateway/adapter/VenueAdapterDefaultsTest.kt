@@ -119,4 +119,13 @@ class VenueAdapterDefaultsTest {
         assertThat(VenueUnavailableException("down", cause)).hasMessage("down").hasCause(cause)
         assertThat(VenueUnavailableException("down").cause).isNull()
     }
+
+    @Test
+    fun `an adapter that cannot search answers null, and a filter must name a series or an event`() {
+        assertThat(Bare.search(InstrumentFilter(series = "KXS"))).isNull()
+        assertThat(Bare.search(InstrumentFilter(event = "KXS-E1"))).isNull()
+        assertThatThrownBy { InstrumentFilter() }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("a series or an event")
+    }
 }
