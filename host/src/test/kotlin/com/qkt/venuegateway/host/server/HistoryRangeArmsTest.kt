@@ -93,14 +93,15 @@ class HistoryRangeArmsTest {
         )
 
     @Test
-    fun `marks before the range, or of a window that has not closed, are not served`() {
+    fun `marks outside the range, or of a window that has not closed, are not served`() {
         venue.marks += VenueMark(-5, BigDecimal("1"), null)
         venue.marks += VenueMark(30_000, BigDecimal("2"), null)
         venue.marks += VenueMark(250_000, BigDecimal("3"), null)
+        venue.marks += VenueMark(280_000, BigDecimal("4"), null)
 
         val page = get("/v1/marks?$symbol&window_ms=60000&from=0&to=600000")
 
-        assertThat(page).contains("\"time\":30000").doesNotContain("\"time\":-5", "\"time\":250000")
+        assertThat(page).contains("\"time\":30000").doesNotContain("\"time\":-5", "\"time\":250000", "\"time\":280000")
     }
 
     @Test
