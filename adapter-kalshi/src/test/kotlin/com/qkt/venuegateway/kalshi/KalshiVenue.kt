@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class KalshiVenue : AutoCloseable {
     val server =
         Fixtures.Server { method, path, query, body ->
-            when ("$method $path") {
+            overrides["$method $path"] ?: when ("$method $path") {
                 "GET /series" -> "demo/series-list.json"
                 "GET /series/KXNBA3D" -> "demo/series-KXNBA3D.json"
                 "GET /series/$HOURLY" -> "demo/series-$HOURLY.json"
@@ -50,6 +50,9 @@ class KalshiVenue : AutoCloseable {
                 else -> null
             }
         }
+
+    /** Answers a test sets for `METHOD path`, taking the place of the recorded route (a fixture name, `!<status>`, or `{`…). */
+    val overrides = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /** What the next reads of the [RESTING] order answer (Kalshi shows a change late), before what it is now. */
     val restingReads = ConcurrentLinkedQueue<String>()
