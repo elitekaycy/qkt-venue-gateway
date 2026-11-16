@@ -3,6 +3,8 @@ package com.qkt.venuegateway.kalshi
 import com.qkt.venuegateway.adapter.Instrument
 import com.qkt.venuegateway.adapter.InstrumentKind
 import com.qkt.venuegateway.adapter.StrikeType
+import com.qkt.venuegateway.kalshi.client.KalshiEvent
+import com.qkt.venuegateway.kalshi.client.KalshiException
 import com.qkt.venuegateway.kalshi.client.KalshiPublic
 import com.qkt.venuegateway.kalshi.client.KalshiRest
 import com.qkt.venuegateway.kalshi.client.KalshiSeries
@@ -71,9 +73,11 @@ class KalshiCategoryCoverageTest {
         val seen = Seen(category, series.size)
         val ordered = series.sortedBy { it.ticker }
         val stride = (ordered.size / CANDIDATES).coerceAtLeast(1)
-        for (candidate in ordered.filterIndexed { i, _ -> i % stride == 0 }.take(CANDIDATES)) {
+        val spread = ordered.filterIndexed { i, _ -> i % stride == 0 }.take(CANDIDATES)
+        // a category the spread finds nothing open in is read series by series until it yields, or ends
+        for (candidate in spread + (ordered - spread.toSet())) {
             if (seen.sampled.size == SERIES_PER_CATEGORY) break
-            val events = public.openEvents(candidate.ticker)
+            val events = openEvents(public, candidate.ticker)
             if (events.isEmpty()) continue
             seen.sampled += candidate.ticker
             seen.events += events.size
@@ -99,6 +103,24 @@ class KalshiCategoryCoverageTest {
             }
         }
         return seen
+    }
+
+    /** One series' open events, paced to stay under Kalshi's request limit; a 429 backs off and tries again. */
+    private fun openEvents(
+        public: KalshiPublic,
+        ticker: String,
+    ): List<KalshiEvent> {
+        var wait = PAUSE_MS
+        repeat(RETRIES) {
+            Thread.sleep(wait)
+            try {
+                return public.openEvents(ticker)
+            } catch (e: KalshiException) {
+                if (e.status != TOO_MANY_REQUESTS) throw e
+                wait *= BACKOFF
+            }
+        }
+        return public.openEvents(ticker)
     }
 
     private fun wellFormed(
@@ -162,7 +184,11 @@ class KalshiCategoryCoverageTest {
         const val NO_CATEGORY = "(none)"
         const val MIN_CATEGORIES = 8
         const val SERIES_PER_CATEGORY = 3
-        const val CANDIDATES = 40
+        const val CANDIDATES = 30
+        const val PAUSE_MS = 300L
+        const val RETRIES = 4
+        const val BACKOFF = 4
+        const val TOO_MANY_REQUESTS = 429
         val COLUMNS =
             listOf(
                 "category",
