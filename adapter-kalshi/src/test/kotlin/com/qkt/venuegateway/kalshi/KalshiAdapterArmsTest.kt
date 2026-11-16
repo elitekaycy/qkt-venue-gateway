@@ -114,4 +114,24 @@ class KalshiAdapterArmsTest {
 
         assertThat(venue.server.requests.count { it.url.encodedPath.endsWith("/series/KXHIGHNY") }).isEqualTo(1)
     }
+
+    @Test
+    fun `a recording that cannot be pruned is logged and the read it came with is still answered`(
+        @org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path,
+    ) {
+        val stuck = dir.resolve("open-interest/$CURRY/2020-01-01.csv")
+        java.nio.file.Files
+            .createDirectories(stuck)
+        java.nio.file.Files
+            .writeString(stuck.resolve("held"), "x")
+        val now = System.currentTimeMillis()
+
+        venue.adapter(stateDir = dir, retentionDays = 1).use { adapter ->
+            assertThat(adapter.openInterest(CURRY, now - 60_000, now + 60_000)).hasSize(1)
+        }
+        assertThat(
+            java.nio.file.Files
+                .exists(stuck),
+        ).isTrue
+    }
 }

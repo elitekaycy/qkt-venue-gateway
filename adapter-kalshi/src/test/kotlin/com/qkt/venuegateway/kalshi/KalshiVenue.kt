@@ -93,18 +93,21 @@ class KalshiVenue : AutoCloseable {
             }
         }
 
-    /** The adapter on shard [shard], its every call answered by [server]. */
+    /** The adapter on shard [shard], its every call answered by [server], recording in [stateDir] for [retentionDays]. */
     fun adapter(
         shard: Int = 0,
         series: String = "KXNBA3D",
         clock: () -> Long = System::currentTimeMillis,
+        stateDir: java.nio.file.Path = Files.createTempDirectory("kalshi-venue"),
+        retentionDays: Int = 0,
     ): VenueAdapter {
         val context =
             AdapterContext(
                 mapOf("environment" to "demo", "shard" to "$shard", "series" to series),
                 clock,
-                Files.createTempDirectory("kalshi-venue"),
+                stateDir,
                 Credentials("key-id", Fixtures.pem),
+                recordingRetentionDays = retentionDays,
             )
         return KalshiAdapterFactory { server.restUrl to server.socketUrl }.create(context)
     }
