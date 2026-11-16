@@ -119,7 +119,7 @@ class KalshiAdapterArmsTest {
     fun `a recording that cannot be pruned is logged and the read it came with is still answered`(
         @org.junit.jupiter.api.io.TempDir dir: java.nio.file.Path,
     ) {
-        val stuck = dir.resolve("open-interest/$CURRY/2020-01-01.csv")
+        val stuck = dir.resolve("depth/STUCK/2020-01-01.csv")
         java.nio.file.Files
             .createDirectories(stuck)
         java.nio.file.Files
