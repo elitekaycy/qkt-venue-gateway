@@ -5,6 +5,7 @@ import com.qkt.venuegateway.host.journal.Journal
 import com.qkt.venuegateway.host.market.InstrumentShelf
 import com.qkt.venuegateway.host.market.ListedVenue
 import com.qkt.venuegateway.host.market.QuoteHub
+import com.qkt.venuegateway.host.market.eventContract
 import com.qkt.venuegateway.host.market.perpetual
 import java.nio.file.Path
 import okhttp3.OkHttpClient
@@ -93,5 +94,18 @@ class InstrumentRoutesTest {
 
         assertThat(get("/v1/instruments/OLD_USDC-PERPETUAL").second).contains("\"code\":\"OLD_USDC-PERPETUAL\"")
         assertThat(get("/v1/instruments/BTC_USDC-PERPETUAL").second).isEqualTo(perp)
+    }
+
+    @Test
+    fun `a series or an event is read from a venue that can search, and from the listing when it cannot`() {
+        assertThat(get("/v1/instruments?series=KXS").second).isEqualTo("""{"instruments":[],"as_of":1000}""")
+
+        venue.searchable =
+            listOf(eventContract("KXS-E1-B", "KXS", "KXS-E1"), eventContract("KXS-E1-A", "KXS", "KXS-E1"))
+        val found = get("/v1/instruments?series=KXS&limit=1").second
+        assertThat(found).contains(""""code":"KXS-E1-A"""", """"next":"KXS-E1-A"""").doesNotContain("KXS-E1-B")
+        assertThat(get("/v1/instruments?event=KXS-E1&status=open").second).contains("KXS-E1-A", "KXS-E1-B")
+        assertThat(get("/v1/instruments?event=OTHER").second).isEqualTo("""{"instruments":[],"as_of":1000}""")
+        assertThat(get("/v1/instruments?kind=perpetual").second).isEqualTo("""{"instruments":[$perp],"as_of":1000}""")
     }
 }

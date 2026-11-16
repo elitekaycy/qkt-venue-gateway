@@ -39,6 +39,13 @@ interface VenueAdapter : AutoCloseable {
     /** [code] although the venue no longer lists it (a settled contract), or null when the venue cannot say. */
     fun instrument(code: String): Instrument? = null
 
+    /**
+     * The instruments of the series or event [filter] names, read from the venue although [instruments] does not
+     * list them (a catalogue too large to list whole), each with the `trading` this account has on it; null when the
+     * adapter knows only its listing, and the host filters that.
+     */
+    fun search(filter: InstrumentFilter): List<Instrument>? = null
+
     fun account(): AccountSnapshot
 
     fun positions(): Positions

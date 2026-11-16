@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.host.market
 
+import com.qkt.venuegateway.adapter.InstrumentFilter
 import com.qkt.venuegateway.host.wire.InvalidRequestException
 import com.qkt.vgp.WireInstrument
 import com.qkt.vgp.WireInstrumentPage
@@ -57,6 +58,13 @@ internal class CatalogQuery(
             asOf = read.readAt,
         )
     }
+
+    /**
+     * What to ask the venue itself for: the [series] or [event] this query names, unless it asks for changes
+     * (`updated_since` is answered from the gateway's own reads). Null when it names neither.
+     */
+    fun search(): InstrumentFilter? =
+        if (updatedSince == null && (series != null || event != null)) InstrumentFilter(series, event) else null
 
     /** One code of a page: listed with its [instrument], or removed (null). */
     private class Row(

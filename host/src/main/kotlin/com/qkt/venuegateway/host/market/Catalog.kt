@@ -1,5 +1,6 @@
 package com.qkt.venuegateway.host.market
 
+import com.qkt.venuegateway.adapter.InstrumentFilter
 import com.qkt.venuegateway.adapter.VenueAdapter
 import com.qkt.venuegateway.host.wire.WireReads
 import com.qkt.vgp.WireInstrument
@@ -48,6 +49,15 @@ class Catalog(
         reread()?.byCode?.get(code)?.let { return it }
         return adapter.instrument(code)?.let(WireReads::instrument)
     }
+
+    /**
+     * What the venue holds for [filter] beyond the listing ([VenueAdapter.search]), read now and not kept; null when
+     * the adapter knows only its listing.
+     */
+    fun search(filter: InstrumentFilter): Read? =
+        adapter.search(filter)?.map(WireReads::instrument)?.let { found ->
+            Read(found, found.associateBy { it.code }, found.mapTo(HashSet()) { it.code }, clock())
+        }
 
     /** Reads the listing now, records what changed and serves it from then on. */
     @Synchronized

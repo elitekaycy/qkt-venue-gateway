@@ -11,7 +11,9 @@ import kotlinx.serialization.builtins.ListSerializer
 /**
  * `GET /v1/instruments` and `GET /v1/instruments/{code}` (wire spec §3), served from the [Gateway.catalog]'s last
  * read: the whole listing as a list when no catalog parameter is given (as every gateway served it), else the page
- * the [CatalogQuery] asks for; one code from the index, else as the adapter answers for it, else `404`.
+ * the [CatalogQuery] asks for (a series or an event from the venue itself when the adapter can search it, so a
+ * catalogue too large to list is still found); one code from the index, else as the adapter answers for it, else
+ * `404`.
  */
 internal fun Route.instrumentRoutes(gateway: Gateway) {
     val catalog = gateway.catalog
@@ -21,7 +23,8 @@ internal fun Route.instrumentRoutes(gateway: Gateway) {
             if (query == null) {
                 json(ListSerializer(WireInstrument.serializer()), catalog.current().listing)
             } else {
-                json(WireInstrumentPage.serializer(), query.page(catalog.current(), catalog.changes, gateway.clock()))
+                val read = query.search()?.let(catalog::search) ?: catalog.current()
+                json(WireInstrumentPage.serializer(), query.page(read, catalog.changes, gateway.clock()))
             }
         }
     }
