@@ -151,7 +151,9 @@ class PaperSettlementTest {
         await { heard.isNotEmpty() }
         upkeep.close()
 
-        assertThat(heard).containsExactly("settle $call 1000")
+        // The upkeep keeps running every 20ms until close, so other pushes (funding) may land; the settlement must be
+        // delivered once, to the listener set at the time.
+        assertThat(heard.filter { it.startsWith("settle ") }).containsExactly("settle $call 1000")
         assertThat(prunes.get()).isGreaterThanOrEqualTo(2)
     }
 }
