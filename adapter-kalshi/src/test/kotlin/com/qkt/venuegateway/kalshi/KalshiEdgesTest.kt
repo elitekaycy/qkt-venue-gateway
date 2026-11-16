@@ -74,7 +74,7 @@ class KalshiEdgesTest {
 
     @Test
     fun `a shard below 0 is refused by its key`() {
-        val settings = mapOf("environment" to "demo", "shard" to "-1")
+        val settings = mapOf("environment" to "demo", "shard" to "-1", "series" to "KXNBA3D")
         val context = AdapterContext(settings, { 0L }, Files.createTempDirectory("k"))
         assertThatThrownBy { KalshiSettings.of(context) }.hasMessageContaining("setting shard must be")
     }
@@ -83,7 +83,7 @@ class KalshiEdgesTest {
     fun `after a restart a label is found by the id kept for it, and a price alone can change`() {
         val dir = Files.createTempDirectory("kalshi-restart")
         val key = Credentials("key-id", Fixtures.pem)
-        val context = { AdapterContext(mapOf("environment" to "demo"), { 0L }, dir, key) }
+        val context = { AdapterContext(mapOf("environment" to "demo", "series" to "KXNBA3D"), { 0L }, dir, key) }
         val factory = KalshiAdapterFactory { venue.server.restUrl to venue.server.socketUrl }
         factory.create(context()).use { first ->
             val price = BigDecimal("0.01")
@@ -97,7 +97,8 @@ class KalshiEdgesTest {
             val after = venue.server.requests.drop(before)
             assertThat(after.map { it.url.encodedPath })
                 .containsExactly("/trade-api/v2/portfolio/orders/$RESTING")
-            assertThat(again.modify("qkt-probe-rest", OrderChange(limitPrice = BigDecimal("0.03")))).isTrue
+            venue.restingReads += "private/order-resting.json"
+            assertThat(again.modify("qkt-probe-rest", OrderChange(limitPrice = BigDecimal("0.02")))).isTrue
         }
     }
 

@@ -1,7 +1,9 @@
 package com.qkt.venuegateway.kalshi.client
 
 import com.qkt.venuegateway.kalshi.Fixtures
+import java.io.IOException
 import java.math.BigDecimal
+import java.net.ServerSocket
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.assertj.core.api.Assertions.assertThat
@@ -34,6 +36,17 @@ class KalshiRestTest {
         assertThat(rest.toString()).isEqualTo("KalshiRest(${server.restUrl})")
         val unsigned = server.requests.first()
         assertThat(unsigned.headers["KALSHI-ACCESS-KEY"]).describedAs("unsigned").isNull()
+    }
+
+    @Test
+    fun `a venue that takes a call and never answers fails it within the timeout`() {
+        ServerSocket(0).use { silent ->
+            val rest = KalshiRest("http://127.0.0.1:${silent.localPort}/trade-api/v2", timeoutMs = 300)
+            val started = System.currentTimeMillis()
+
+            assertThatThrownBy { rest.get("/events") }.isInstanceOf(IOException::class.java)
+            assertThat(System.currentTimeMillis() - started).isLessThan(5_000L)
+        }
     }
 
     @Test

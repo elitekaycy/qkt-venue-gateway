@@ -7,9 +7,9 @@ import com.qkt.venuegateway.support.Paging
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Kalshi's market data over [rest]: the series, the open events with their markets, one market by ticker, a
- * market's book, its public trades and its candlesticks. Every list is paged by Kalshi's `cursor` (`""` on the last
- * page). Times Kalshi takes in a query are Unix seconds.
+ * Kalshi's market data over [rest]: the series, the open events (of one series, or of all) with their markets, one
+ * market by ticker, a market's book, its public trades and its candlesticks. Every list is paged by Kalshi's `cursor`
+ * (`""` on the last page). Times Kalshi takes in a query are Unix seconds.
  */
 class KalshiPublic(
     private val rest: KalshiRest,
@@ -21,9 +21,14 @@ class KalshiPublic(
     fun series(ticker: String): KalshiSeries? =
         rest.orNull { rest.get("/series/$ticker") }?.let { KalshiMarketJson.series(it["series"] as JsonObject) }
 
-    /** Every open event with its markets, [EVENTS_PER_PAGE] a page. */
-    fun openEvents(): List<KalshiEvent> {
-        val params = listOf("status" to "open", "with_nested_markets" to "true", "limit" to "$EVENTS_PER_PAGE")
+    /**
+     * The open events of [series] with their markets, [EVENTS_PER_PAGE] a page; null reads every series' (the whole
+     * catalogue: over 13,000 events and 100,000 markets on production on 2026-11-16, many minutes of pages).
+     */
+    fun openEvents(series: String? = null): List<KalshiEvent> {
+        val params =
+            listOf("status" to "open", "with_nested_markets" to "true", "limit" to "$EVENTS_PER_PAGE") +
+                listOfNotNull(series?.let { "series_ticker" to it })
         return Paging.cursor(
             fetch = { cursor ->
                 val page = rest.get("/events", params + listOfNotNull(cursor?.let { "cursor" to it }))
