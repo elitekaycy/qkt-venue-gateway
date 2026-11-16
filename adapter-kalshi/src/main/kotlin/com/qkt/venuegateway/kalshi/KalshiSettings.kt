@@ -49,7 +49,12 @@ data class KalshiSettings(
         }
 
         private fun series(raw: String): List<String> {
-            val named = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            val named =
+                raw
+                    .split(',')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinct()
             if (named == listOf(EVERY)) return emptyList()
             val bad = named.firstOrNull { !TICKER.matches(it) }
             require(named.isNotEmpty() && bad == null) {

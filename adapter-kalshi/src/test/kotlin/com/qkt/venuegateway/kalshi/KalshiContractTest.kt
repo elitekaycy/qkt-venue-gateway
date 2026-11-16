@@ -100,7 +100,8 @@ class KalshiContractTest : AdapterContractTest() {
         private fun tradable(m: KalshiMarket): Boolean {
             val (bid, ask) = (m.yesBid ?: return false) to (m.yesAsk ?: return false)
             val deep = listOf(m.yesBidSize, m.yesAskSize).all { it != null && it >= DEPTH }
-            val whole = m.priceRanges.singleOrNull()?.step?.compareTo(CENT) == 0
+            val step = m.priceRanges.singleOrNull()?.step
+            val whole = step?.compareTo(CENT) == 0
             return m.status == "active" && (m.exchangeIndex ?: 0) == 0 && whole && deep && bid >= LOW && ask <= HIGH
         }
     }

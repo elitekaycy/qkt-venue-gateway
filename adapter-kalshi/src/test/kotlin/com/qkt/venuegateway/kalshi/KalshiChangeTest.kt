@@ -47,8 +47,6 @@ class KalshiChangeTest {
 
     private fun posts() = venue.server.requests.filter { it.method == "POST" }
 
-    private fun reads() = venue.server.requests.count { it.method == "GET" && it.url.encodedPath.endsWith(RESTING) }
-
     private fun twoAtTwoCents() = OrderChange(quantity = BigDecimal("2"), limitPrice = BigDecimal("0.02"))
 
     @Test

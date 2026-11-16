@@ -116,7 +116,8 @@ class KalshiSocketTest {
 
     @Test
     fun `a handshake the venue never answers is given up and tried again, whatever the client's own timeouts`() {
-        val patient = OkHttpClient.Builder().connectTimeout(Duration.ZERO).readTimeout(Duration.ZERO).build()
+        val unlimited = OkHttpClient.Builder().readTimeout(Duration.ZERO)
+        val patient = unlimited.connectTimeout(Duration.ZERO).build()
         ServerSocket(0).use { silent ->
             silent.soTimeout = 10_000
             val url = "ws://127.0.0.1:${silent.localPort}/trade-api/ws/v2"
