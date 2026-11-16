@@ -97,7 +97,8 @@ class KalshiEdgesTest {
             val after = venue.server.requests.drop(before)
             assertThat(after.map { it.url.encodedPath })
                 .containsExactly("/trade-api/v2/portfolio/orders/$RESTING")
-            assertThat(again.modify("qkt-probe-rest", OrderChange(limitPrice = BigDecimal("0.03")))).isTrue
+            venue.restingReads += "private/order-resting.json"
+            assertThat(again.modify("qkt-probe-rest", OrderChange(limitPrice = BigDecimal("0.02")))).isTrue
         }
     }
 

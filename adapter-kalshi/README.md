@@ -107,7 +107,11 @@ WebSocket), the account's user id replaced by zeros.
   unknown label is looked for in the account's order list. A market order is an IOC limit at the grid's worst price
   (0.99 or 0.999 to buy, 0.01 or 0.001 to sell). `reduce_only` is accepted on IOC only (`400 invalid_order:
   reduce_only can only be used with IoC orders`), so a resting reduce-only order is sent for at most the position.
-  An amend keeps the order id and the label; the order's `initial_count` stays the original size. Recorded
+  An amend keeps the order id and the label; the order's `initial_count` stays the original size. The order read
+  by its id shows an amend or a cancel late (measured 2026-11-16: the old price 0.6 s after the amend was taken,
+  the new one at 1 s; still `resting` right after a cancel), so a change or a cancel returns once the order shows
+  it, read every 200 ms for up to 5 s, and is reported unavailable if it never does. An amend that changes nothing
+  is refused (`400 AMEND_ORDER_NO_OP`), so a change to what the order already is sends nothing and succeeds. Recorded
   refusals: `invalid_price` (off the grid), `insufficient_balance`, `not_found`. Kalshi's order does not echo the
   time in force or type sent, so they are reported as sent while the gateway runs, and as GTC limit after a restart.
 - **Settlements.** Read from the account's settlement history (`/portfolio/settlements`): 1 for `yes`, 0 for `no`,

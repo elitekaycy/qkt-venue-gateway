@@ -10,6 +10,7 @@ import com.qkt.venuegateway.adapter.VenueOrder
 import com.qkt.venuegateway.adapter.VenueQuote
 import com.qkt.venuegateway.adapter.VenueSettlement
 import java.nio.file.Files
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -38,17 +39,22 @@ class KalshiVenue : AutoCloseable {
                 "GET /portfolio/positions" -> "private/positions.json"
                 "GET /portfolio/orders" ->
                     if (query["status"] == "resting") "private/orders-resting.json" else "private/orders-all.json"
-                "GET /portfolio/orders/$RESTING" -> "private/order-amended.json"
+                "GET /portfolio/orders/$RESTING" -> restingReads.poll() ?: "private/order-$restingNow.json"
                 "GET /portfolio/orders/$FILLED" -> "private/order-filled.json"
                 "GET /portfolio/orders/$ASKED" -> "private/order-ask-filled.json"
                 "GET /portfolio/fills" -> "private/fills.json"
                 "GET /portfolio/settlements" -> "private/settlements.json"
                 "POST /portfolio/events/orders" -> placement(body)
                 "POST /portfolio/events/orders/$RESTING/amend" -> "private/amend.json"
-                "DELETE /portfolio/events/orders/$RESTING" -> "private/cancel.json"
+                "DELETE /portfolio/events/orders/$RESTING" -> "private/cancel.json".also { restingNow = "cancelled" }
                 else -> null
             }
         }
+
+    /** What the next reads of the [RESTING] order answer (Kalshi shows a change late), before what it is now. */
+    val restingReads = ConcurrentLinkedQueue<String>()
+
+    @Volatile private var restingNow = "amended"
     val orders = CopyOnWriteArrayList<VenueOrder>()
     val fills = CopyOnWriteArrayList<VenueFill>()
     val quotes = CopyOnWriteArrayList<VenueQuote>()

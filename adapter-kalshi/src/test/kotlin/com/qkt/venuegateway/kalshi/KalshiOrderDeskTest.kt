@@ -116,11 +116,11 @@ class KalshiOrderDeskTest {
 
     @Test
     fun `a change amends the total quantity and the price, an unknown label is false and a stop is refused`() {
-        assertThat(adapter.modify("qkt-probe-rest", OrderChange(quantity = BigDecimal("3")))).isTrue
+        venue.restingReads += "private/order-resting.json"
+        assertThat(adapter.modify("qkt-probe-rest", OrderChange(quantity = BigDecimal("2")))).isTrue
 
-        val amended = venue.server.requests.last()
-        val amend = Json.parseToJsonElement(amended.body!!.utf8()).jsonObject
-        assertThat(amend["count"]!!.jsonPrimitive.content).isEqualTo("3")
+        val amend = Json.parseToJsonElement(posted()).jsonObject
+        assertThat(amend["count"]!!.jsonPrimitive.content).isEqualTo("2")
         assertThat(amend["price"]!!.jsonPrimitive.content).isEqualTo("0.0200")
         assertThat(adapter.modify("ghost", OrderChange(limitPrice = BigDecimal("0.03")))).isFalse
         assertThatThrownBy { adapter.modify("qkt-probe-rest", OrderChange(stopPrice = BigDecimal("0.5"))) }
