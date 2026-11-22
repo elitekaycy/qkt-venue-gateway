@@ -1,14 +1,11 @@
 package com.qkt.venuegateway.kalshi
 
-import com.qkt.venuegateway.adapter.Instrument
-import com.qkt.venuegateway.adapter.InstrumentKind
-import com.qkt.venuegateway.adapter.StrikeType
 import com.qkt.venuegateway.kalshi.client.KalshiEvent
-import com.qkt.venuegateway.kalshi.client.KalshiException
+import com.qkt.venuegateway.kalshi.client.KalshiMarketJson
 import com.qkt.venuegateway.kalshi.client.KalshiPublic
 import com.qkt.venuegateway.kalshi.client.KalshiRest
 import com.qkt.venuegateway.kalshi.client.KalshiSeries
-import java.math.BigDecimal
+import com.qkt.venuegateway.support.JsonReads.objects
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
@@ -21,10 +18,11 @@ import org.junit.jupiter.api.Timeout
 /**
  * Every category of Kalshi's catalogue through the adapter's mapping. Reads production's public market data (no key,
  * nothing is written or traded), only with `KALSHI_PUBLIC_LIVE=1`: it takes the whole series list, then from each
- * category a few series that have open events, and maps every market of those events as the listing does. Each must
- * map to a well-formed `event` instrument (the rules of the contract kit's event checks), apart from the recorded
- * market whose floor is above its cap, which the listing leaves out. The table it measured is written to
- * `build/kalshi-category-coverage.md`.
+ * category a few series that have open events, and maps every market of those events as the listing does. A category
+ * with nothing open is read through a few of its settled events instead (their markets map `disabled`, with the terms
+ * and outcome Kalshi recorded). Each market must map to a well-formed `event` instrument ([KalshiInstrumentRules]),
+ * apart from the recorded market whose floor is above its cap, which the listing leaves out. The table it measured is
+ * written to `build/kalshi-category-coverage.md`.
  */
 @Timeout(value = 25, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 class KalshiCategoryCoverageTest {
@@ -37,21 +35,23 @@ class KalshiCategoryCoverageTest {
         val seriesCount: Int,
     ) {
         val sampled = mutableListOf<String>()
+        val settled = mutableListOf<String>()
         var events = 0
         var markets = 0
+        var settledMarkets = 0
         var left = 0
         var tradable = 0
         val strikes = sortedSetOf<String>()
         val fees = sortedSetOf<String>()
-        val frequencies = sortedSetOf<String>()
         val shards = sortedSetOf<Int>()
     }
 
     @Test
     fun `every category maps to well-formed event instruments`() {
-        val public = KalshiPublic(KalshiRest(KalshiEnvironment.PRODUCTION.restUrl))
+        val rest = KalshiRest(KalshiEnvironment.PRODUCTION.restUrl)
+        val public = KalshiPublic(rest)
         val byCategory = public.series().groupBy { it.category ?: NO_CATEGORY }.toSortedMap()
-        val seen = byCategory.map { (category, series) -> sample(public, category, series) }
+        val seen = byCategory.map { (category, series) -> sample(rest, public, category, series) }
 
         Files.writeString(Path.of("build", "kalshi-category-coverage.md"), table(seen))
         assertThat(seen.size).describedAs("categories").isGreaterThanOrEqualTo(MIN_CATEGORIES)
@@ -63,9 +63,13 @@ class KalshiCategoryCoverageTest {
         seen.filter { it.sampled.isNotEmpty() }.forEach {
             assertThat(it.markets).describedAs("markets mapped in ${it.category}").isPositive
         }
+        seen.filter { it.settled.isNotEmpty() }.forEach {
+            assertThat(it.settledMarkets).describedAs("settled markets mapped in ${it.category}").isPositive
+        }
     }
 
     private fun sample(
+        rest: KalshiRest,
         public: KalshiPublic,
         category: String,
         series: List<KalshiSeries>,
@@ -77,83 +81,77 @@ class KalshiCategoryCoverageTest {
         // a category the spread finds nothing open in is read series by series until it yields, or ends
         for (candidate in spread + (ordered - spread.toSet())) {
             if (seen.sampled.size == SERIES_PER_CATEGORY) break
-            val events = openEvents(public, candidate.ticker)
+            val events = KalshiLiveReads.paced { public.openEvents(candidate.ticker) }
             if (events.isEmpty()) continue
             seen.sampled += candidate.ticker
             seen.events += events.size
-            for (event in events) {
-                for (market in event.markets) {
-                    val shard = market.exchangeIndex ?: 0
-                    val instrument =
-                        runCatching { KalshiMapping.instrument(market, event, candidate, shard) }
-                            .getOrElse {
-                                assertThat(it).isInstanceOf(IllegalStateException::class.java)
-                                assertThat(it.message).describedAs("${market.ticker} refused").contains("is between")
-                                seen.left++
-                                null
-                            } ?: continue
-                    wellFormed(instrument, market.ticker, candidate.category)
-                    seen.markets++
-                    seen.shards += shard
-                    seen.strikes += instrument.event!!.strikeType.name
-                    instrument.event!!.fee?.let { seen.fees += it.model.name }
-                    instrument.event!!.frequency?.let { seen.frequencies += it }
-                    if (instrument.trading.name == "FULL") seen.tradable++
-                }
-            }
+            events.forEach { map(seen, it, candidate, settled = false) }
         }
+        if (seen.sampled.isEmpty() && ordered.all { it.ticker.startsWith(KalshiTerms.COMBO_PREFIX) }) {
+            sampleCombos(rest, seen, ordered)
+        }
+        if (seen.sampled.isEmpty()) sampleSettled(rest, seen, ordered)
         return seen
     }
 
-    /** One series' open events, paced to stay under Kalshi's request limit; a 429 backs off and tries again. */
-    private fun openEvents(
-        public: KalshiPublic,
-        ticker: String,
-    ): List<KalshiEvent> {
-        var wait = PAUSE_MS
-        repeat(RETRIES) {
-            Thread.sleep(wait)
-            try {
-                return public.openEvents(ticker)
-            } catch (e: KalshiException) {
-                if (e.status != TOO_MANY_REQUESTS) throw e
-                wait *= BACKOFF
-            }
+    /** The combo category: open combo markets, each under the longest of [ordered]'s series its event belongs to. */
+    private fun sampleCombos(
+        rest: KalshiRest,
+        seen: Seen,
+        ordered: List<KalshiSeries>,
+    ) {
+        for (market in KalshiLiveReads.combos(rest, COMBOS)) {
+            val series =
+                ordered.filter { market.eventTicker.startsWith("${it.ticker}-") }.maxByOrNull { it.ticker.length }
+                    ?: continue
+            if (series.ticker !in seen.sampled) seen.sampled += series.ticker
+            seen.events++
+            map(seen, KalshiEvent(market.eventTicker, series.ticker, false, null, null, listOf(market)), series, false)
         }
-        return public.openEvents(ticker)
     }
 
-    private fun wellFormed(
-        i: Instrument,
-        ticker: String,
-        category: String?,
+    /** A category with nothing open: a few series' settled events, which Kalshi keeps with their markets. */
+    private fun sampleSettled(
+        rest: KalshiRest,
+        seen: Seen,
+        ordered: List<KalshiSeries>,
     ) {
-        val what = "instrument $ticker"
-        assertThat(i.code).describedAs("$what code").isEqualTo(ticker)
-        assertThat(i.kind).describedAs("$what kind").isEqualTo(InstrumentKind.EVENT)
-        assertThat(i.category).describedAs("$what category").isEqualTo(category)
-        assertThat(i.tickSize).describedAs("$what tick").isPositive
-        i.tickRanges?.forEach { assertThat(it.tick).describedAs("$what tick range tick").isPositive }
-        val e = i.event!!
-        assertThat(e.series).describedAs("$what series").isNotBlank
-        assertThat(e.event).describedAs("$what event").isNotBlank
-        assertThat(e.closeAtMs).describedAs("$what close").isGreaterThanOrEqualTo(e.openAtMs)
-        val bounds = (e.floor != null) to (e.cap != null)
-        val expected =
-            when (e.strikeType) {
-                StrikeType.BETWEEN -> true to true
-                StrikeType.GREATER, StrikeType.GREATER_OR_EQUAL -> true to false
-                StrikeType.LESS, StrikeType.LESS_OR_EQUAL -> false to true
-                StrikeType.CUSTOM, StrikeType.NONE -> false to false
-            }
-        assertThat(bounds).describedAs("$what (floor, cap) present for ${e.strikeType}").isEqualTo(expected)
-        e.outcome?.let { assertThat(it).describedAs("$what outcome").isBetween(BigDecimal.ZERO, BigDecimal.ONE) }
-        e.fee?.let { fee ->
-            listOfNotNull(fee.takerRate, fee.makerRate).forEach {
-                assertThat(it)
-                    .describedAs("$what fee rate")
-                    .isGreaterThanOrEqualTo(BigDecimal.ZERO)
-                    .isLessThan(BigDecimal.ONE)
+        val params = listOf("status" to "settled", "with_nested_markets" to "true", "limit" to "$SETTLED_EVENTS")
+        for (candidate in ordered) {
+            if (seen.settled.size == SERIES_PER_CATEGORY) break
+            val page = KalshiLiveReads.paced { rest.get("/events", params + ("series_ticker" to candidate.ticker)) }
+            val events = page.objects("events").map(KalshiMarketJson::event).map { KalshiLiveReads.archived(rest, it) }
+            if (events.none { it.markets.isNotEmpty() }) continue
+            seen.settled += candidate.ticker
+            events.forEach { map(seen, it, candidate, settled = true) }
+        }
+    }
+
+    private fun map(
+        seen: Seen,
+        event: KalshiEvent,
+        series: KalshiSeries,
+        settled: Boolean,
+    ) {
+        for (market in event.markets) {
+            val shard = market.exchangeIndex ?: 0
+            val instrument =
+                runCatching { KalshiMapping.instrument(market, event, series, shard) }
+                    .getOrElse {
+                        assertThat(it).isInstanceOf(IllegalStateException::class.java)
+                        assertThat(it.message).describedAs("${market.ticker} refused").contains("is between")
+                        seen.left++
+                        null
+                    } ?: continue
+            KalshiInstrumentRules.wellFormed(instrument, market.ticker, series.category)
+            seen.shards += shard
+            seen.strikes += instrument.event!!.strikeType.name
+            instrument.event!!.fee?.let { seen.fees += it.model.name }
+            if (settled) {
+                seen.settledMarkets++
+            } else {
+                seen.markets++
+                if (instrument.trading.name == "FULL") seen.tradable++
             }
         }
     }
@@ -171,6 +169,8 @@ class KalshiCategoryCoverageTest {
                         s.events,
                         s.markets,
                         s.tradable,
+                        s.settled.joinToString(" "),
+                        s.settledMarkets,
                         s.left,
                         s.strikes.joinToString(", "),
                         s.fees.joinToString(", "),
@@ -185,10 +185,8 @@ class KalshiCategoryCoverageTest {
         const val MIN_CATEGORIES = 8
         const val SERIES_PER_CATEGORY = 3
         const val CANDIDATES = 30
-        const val PAUSE_MS = 300L
-        const val RETRIES = 4
-        const val BACKOFF = 4
-        const val TOO_MANY_REQUESTS = 429
+        const val SETTLED_EVENTS = 50
+        const val COMBOS = 50
         val COLUMNS =
             listOf(
                 "category",
@@ -197,6 +195,8 @@ class KalshiCategoryCoverageTest {
                 "events",
                 "markets",
                 "tradable",
+                "settled sample",
+                "settled markets",
                 "left out",
                 "strike types",
                 "fee models",
