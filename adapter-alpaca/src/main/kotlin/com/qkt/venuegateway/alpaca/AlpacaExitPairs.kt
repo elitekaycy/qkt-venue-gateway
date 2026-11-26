@@ -154,14 +154,12 @@ class AlpacaExitPairs(
         }
 
     private fun ended(order: JsonObject) = order.text("status") in ENDED
-
-    private companion object {
-        const val STOP_LEG = "stop_loss"
-        const val HELD = "40310000"
-        const val HELD_FIELD = "held_for_orders"
-        const val FORBIDDEN = 403
-        const val POLLS = 20
-        const val POLL_MS = 250L
-        val ENDED = setOf("canceled", "filled", "expired", "rejected")
-    }
 }
+
+private const val STOP_LEG = "stop_loss"
+private const val HELD = "40310000"
+private const val HELD_FIELD = "held_for_orders"
+private const val FORBIDDEN = 403
+private const val POLLS = 20
+private const val POLL_MS = 250L
+private val ENDED = setOf("canceled", "filled", "expired", "rejected")
