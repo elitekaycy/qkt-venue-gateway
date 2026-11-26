@@ -161,7 +161,9 @@ class AlpacaOrderDeskTest {
         assertThat(desk.byLabel(label)?.status).isEqualTo(OrderStatus.CANCELLED)
         // Alpaca's open list still holds it for a moment after the cancel: the desk does not report it open.
         assertThat(desk.open()).isEmpty()
-        val (none, _) = desk(mapOf("GET /v2/orders:by_client_order_id" to listOf("404:order-by-label-unknown.json")))
+        val unknown = listOf("404:order-by-label-unknown.json")
+        val open = listOf("orders-open.json")
+        val (none, _) = desk(mapOf("GET /v2/orders:by_client_order_id" to unknown, "GET /v2/orders" to open))
         none.cancel("qkt-never-placed")
         assertThat(none.byLabel("qkt-never-placed")).isNull()
         assertThat(none.modify("qkt-never-placed", OrderChange(limitPrice = BigDecimal.ONE))).isFalse

@@ -32,6 +32,7 @@ class AlpacaRemainingArmsTest {
                             "order-by-label-cancelled.json",
                         ),
                     "DELETE /v2/orders/${working.text("id")}" to listOf(""),
+                    "GET /v2/orders" to listOf("orders-open.json"),
                 ),
             )
 
@@ -57,6 +58,7 @@ class AlpacaRemainingArmsTest {
                         ),
                     "PATCH /v2/orders/${original.text("id")}" to listOf("order-crypto-replaced.json"),
                     "GET /v2/orders/${replacement.text("id")}" to listOf("order-crypto-replaced.json"),
+                    "GET /v2/orders" to listOf("orders-open.json"),
                 ),
             )
 

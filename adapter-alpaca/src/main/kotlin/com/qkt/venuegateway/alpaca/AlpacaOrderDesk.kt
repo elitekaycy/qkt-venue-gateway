@@ -4,14 +4,13 @@ import com.qkt.venuegateway.adapter.NewOrder
 import com.qkt.venuegateway.adapter.OrderChange
 import com.qkt.venuegateway.adapter.OrderStatus
 import com.qkt.venuegateway.adapter.OrderType
-import com.qkt.venuegateway.adapter.Side
 import com.qkt.venuegateway.adapter.TimeInForce
 import com.qkt.venuegateway.adapter.VenueFill
 import com.qkt.venuegateway.adapter.VenueOrder
-import com.qkt.venuegateway.adapter.VenueRefusedException
 import com.qkt.venuegateway.alpaca.client.AlpacaHttpException
 import com.qkt.venuegateway.alpaca.client.AlpacaTrading
 import com.qkt.venuegateway.support.JsonReads.need
+import com.qkt.venuegateway.support.JsonReads.objects
 import com.qkt.venuegateway.support.JsonReads.text
 import com.qkt.venuegateway.support.Retry
 import java.math.BigDecimal
@@ -42,10 +41,12 @@ class AlpacaOrderDesk(
     private val labels = ConcurrentHashMap<String, String>()
     private val final = ConcurrentHashMap<String, Long>()
 
+    /** A share's exits sent as one OCO ([AlpacaExitPairs]); the adapter reads trade updates' labels through it. */
+    val pairs = AlpacaExitPairs(trading, clock, sleep)
+
     fun place(order: NewOrder): VenueOrder {
         val listed = listing.require(order.symbol)
-        val quantity = if (order.reduceOnly) reducible(order) else order.quantity
-        if (!listed.crypto && quantity.stripTrailingZeros().scale() > 0) fractionAllowed(order, listed)
+        val quantity = AlpacaOrderRules.quantity(order, listed) { netPosition(order.symbol) }
         val body =
             buildJsonObject {
                 put("symbol", listed.symbol)
@@ -69,7 +70,9 @@ class AlpacaOrderDesk(
                 trading.submit(body)
             } catch (e: AlpacaHttpException) {
                 val retried = AlpacaErrors.code(e) == DUPLICATE && "client_order_id" in e.body
-                (if (retried) latest(order.clientOrderId) else null) ?: throw AlpacaErrors.translate(e)
+                (if (retried) latest(order.clientOrderId) else null)
+                    ?: pairs.afterRefusal(e, order, quantity, listed)
+                    ?: throw AlpacaErrors.translate(e)
             } catch (e: java.io.IOException) {
                 throw AlpacaErrors.translate(e)
             }
@@ -110,7 +113,9 @@ class AlpacaOrderDesk(
                 change.quantity?.let { put("qty", it.toPlainString()) }
                 change.limitPrice?.let { put("limit_price", it.toPlainString()) }
                 change.stopPrice?.let { put("stop_price", it.toPlainString()) }
-                put("client_order_id", AlpacaLabels.next(order.need("client_order_id")))
+                // An OCO's stop leg carries Alpaca's own id until its first replacement names it.
+                val current = order.need("client_order_id").takeIf { AlpacaLabels.labelOf(it) == label } ?: label
+                put("client_order_id", AlpacaLabels.next(current))
             }
         val replacement = AlpacaErrors.venue { trading.replace(order.need("id"), body) }.need("id")
         Retry.until(SETTLE_POLLS, SETTLE_POLL_MS, sleep) {
@@ -130,10 +135,9 @@ class AlpacaOrderDesk(
         final.entries.removeIf { now - it.value > settleMs }
         return AlpacaErrors
             .venue { trading.openOrders() }
-            .map {
-                AlpacaMapping.order(
-                    it,
-                )
+            .flatMap { order ->
+                listOf(AlpacaMapping.order(order)) +
+                    order.objects("legs").map { AlpacaMapping.order(it, pairs.label(order, it)) }
             }.filter { !final.containsKey(it.clientOrderId) }
     }
 
@@ -146,46 +150,19 @@ class AlpacaOrderDesk(
             val orderId = activity.need("order_id")
             val label =
                 labels.getOrPut(orderId) {
-                    AlpacaLabels.labelOf(
-                        AlpacaErrors.venue { trading.order(orderId) }?.need("client_order_id") ?: orderId,
-                    )
+                    AlpacaErrors.venue { trading.order(orderId) }?.let(pairs::label) ?: orderId
                 }
             AlpacaMapping.fill(activity, label)
         }
 
     /** The newest order of [label]'s replace chain, or null when Alpaca never saw the label. */
     private fun latest(label: String): JsonObject? {
-        var order = trading.orderByClientId(label) ?: return null
+        var order = trading.orderByClientId(label) ?: return pairs.leg(label)
+        if (order.text("status") == "canceled" && order.text("order_class") == null && order.text("type") == "limit") {
+            order = pairs.successor(label, order) ?: order
+        }
         while (order.text("status") == "replaced") order = order.text("replaced_by")?.let(trading::order) ?: break
         return order
-    }
-
-    /** Alpaca's rules for a fractional share quantity (recorded: whole-share-only assets, GTC and short sales refused). */
-    private fun fractionAllowed(
-        order: NewOrder,
-        listed: AlpacaListed,
-    ) {
-        if (listed.instrument.volumeStep >= BigDecimal.ONE) {
-            throw VenueRefusedException(
-                "alpaca lists ${order.symbol} in whole shares: ${order.quantity.toPlainString()}",
-            )
-        }
-        if (order.timeInForce != TimeInForce.DAY) {
-            throw VenueRefusedException(
-                "alpaca takes a fractional quantity on DAY orders only, not ${order.timeInForce}",
-            )
-        }
-    }
-
-    private fun reducible(order: NewOrder): BigDecimal {
-        val held = netPosition(order.symbol)
-        val reducing = if (order.side == Side.SELL) held.signum() > 0 else held.signum() < 0
-        if (!reducing) {
-            throw VenueRefusedException(
-                "reduce-only ${order.side} of ${order.symbol} with no position to reduce",
-            )
-        }
-        return order.quantity.min(held.abs())
     }
 
     private companion object {

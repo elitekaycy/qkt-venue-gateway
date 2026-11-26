@@ -14,6 +14,16 @@ class AlpacaLabelsTest {
     }
 
     @Test
+    fun `an oco carries its stop's label after the target's next generation, and stays a pair when replaced`() {
+        assertThat(AlpacaLabels.paired("tp-1", "sl-1")).isEqualTo("tp-1~r1~osl-1")
+        assertThat(AlpacaLabels.paired("tp-1~r1", "sl-1")).isEqualTo("tp-1~r2~osl-1")
+        assertThat(AlpacaLabels.next("tp-1~r1~osl-1")).isEqualTo("tp-1~r2~osl-1")
+        assertThat(AlpacaLabels.labelOf("tp-1~r2~osl-1")).isEqualTo("tp-1")
+        assertThat(AlpacaLabels.stopOf("tp-1~r2~osl-1")).isEqualTo("sl-1")
+        assertThat(AlpacaLabels.stopOf("tp-1~r2")).isNull()
+    }
+
+    @Test
     fun `bar lengths Alpaca serves are named its way and any other is refused`() {
         assertThat(AlpacaTimeframes.of(60_000)).isEqualTo("1Min")
         assertThat(AlpacaTimeframes.of(15 * 60_000)).isEqualTo("15Min")

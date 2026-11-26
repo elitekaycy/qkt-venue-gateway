@@ -27,11 +27,23 @@ class AlpacaTrading(
     fun positions(): List<JsonObject> =
         AlpacaJson.array(http.get("/v2/positions"), "positions").map { it as JsonObject }
 
-    /** Every open order, oldest first (Alpaca lists at most 500). */
-    fun openOrders(): List<JsonObject> =
-        AlpacaJson
-            .array(http.get("/v2/orders", listOf("status" to "open", "limit" to "500", "direction" to "asc")), "orders")
-            .map { it as JsonObject }
+    /**
+     * Every open order, oldest first (Alpaca lists at most 500), with an OCO's stop in its `legs`: a held leg is not
+     * listed on its own (measured on paper).
+     */
+    fun openOrders(): List<JsonObject> = orders("open", "asc")
+
+    /** Orders of [status] (`open`, `all`), newest first, with their `legs`; only [symbol]'s when given. */
+    fun orders(
+        status: String,
+        direction: String = "desc",
+        symbol: String? = null,
+    ): List<JsonObject> {
+        val params =
+            listOf("status" to status, "nested" to "true", "limit" to "500", "direction" to direction) +
+                listOfNotNull(symbol?.let { "symbols" to it })
+        return AlpacaJson.array(http.get("/v2/orders", params), "orders").map { it as JsonObject }
+    }
 
     fun orderByClientId(clientOrderId: String): JsonObject? =
         missingAsNull {
