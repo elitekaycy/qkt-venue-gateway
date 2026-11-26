@@ -72,7 +72,13 @@ class AlpacaDeskArmsTest {
     @Test
     fun `an order already final is not cancelled again`() {
         val cancelled = Fixtures.obj("order-by-label-cancelled.json")
-        val (desk, http) = desk(mapOf("GET /v2/orders:by_client_order_id" to listOf("order-by-label-cancelled.json")))
+        val (desk, http) =
+            desk(
+                mapOf(
+                    "GET /v2/orders:by_client_order_id" to listOf("order-by-label-cancelled.json"),
+                    "GET /v2/orders" to listOf("orders-open.json"),
+                ),
+            )
 
         desk.cancel(cancelled.text("client_order_id")!!)
 

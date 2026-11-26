@@ -17,6 +17,7 @@ import com.qkt.venuegateway.alpaca.client.AlpacaData
 import com.qkt.venuegateway.alpaca.client.AlpacaTrading
 import com.qkt.venuegateway.support.JsonReads.decimal
 import com.qkt.venuegateway.support.JsonReads.need
+import com.qkt.venuegateway.support.JsonReads.text
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.LoggerFactory
@@ -53,7 +54,7 @@ class AlpacaAdapter(
 
     private val log = LoggerFactory.getLogger(AlpacaAdapter::class.java)
     private val listing = AlpacaListing(trading, settings.assetClasses, clock, fractional = settings.fractional)
-    private val desk = AlpacaOrderDesk(trading, listing, settings, ::net)
+    private val desk = AlpacaOrderDesk(trading, listing, settings, ::net, clock)
     private val recent = AlpacaRecentFills(clock)
     private val coinFees = AlpacaCoinFees { positions().rows }
 
@@ -152,7 +153,10 @@ class AlpacaAdapter(
     private fun update(update: JsonObject) {
         val target = listener ?: return
         runCatching {
-            AlpacaMapping.fill(update)?.let { gross ->
+            val order = update["order"] as JsonObject
+            if (desk.pairs.hides(update.text("event"), order)) return
+            val label = desk.pairs.label(order)
+            AlpacaMapping.fill(update)?.copy(clientOrderId = label)?.let { gross ->
                 val coin =
                     listing
                         .find(gross.symbol)
@@ -163,7 +167,7 @@ class AlpacaAdapter(
                 recent.add(fill)
                 target.fill(fill)
             }
-            target.order(AlpacaMapping.order(update["order"] as JsonObject))
+            target.order(AlpacaMapping.order(order, label))
         }.onFailure { log.error("alpaca trade update not mapped: {}", it.message) }
     }
 

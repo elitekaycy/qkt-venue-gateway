@@ -1,0 +1,4 @@
+{
+  "code": 42210000,
+  "message": "take_profit.limit_price must be > stop_loss.stop_price"
+}

@@ -58,8 +58,9 @@ SYMBOLS
 
 ## Capabilities
 
-Bars, quotes and stop orders (Alpaca holds stop and stop-limit orders; a coin pair takes stop-limit only, so the
-venue refuses a plain stop on one). The host builds every bar window from Alpaca's klines of 1, 5, 15 and 30 minutes and an hour, all
+Bars, quotes and stop orders (Alpaca holds stop and stop-limit orders on a share; a coin pair takes stop-limit only,
+so the adapter refuses a plain stop on one before Alpaca is asked, and qkt holds that stop itself). The capability is
+the account's, since VGP declares it per gateway, not per instrument. The host builds every bar window from Alpaca's klines of 1, 5, 15 and 30 minutes and an hour, all
 on the UTC grid (Alpaca stamps a share's daily bar at midnight New York, 04:00 or 05:00 UTC, so days are built from
 hours). Each quote subscription replaces the last: what is no longer asked for is unsubscribed on its stream. Alpaca
 lists no expiring contracts, so settlements, funding, marks, open interest, the tape, liquidations and depth are
@@ -84,6 +85,20 @@ Measured on the paper environment, 2026-10-27/28, every answer recorded in `src/
 - **Replace.** A replace is a new Alpaca order with a new `client_order_id`, which must also be unique; the adapter
   sends `<label>~r1`, `~r2`, ... and reads the label back from it, and a lookup by label follows `replaced_by` to the
   newest order. A replace of an order not yet live (`accepted`, before the session opens) is refused with `42210000`.
+- **A share's two exits.** Alpaca holds a position's shares for the first resting sell and refuses a second one:
+  a bracket's stop sent after its target got 403 `40310000` `insufficient qty available for order (requested: 2,
+  available: 0)` with `held_for_orders` (measured on paper, 2026-11-26, MSFT). Alpaca takes the pair only as one
+  `oco` order (type `limit`, exit only, `take_profit` and `stop_loss`), which reports its stop as a leg in the OCO's
+  `legs`, named by Alpaca's own id (a replace that changes nothing else, to rename it, is refused: `order parameters
+  are not changed`). So when a share's stop or stop-limit is refused for held shares, the adapter cancels the target
+  it collides with (the newest working plain limit of the same side and quantity, placed in the last minute) and
+  sends both as one OCO: its `client_order_id` is the target's next generation followed by `~o` and the stop's label
+  (`<target>~r1~o<stop>`, within Alpaca's 128 characters), so the target keeps its label and the stop leg is read back
+  under the stop's label from it, after a restart too. The target's cancellation is not reported (the OCO carries it
+  on); a lookup of the cancelled target reaches the OCO. Alpaca cancels the other leg when one fills, and cancelling
+  the target cancels the stop with it. Should Alpaca refuse the OCO, the target is placed again as it was and the
+  stop's refusal stands. A coin pair has no OCO (`crypto orders not allowed for advanced order_class: oco`), so a
+  coin position's venue exits are one order, and qkt holds the other.
 - **Cancel.** `DELETE` answers 204 before the order is final; the adapter polls until it reads `canceled`. The
   open-order list still showed a cancelled order for a moment after, so an order seen final in the last minute is
   left out of it.

@@ -1,0 +1,8 @@
+{
+  "available": "0",
+  "code": 40310000,
+  "existing_qty": "2",
+  "held_for_orders": "2",
+  "message": "insufficient qty available for order (requested: 2, available: 0)",
+  "symbol": "MSFT"
+}

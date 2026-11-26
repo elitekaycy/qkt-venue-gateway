@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonObject
  */
 internal class WiredAdapter(
     routes: Map<String, List<String>>,
+    assetClasses: Set<String> = setOf(AlpacaSettings.CRYPTO),
 ) {
     val http = FixtureHttp(routes)
     lateinit var update: (JsonObject) -> Unit
@@ -22,7 +23,7 @@ internal class WiredAdapter(
 
     val adapter =
         AlpacaAdapter(
-            AlpacaSettings(AlpacaEnvironment.PAPER, assetClasses = setOf("crypto")),
+            AlpacaSettings(AlpacaEnvironment.PAPER, assetClasses = assetClasses),
             AlpacaTrading(http),
             AlpacaData(http, "iex"),
             { 0L },
